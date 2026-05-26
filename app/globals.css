@@ -4,167 +4,366 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
-  Brand palette
-  ─────────────────────────────────────────────
-  Primary   #0F172A  slate-900  — dark navy (foreground / dark-mode bg)
-  Secondary #2563EB  blue-600   — interactive actions (buttons, links, rings)
-  Tertiary  #16A34A  green-600  — accent / success states
-  Neutral   #64748B  slate-500  — muted text, borders, subdued UI
-*/
+/* =============================================================================
+   HOW COLORS WORK IN THIS FILE — READ THIS FIRST
+   =============================================================================
+
+   THREE LAYERS stack on top of each other:
+
+   1. RAW PALETTE  (defined in :root / .dark)
+      CSS custom properties holding the exact hex values from DESIGN.md.
+      e.g.  --ds-secondary: #0051d5
+
+   2. SEMANTIC TOKENS  (also in :root / .dark)
+      shadcn-compatible tokens that POINT to the palette via var().
+      e.g.  --primary: var(--ds-secondary)
+      Dark mode only needs to override Layer 1 — Layer 2 follows automatically.
+
+   3. TAILWIND UTILITIES  (registered in @theme inline below)
+      Maps every Layer 1 + Layer 2 token to a Tailwind class.
+      e.g.  --color-ds-secondary: var(--ds-secondary)
+      → generates  bg-ds-secondary / text-ds-secondary / border-ds-secondary
+
+   HOW TO USE IN JSX
+   ─────────────────
+   Shadcn semantic tokens  (use for component-level styling — theme-aware)
+     bg-background          bg-foreground         bg-primary
+     bg-secondary           bg-muted              bg-accent
+     bg-card                bg-border             bg-destructive
+     text-foreground        text-primary          text-muted-foreground
+     border-border          ring-ring
+
+   Surface hierarchy  (use for layout depth — tonal layering)
+     bg-surface                  ← main canvas (#f8f9ff)
+     bg-surface-container-low    ← sidebar, secondary nav (#eff4ff)
+     bg-surface-container        ← wells, inset sections (#e5eeff)
+     bg-surface-container-high   ← pressed/active states (#dce9ff)
+     bg-surface-container-highest← deepest wells (#d3e4fe)
+     bg-surface-dim              ← dimmed overlay (#cbdbf5)
+
+   On-surface text  (pair with the surface variant above it)
+     text-on-surface             ← primary text (#0b1c30)
+     text-on-surface-variant     ← subdued/secondary text (#45464d)
+     text-inverse-on-surface     ← text on dark inverse surfaces (#eaf1ff)
+
+   Border / outline
+     border-outline              ← stronger border (#76777d)
+     border-outline-variant      ← subtle border (#c6c6cd)
+
+   Brand / action
+     bg-ds-secondary             ← the blue (#0051d5) — primary interactive
+     text-ds-secondary
+     bg-ds-secondary-container   ← lighter blue (#316bf3)
+     text-on-ds-secondary-container ← text on blue container (#fefcff)
+
+   Success / positive
+     bg-ds-tertiary-action       ← green (#009842)
+     text-ds-tertiary-action
+
+   Error / destructive
+     bg-ds-error                 ← red (#ba1a1a)
+     bg-ds-error-container       ← light red tint (#ffdad6)
+     text-on-ds-error-container  ← dark red text (#93000a)
+
+   Fixed tints  (permanent, don't flip in dark mode — for illustrations/badges)
+     bg-primary-fixed            ← #dae2fd
+     bg-secondary-fixed          ← #dbe1ff
+     bg-tertiary-fixed           ← #7ffc97
+
+   EXAMPLES
+   ────────
+   <div className="bg-surface-container-low border border-outline-variant rounded-lg p-6">
+   <button className="bg-ds-secondary text-on-ds-secondary hover:bg-ds-secondary-container">
+   <span className="text-on-surface-variant text-xs font-medium uppercase tracking-widest">
+   <div className="bg-ds-error-container text-on-ds-error-container border border-ds-error/20">
+
+   WITH OPACITY MODIFIER  (works on any token)
+   <div className="bg-ds-secondary/10">   ← 10% opacity blue tint
+   <div className="border-outline/50">    ← 50% opacity border
+   ============================================================================= */
+
+/* =============================================================================
+   @theme inline — registers every token as a Tailwind utility
+   ============================================================================= */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  /* ── Fonts ─────────────────────────────────────────────────────────── */
+  --font-sans:    var(--font-sans);
+  --font-mono:    var(--font-geist-mono);
   --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
+
+  /* ── Radius  (matches DESIGN.md: sm=4px, DEFAULT=8px, md=12px, lg=16px, xl=24px) */
+  --radius-sm:  0.25rem;   /* 4px  — checkboxes, tags */
+  --radius-md:  0.5rem;    /* 8px  — buttons, inputs */
+  --radius-lg:  0.75rem;   /* 12px — cards */
+  --radius-xl:  1rem;      /* 16px — modals, large containers */
+  --radius-2xl: 1.5rem;    /* 24px — special pill shapes */
+  --radius-3xl: 2rem;
+  --radius-4xl: 2.5rem;
+
+  /* ── shadcn semantic tokens → Tailwind (bg-primary, text-foreground, etc.) */
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
+
+  /* ── Sidebar ──────────────────────────────────────────────────────── */
+  --color-sidebar:                    var(--sidebar);
+  --color-sidebar-foreground:         var(--sidebar-foreground);
+  --color-sidebar-primary:            var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent:             var(--sidebar-accent);
+  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
+  --color-sidebar-border:             var(--sidebar-border);
+  --color-sidebar-ring:               var(--sidebar-ring);
+
+  /* ── Charts ───────────────────────────────────────────────────────── */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* ── Surface hierarchy → bg-surface, bg-surface-container-low, etc. */
+  --color-surface:                   var(--surface);
+  --color-surface-dim:               var(--surface-dim);
+  --color-surface-bright:            var(--surface-bright);
+  --color-surface-container-lowest:  var(--surface-container-lowest);
+  --color-surface-container-low:     var(--surface-container-low);
+  --color-surface-container:         var(--surface-container);
+  --color-surface-container-high:    var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+
+  /* ── On-surface text → text-on-surface, text-on-surface-variant, etc. */
+  --color-on-surface:          var(--on-surface);
+  --color-on-surface-variant:  var(--on-surface-variant);
+  --color-inverse-surface:     var(--inverse-surface);
+  --color-inverse-on-surface:  var(--inverse-on-surface);
+
+  /* ── Borders → border-outline, border-outline-variant */
+  --color-outline:         var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-surface-tint:    var(--surface-tint);
+
+  /* ── Brand primary (structural black) → bg-ds-primary */
+  --color-ds-primary:                  var(--ds-primary);
+  --color-on-ds-primary:               var(--on-ds-primary);
+  --color-ds-primary-container:        var(--ds-primary-container);
+  --color-on-ds-primary-container:     var(--on-ds-primary-container);
+  --color-inverse-primary:             var(--inverse-primary);
+
+  /* ── Brand secondary (action blue) → bg-ds-secondary, text-ds-secondary */
+  --color-ds-secondary:                var(--ds-secondary);
+  --color-on-ds-secondary:             var(--on-ds-secondary);
+  --color-ds-secondary-container:      var(--ds-secondary-container);
+  --color-on-ds-secondary-container:   var(--on-ds-secondary-container);
+
+  /* ── Brand tertiary (success green) → bg-ds-tertiary-action */
+  --color-ds-tertiary-action:          var(--ds-tertiary-action);
+  --color-ds-tertiary-container:       var(--ds-tertiary-container);
+  --color-on-ds-tertiary-container:    var(--on-ds-tertiary-container);
+
+  /* ── Error / destructive → bg-ds-error, bg-ds-error-container */
+  --color-ds-error:              var(--ds-error);
+  --color-on-ds-error:           var(--on-ds-error);
+  --color-ds-error-container:    var(--ds-error-container);
+  --color-on-ds-error-container: var(--on-ds-error-container);
+
+  /* ── Fixed tints (do NOT invert in dark mode — use for badges, illustrations) */
+  --color-primary-fixed:     var(--primary-fixed);
+  --color-primary-fixed-dim: var(--primary-fixed-dim);
+  --color-secondary-fixed:   var(--secondary-fixed);
+  --color-secondary-fixed-dim: var(--secondary-fixed-dim);
+  --color-tertiary-fixed:    var(--tertiary-fixed);
+  --color-tertiary-fixed-dim: var(--tertiary-fixed-dim);
 }
+
+
+/* =============================================================================
+   :root — LIGHT MODE
+   Layer 1: Raw DESIGN.md palette  →  Layer 2: Semantic tokens
+   ============================================================================= */
 
 :root {
-  /* ── Surfaces ──────────────────────────────────────────────────────── */
-  --background:              oklch(1 0 0);
-  --foreground:              oklch(0.208 0.042 265.755); /* #0F172A — primary */
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     LAYER 1 — RAW PALETTE  (straight from DESIGN.md)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-  --card:                    oklch(1 0 0);
-  --card-foreground:         oklch(0.208 0.042 265.755);
+  /* Surface scale */
+  --surface:                    #f8f9ff;
+  --surface-dim:                #cbdbf5;
+  --surface-bright:             #f8f9ff;
+  --surface-container-lowest:   #ffffff;
+  --surface-container-low:      #eff4ff;
+  --surface-container:          #e5eeff;
+  --surface-container-high:     #dce9ff;
+  --surface-container-highest:  #d3e4fe;
 
-  --popover:                 oklch(1 0 0);
-  --popover-foreground:      oklch(0.208 0.042 265.755);
+  /* On-surface */
+  --on-surface:                 #0b1c30;
+  --on-surface-variant:         #45464d;
+  --inverse-surface:            #213145;
+  --inverse-on-surface:         #eaf1ff;
 
-  /* ── Primary — blue-600 #2563EB (buttons, links, interactive) ──────── */
-  --primary:                 oklch(0.546 0.245 264.376);
-  --primary-foreground:      oklch(1 0 0);
+  /* Borders */
+  --outline:                    #76777d;
+  --outline-variant:            #c6c6cd;
+  --surface-tint:               #565e74;
 
-  /* ── Secondary — blue-100 tint (secondary buttons, badges) ────────── */
-  --secondary:               oklch(0.931 0.033 255.585);
-  --secondary-foreground:    oklch(0.546 0.245 264.376);
+  /* Primary (brand black — structural, heavy UI) */
+  --ds-primary:                 #000000;
+  --on-ds-primary:              #ffffff;
+  --ds-primary-container:       #131b2e;
+  --on-ds-primary-container:    #7c839b;
+  --inverse-primary:            #bec6e0;
 
-  /* ── Muted — slate-100 surface / slate-500 text ───────────────────── */
-  --muted:                   oklch(0.968 0.007 247.9);
-  --muted-foreground:        oklch(0.554 0.046 257.417); /* #64748B — neutral */
+  /* Secondary (action blue — buttons, links, active states) */
+  --ds-secondary:               #0051d5;
+  --on-ds-secondary:            #ffffff;
+  --ds-secondary-container:     #316bf3;
+  --on-ds-secondary-container:  #fefcff;
 
-  /* ── Accent — green-600 #16A34A (success, approvals, positive) ─────── */
-  --accent:                  oklch(0.627 0.194 149.23);
-  --accent-foreground:       oklch(1 0 0);
+  /* Tertiary (success green — approvals, positive states) */
+  --ds-tertiary-action:         #009842;
+  --ds-tertiary-container:      #002109;
+  --on-ds-tertiary-container:   #009842;
 
-  /* ── Destructive — red (errors, deletions) ─────────────────────────── */
-  --destructive:             oklch(0.577 0.245 27.325);
+  /* Error / destructive */
+  --ds-error:                   #ba1a1a;
+  --on-ds-error:                #ffffff;
+  --ds-error-container:         #ffdad6;
+  --on-ds-error-container:      #93000a;
 
-  /* ── Borders & inputs ───────────────────────────────────────────────── */
-  --border:                  oklch(0.929 0.013 255.508);
-  --input:                   oklch(0.929 0.013 255.508);
-  --ring:                    oklch(0.546 0.245 264.376); /* blue focus ring */
+  /* Fixed tints (permanent — never inverted in dark mode) */
+  --primary-fixed:              #dae2fd;
+  --primary-fixed-dim:          #bec6e0;
+  --secondary-fixed:            #dbe1ff;
+  --secondary-fixed-dim:        #b4c5ff;
+  --tertiary-fixed:             #7ffc97;
+  --tertiary-fixed-dim:         #62df7d;
 
-  /* ── Radius ─────────────────────────────────────────────────────────── */
-  --radius: 0.625rem;
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     LAYER 2 — SEMANTIC TOKENS (shadcn-compatible, point to Layer 1)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-  /* ── Charts ─────────────────────────────────────────────────────────── */
-  --chart-1:                 oklch(0.546 0.245 264.376); /* blue   */
-  --chart-2:                 oklch(0.627 0.194 149.23);  /* green  */
-  --chart-3:                 oklch(0.208 0.042 265.755); /* navy   */
-  --chart-4:                 oklch(0.554 0.046 257.417); /* slate  */
-  --chart-5:                 oklch(0.577 0.245 27.325);  /* red    */
+  /* Surfaces */
+  --background:         var(--surface);                    /* #f8f9ff */
+  --foreground:         var(--on-surface);                 /* #0b1c30 */
 
-  /* ── Sidebar ─────────────────────────────────────────────────────────── */
-  --sidebar:                 oklch(0.968 0.007 247.9);
-  --sidebar-foreground:      oklch(0.208 0.042 265.755);
-  --sidebar-primary:         oklch(0.546 0.245 264.376);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent:          oklch(0.931 0.033 255.585);
-  --sidebar-accent-foreground: oklch(0.546 0.245 264.376);
-  --sidebar-border:          oklch(0.929 0.013 255.508);
-  --sidebar-ring:            oklch(0.546 0.245 264.376);
+  --card:               var(--surface-container-lowest);   /* #ffffff */
+  --card-foreground:    var(--on-surface);
+
+  --popover:            var(--surface-container-lowest);   /* #ffffff */
+  --popover-foreground: var(--on-surface);
+
+  /* Primary action — the blue drives all buttons, rings, active states */
+  --primary:            var(--ds-secondary);               /* #0051d5 */
+  --primary-foreground: var(--on-ds-secondary);            /* #ffffff */
+
+  /* Secondary — soft blue tint for secondary buttons and muted actions */
+  --secondary:          var(--surface-container-low);      /* #eff4ff */
+  --secondary-foreground: var(--ds-secondary);             /* #0051d5 */
+
+  /* Muted — for disabled states, placeholder text, subtle wells */
+  --muted:              var(--surface-container);          /* #e5eeff */
+  --muted-foreground:   var(--on-surface-variant);         /* #45464d */
+
+  /* Accent — green for approved/success states */
+  --accent:             var(--ds-tertiary-action);         /* #009842 */
+  --accent-foreground:  #ffffff;
+
+  /* Destructive */
+  --destructive:        var(--ds-error);                   /* #ba1a1a */
+
+  /* Borders & inputs */
+  --border:             var(--outline-variant);            /* #c6c6cd */
+  --input:              var(--outline-variant);            /* #c6c6cd */
+  --ring:               var(--ds-secondary);               /* #0051d5 — focus ring */
+
+  /* Radius — 8px base (buttons/inputs use this; cards use radius-lg=12px) */
+  --radius: 0.5rem;
+
+  /* Charts */
+  --chart-1: var(--ds-secondary);          /* blue  */
+  --chart-2: var(--ds-tertiary-action);    /* green */
+  --chart-3: var(--inverse-surface);       /* navy  */
+  --chart-4: var(--outline);               /* gray  */
+  --chart-5: var(--ds-error);              /* red   */
+
+  /* Sidebar */
+  --sidebar:                    var(--surface-container-low);   /* #eff4ff */
+  --sidebar-foreground:         var(--on-surface);
+  --sidebar-primary:            var(--ds-secondary);
+  --sidebar-primary-foreground: var(--on-ds-secondary);
+  --sidebar-accent:             var(--surface-container);
+  --sidebar-accent-foreground:  var(--ds-secondary);
+  --sidebar-border:             var(--outline-variant);
+  --sidebar-ring:               var(--ds-secondary);
 }
+
+
+/* =============================================================================
+   .dark — DARK MODE
+   Only Layer 1 (raw palette) needs overriding.
+   Layer 2 semantic tokens follow automatically via var().
+   ============================================================================= */
 
 .dark {
-  /* ── Surfaces — primary #0F172A as the dark background ─────────────── */
-  --background:              oklch(0.208 0.042 265.755); /* #0F172A — primary */
-  --foreground:              oklch(0.984 0.003 247.858); /* near-white */
+  /* ━━ Surface scale — inverted: deep navy base, progressively lighter */
+  --surface:                    #0b1c30;    /* was on-surface, now bg canvas */
+  --surface-dim:                #07121f;    /* deeper dim */
+  --surface-bright:             #152538;
+  --surface-container-lowest:   #060f1a;    /* deepest well */
+  --surface-container-low:      #0f2035;
+  --surface-container:          #152840;
+  --surface-container-high:     #1c324e;
+  --surface-container-highest:  #253d5c;
 
-  --card:                    oklch(0.265 0.038 261.5);   /* slate-800 */
-  --card-foreground:         oklch(0.984 0.003 247.858);
+  /* ━━ On-surface text — inverted */
+  --on-surface:                 #eaf1ff;    /* was inverse-on-surface */
+  --on-surface-variant:         #c6c6cd;    /* softened for dark bg */
+  --inverse-surface:            #f8f9ff;    /* the light surface becomes inverse */
+  --inverse-on-surface:         #0b1c30;
 
-  --popover:                 oklch(0.265 0.038 261.5);
-  --popover-foreground:      oklch(0.984 0.003 247.858);
+  /* ━━ Borders — lighter on dark bg */
+  --outline:                    #8e9099;
+  --outline-variant:            #44474f;
 
-  /* ── Primary — blue-500 (slightly lighter for dark backgrounds) ─────── */
-  --primary:                 oklch(0.623 0.214 258.87);  /* #3B82F6 blue-500 */
-  --primary-foreground:      oklch(1 0 0);
+  /* ━━ Action blue — slightly lighter for legibility on dark bg */
+  --ds-secondary:               #6b9eff;    /* blue-400 equivalent */
+  --on-ds-secondary:            #003087;
+  --ds-secondary-container:     #0051d5;    /* original blue as container */
+  --on-ds-secondary-container:  #dbe1ff;
 
-  /* ── Secondary — dark blue tint ────────────────────────────────────── */
-  --secondary:               oklch(0.279 0.041 260.031);
-  --secondary-foreground:    oklch(0.831 0.071 254.9);
+  /* ━━ Success green — slightly lighter for dark bg */
+  --ds-tertiary-action:         #00c853;
+  --on-ds-tertiary-container:   #00c853;
 
-  /* ── Muted ──────────────────────────────────────────────────────────── */
-  --muted:                   oklch(0.265 0.038 261.5);
-  --muted-foreground:        oklch(0.704 0.04 256.788);  /* slate-400 */
-
-  /* ── Accent — green-500 (brighter on dark) ──────────────────────────── */
-  --accent:                  oklch(0.723 0.194 149.58);  /* #22C55E green-500 */
-  --accent-foreground:       oklch(0.145 0 0);
-
-  /* ── Destructive ────────────────────────────────────────────────────── */
-  --destructive:             oklch(0.704 0.191 22.216);
-
-  /* ── Borders & inputs ───────────────────────────────────────────────── */
-  --border:                  oklch(1 0 0 / 10%);
-  --input:                   oklch(1 0 0 / 15%);
-  --ring:                    oklch(0.623 0.214 258.87);
-
-  /* ── Charts ─────────────────────────────────────────────────────────── */
-  --chart-1:                 oklch(0.623 0.214 258.87);  /* blue-500  */
-  --chart-2:                 oklch(0.723 0.194 149.58);  /* green-500 */
-  --chart-3:                 oklch(0.871 0.021 253.1);   /* slate-300 */
-  --chart-4:                 oklch(0.554 0.046 257.417); /* slate-500 */
-  --chart-5:                 oklch(0.704 0.191 22.216);  /* red       */
-
-  /* ── Sidebar ─────────────────────────────────────────────────────────── */
-  --sidebar:                 oklch(0.181 0.038 265.8);   /* even darker than bg */
-  --sidebar-foreground:      oklch(0.929 0.013 255.508);
-  --sidebar-primary:         oklch(0.623 0.214 258.87);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent:          oklch(0.265 0.038 261.5);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border:          oklch(1 0 0 / 10%);
-  --sidebar-ring:            oklch(0.623 0.214 258.87);
+  /* ━━ Error — lighter for dark bg */
+  --ds-error:                   #ffb4ab;
+  --on-ds-error:                #690005;
+  --ds-error-container:         #93000a;
+  --on-ds-error-container:      #ffdad6;
 }
+
+
+/* =============================================================================
+   @layer base — global defaults
+   ============================================================================= */
 
 @layer base {
   * {
