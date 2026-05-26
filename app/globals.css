@@ -88,9 +88,9 @@
 
 @theme inline {
   /* ── Fonts ─────────────────────────────────────────────────────────── */
-  --font-sans:    var(--font-sans);
-  --font-mono:    var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans:    var(--font-inter);   /* → Inter, injected by Next.js font in layout.tsx */
+  --font-mono:    var(--font-mono);    /* → JetBrains Mono, for code blocks only */
+  --font-heading: var(--font-inter);  /* headings also use Inter */
 
   /* ── Radius  (matches DESIGN.md: sm=4px, DEFAULT=8px, md=12px, lg=16px, xl=24px) */
   --radius-sm:  0.25rem;   /* 4px  — checkboxes, tags */
