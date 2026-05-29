@@ -376,3 +376,7 @@
     @apply font-sans;
   }
 }
+
+body {
+  background-color: #eff4ff;
+}
