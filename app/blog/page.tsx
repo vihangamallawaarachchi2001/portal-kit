@@ -117,7 +117,7 @@ export default function BlogPage() {
               Start for free while we finish the blog. Your first portal takes under 10 minutes to set up.
             </p>
             <Button asChild size="lg" className="bg-ds-secondary text-on-ds-secondary font-semibold px-8">
-              <Link href="/auth/login">Start for free</Link>
+              <Link href="/auth">Start for free</Link>
             </Button>
           </div>
         </section>

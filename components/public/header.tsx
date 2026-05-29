@@ -121,14 +121,14 @@ export function Header() {
               isTransparent ? 'text-white/80' : 'text-on-surface-variant'
             )}
           >
-            <Link href="/auth/login">Sign in</Link>
+            <Link href="/auth">Sign in</Link>
           </Button>
           <Button
             asChild
             size="sm"
             className="text-base bg-ds-secondary text-on-ds-secondary font-semibold px-4"
           >
-            <Link href="/auth/login">Start free</Link>
+            <Link href="/auth">Start free</Link>
           </Button>
         </div>
 
@@ -191,13 +191,13 @@ export function Header() {
               variant="ghost"
               className="w-full justify-center text-base text-on-surface-variant"
             >
-              <Link href="/auth/login">Sign in</Link>
+              <Link href="/auth">Sign in</Link>
             </Button>
             <Button
               asChild
               className="w-full justify-center text-base bg-ds-secondary text-on-ds-secondary font-semibold"
             >
-              <Link href="/auth/login">Start free — no credit card needed</Link>
+              <Link href="/auth">Start free — no credit card needed</Link>
             </Button>
           </div>
         </div>

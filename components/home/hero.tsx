@@ -76,7 +76,7 @@ export default function HomeHero() {
           size="lg"
           className="w-full sm:w-auto bg-ds-secondary text-on-ds-secondary font-semibold px-8 text-base h-12"
         >
-          <Link href="/auth/login">Start for free</Link>
+          <Link href="/auth">Start for free</Link>
         </Button>
         <Button
           asChild

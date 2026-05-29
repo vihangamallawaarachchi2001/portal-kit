@@ -148,7 +148,7 @@ export default function SecurityPage() {
                 <Link href="/help">Contact us</Link>
               </Button>
               <Button asChild size="lg" variant="ghost" className="w-full sm:w-auto border border-white/20 bg-white/5 text-white font-semibold px-8 backdrop-blur-sm">
-                <Link href="/auth/login">Start free</Link>
+                <Link href="/auth">Start free</Link>
               </Button>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
