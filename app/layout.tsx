@@ -16,8 +16,59 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PortalKit",
-  description: "The client portal for freelancers",
+  title: {
+    default: "PortalKit — Client Portal Software for Freelancers",
+    template: "%s | PortalKit",
+  },
+  description:
+    "PortalKit gives freelancers and agencies a branded client portal to share files, collect approvals, track invoices, and manage projects — all through one professional link.",
+  keywords: [
+    "client portal",
+    "freelancer software",
+    "project management for freelancers",
+    "invoice tracking",
+    "file approval software",
+    "client collaboration tool",
+    "white label client portal",
+  ],
+  authors: [{ name: "PortalKit" }],
+  creator: "PortalKit",
+  metadataBase: new URL("https://portalkit.com"),
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://portalkit.com",
+    siteName: "PortalKit",
+    title: "PortalKit — Client Portal Software for Freelancers",
+    description:
+      "Share files, collect approvals, track invoices, and manage projects — all through one branded client portal link.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "PortalKit — Client Portal Software",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PortalKit — Client Portal Software for Freelancers",
+    description:
+      "Share files, collect approvals, track invoices, and manage projects — all through one branded client portal link.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({
