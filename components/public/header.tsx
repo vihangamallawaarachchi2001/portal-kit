@@ -1,24 +1,33 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Layers, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useUser } from '../providers/auth-provider'
+import { logout } from '@/app/auth/action'
 
 const NAV_LINKS = [
   { label: 'Features', href: '/features' },
-  { label: 'Pricing',  href: '/pricing'  },
-  { label: 'About',    href: '/about'    },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'About', href: '/about' },
 ] as const
 
 export function Header() {
-  const pathname   = usePathname()
+  const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [scrolled, setScrolled]     = useState(false)
-  const { user } =  useUser();
+  const [scrolled, setScrolled] = useState(false)
+  const { user } = useUser();
+  const [pending, startTransition] = useTransition();
+
+  function handleSignOut() {
+    startTransition(async () => {
+      await logout();
+    })
+  }
+
 
   // Transparent-over-dark only on the home page hero
   const isTransparent = !scrolled && pathname === '/'
@@ -129,13 +138,25 @@ export function Header() {
               <Link href="/auth">Sign in</Link>
             )}
           </Button>
-          <Button
-            asChild
-            size="sm"
-            className="text-base bg-ds-secondary text-on-ds-secondary font-semibold px-4"
-          >
-            <Link href="/auth">Start free</Link>
-          </Button>
+          {user ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-base bg-ds-secondary text-on-ds-secondary font-semibold px-4 cursor-pointer"
+              onClick={handleSignOut}
+              disabled={pending}
+            >
+              {pending ? 'Signing out…' : 'Sign out'}
+            </Button>
+          ) : (
+            <Button
+              asChild
+              size="sm"
+              className="text-base bg-ds-secondary text-on-ds-secondary font-semibold px-4"
+            >
+              <Link href="/auth">Start free</Link>
+            </Button>
+          )}
         </div>
 
         {/* Mobile toggle */}
