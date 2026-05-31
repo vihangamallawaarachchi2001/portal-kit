@@ -161,7 +161,7 @@ export default function AboutPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Button asChild size="lg" className="w-full sm:w-auto bg-ds-secondary text-on-ds-secondary font-semibold px-8">
-                <Link href="/auth/login">Start for free</Link>
+                <Link href="/auth">Start for free</Link>
               </Button>
               <Button asChild size="lg" variant="ghost" className="w-full sm:w-auto border border-white/20 bg-white/5 text-white font-semibold px-8 backdrop-blur-sm">
                 <Link href="/help">Talk to us</Link>

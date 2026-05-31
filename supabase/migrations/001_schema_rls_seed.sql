@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS public.files (
 CREATE TABLE IF NOT EXISTS public.invoices (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id               UUID NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+    project_id              UUID REFERENCES public.projects(id) ON DELETE SET NULL,
     freelancer_id           UUID NOT NULL REFERENCES public.profiles(id),
     invoice_number          TEXT NOT NULL,        -- e.g. INV-0001, unique per freelancer
     line_items              JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -189,6 +190,7 @@ CREATE INDEX IF NOT EXISTS idx_files_status           ON public.files(status);
 
 -- invoices
 CREATE INDEX IF NOT EXISTS idx_invoices_client        ON public.invoices(client_id)    WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_invoices_project       ON public.invoices(project_id)   WHERE deleted_at IS NULL AND project_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_invoices_freelancer    ON public.invoices(freelancer_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_invoices_status        ON public.invoices(status);
 CREATE INDEX IF NOT EXISTS idx_invoices_stripe_pi     ON public.invoices(stripe_payment_intent_id);

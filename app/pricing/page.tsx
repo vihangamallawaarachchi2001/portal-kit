@@ -20,7 +20,7 @@ const PLANS = [
     period: 'forever',
     description: 'Perfect for freelancers just getting started.',
     cta: 'Get started free',
-    href: '/auth/login',
+    href: '/auth',
     featured: false,
   },
   {
@@ -29,7 +29,7 @@ const PLANS = [
     period: 'per month',
     description: 'For growing freelancers managing multiple clients.',
     cta: 'Start 14-day trial',
-    href: '/auth/login',
+    href: '/auth',
     featured: true,
   },
   {
@@ -38,7 +38,7 @@ const PLANS = [
     period: 'per month',
     description: 'For agencies and high-volume freelancers.',
     cta: 'Start 14-day trial',
-    href: '/auth/login',
+    href: '/auth',
     featured: false,
   },
 ]
@@ -161,7 +161,7 @@ export default function PricingPage() {
             </div>
             <p className="text-center text-sm text-on-surface-variant mt-6">
               Save 20% with annual billing.{' '}
-              <Link href="/auth/login" className="text-ds-secondary underline-offset-4 hover:underline">
+              <Link href="/auth" className="text-ds-secondary underline-offset-4 hover:underline">
                 Switch after signup →
               </Link>
             </p>
@@ -244,7 +244,7 @@ export default function PricingPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Button asChild size="lg" className="w-full sm:w-auto bg-ds-secondary text-on-ds-secondary font-semibold px-8">
-                <Link href="/auth/login">Start for free</Link>
+                <Link href="/auth">Start for free</Link>
               </Button>
               <Button asChild size="lg" variant="ghost" className="w-full sm:w-auto border border-white/20 bg-white/5 text-white font-semibold px-8 backdrop-blur-sm">
                 <Link href="/help">Talk to us</Link>

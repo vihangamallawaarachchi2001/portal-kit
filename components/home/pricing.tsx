@@ -10,7 +10,7 @@ const PLANS = [
     period: 'forever',
     description: 'Perfect for freelancers just getting started.',
     cta: 'Get started free',
-    href: '/auth/login',
+    href: '/auth',
     featured: false,
     features: [
       '1 active client portal',
@@ -26,7 +26,7 @@ const PLANS = [
     period: 'per month',
     description: 'For growing freelancers managing multiple clients.',
     cta: 'Start Pro — free trial',
-    href: '/auth/login',
+    href: '/auth',
     featured: true,
     features: [
       'Unlimited client portals',
@@ -43,7 +43,7 @@ const PLANS = [
     period: 'per month',
     description: 'For agencies and high-volume freelancers.',
     cta: 'Start Business — free trial',
-    href: '/auth/login',
+    href: '/auth',
     featured: false,
     features: [
       'Everything in Pro',
