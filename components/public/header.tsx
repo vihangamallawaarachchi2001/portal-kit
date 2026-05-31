@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Layers, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useUser } from '../providers/auth-provider'
 
 const NAV_LINKS = [
   { label: 'Features', href: '/features' },
@@ -17,6 +18,7 @@ export function Header() {
   const pathname   = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled]     = useState(false)
+  const { user } =  useUser();
 
   // Transparent-over-dark only on the home page hero
   const isTransparent = !scrolled && pathname === '/'
@@ -121,7 +123,11 @@ export function Header() {
               isTransparent ? 'text-white/80' : 'text-on-surface-variant'
             )}
           >
-            <Link href="/auth">Sign in</Link>
+            {user ? (
+              <Link href="/dashboard">Dashboard</Link>
+            ) : (
+              <Link href="/auth">Sign in</Link>
+            )}
           </Button>
           <Button
             asChild
@@ -191,7 +197,11 @@ export function Header() {
               variant="ghost"
               className="w-full justify-center text-base text-on-surface-variant"
             >
-              <Link href="/auth">Sign in</Link>
+              {user ? (
+                <Link href="/dashboard">Dashboard</Link>
+              ) : (
+                <Link href="/auth">Sign in</Link>
+              )}
             </Button>
             <Button
               asChild
