@@ -1,9 +1,28 @@
-import { type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
 
+const PROTECTED = ['/dashboard', '/onboarding', '/settings', '/projects', '/clients', '/invoices']
+const AUTH_ONLY = ['/auth']
+
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  const { response, claims } = await updateSession(request)
+  const isAuthenticated = !!claims
+
+  if (!isAuthenticated && PROTECTED.some(p => pathname.startsWith(p))) {
+    const url = new URL('/auth', request.url)
+    url.searchParams.set('next', pathname)
+    return NextResponse.redirect(url)
+  }
+
+  if (isAuthenticated && AUTH_ONLY.some(p => pathname.startsWith(p))) {
+    const onboardingComplete = claims?.user_metadata?.onboarding_complete === true
+    const destination = onboardingComplete ? '/dashboard' : '/onboarding'
+    return NextResponse.redirect(new URL(destination, request.url))
+  }
   // update user's auth session
-  return await updateSession(request)
+  return response
 }
 
 export const config = {
