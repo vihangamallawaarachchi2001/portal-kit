@@ -33,12 +33,16 @@ export default async function BillingPage({
   const { upgraded } = await searchParams
 
   return (
-    <BillingSettings
-      plan={profile?.plan ?? 'free'}
-      subscriptionStatus={profile?.subscription_status ?? null}
-      hasBilling={!!profile?.stripe_customer_id}
-      usage={{ clients: clientCount ?? 0, files: fileCount ?? 0 }}
-      justUpgraded={upgraded === 'true'}
-    />
+    <div className="px-8 pt-8 pb-12">
+      <h2 className="text-lg font-bold text-on-surface tracking-tight">Billing</h2>
+      <p className="text-sm text-on-surface-variant mt-0.5 mb-8">Manage your plan and payment details.</p>
+      <BillingSettings
+        plan={profile?.plan ?? 'free'}
+        subscriptionStatus={profile?.subscription_status ?? null}
+        hasBilling={!!profile?.stripe_customer_id}
+        usage={{ clients: clientCount ?? 0, files: fileCount ?? 0 }}
+        justUpgraded={upgraded === 'true'}
+      />
+    </div>
   )
 }
