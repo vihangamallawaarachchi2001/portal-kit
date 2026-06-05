@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { KpiCards } from '@/components/dashboard/kpi-cards'
 import { DashboardClientList } from '@/components/dashboard/dashboard-client-list'
 import { DashboardStats } from '@/types/database'
-import { Plus } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -12,7 +11,6 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
-  // Fetch clients with their active projects
   const { data: clients } = await supabase
     .from('clients')
     .select(`
@@ -29,7 +27,6 @@ export default async function DashboardPage() {
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
 
-  // Compute per-client stats
   const enrichedClients = (clients ?? []).map(c => {
     const projects = (c.projects ?? []).filter((p: { deleted_at: string | null }) => !p.deleted_at)
     const outstanding = (c.invoices ?? [])
@@ -58,7 +55,6 @@ export default async function DashboardPage() {
     }
   })
 
-  // Dashboard KPI stats
   const allInvoices = enrichedClients.flatMap(c => c.invoices ?? [])
   const allProjects = enrichedClients.flatMap(c => c.projects)
 
@@ -78,16 +74,15 @@ export default async function DashboardPage() {
   const profile = (await supabase.from('profiles').select('full_name, plan').eq('id', user.id).single()).data
 
   return (
-    <div className="p-8 flex flex-col gap-8 max-w-7xl">
+    <div className="w-full p-8 flex flex-col gap-8">
       {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-on-surface">
-            {profile?.full_name ? `Welcome back, ${profile.full_name.split(' ')[0]}` : 'Dashboard'}
-          </h1>
-          <p className="text-sm text-on-surface-variant mt-0.5">Here's what's happening across your client portals.</p>
-        </div>
-        <DashboardAddClientButton plan={profile?.plan ?? 'free'} clientCount={enrichedClients.length} />
+      <div>
+        <h1 className="text-2xl font-bold text-on-surface">
+          {profile?.full_name ? `Welcome back, ${profile.full_name.split(' ')[0]}` : 'Dashboard'}
+        </h1>
+        <p className="text-sm text-on-surface-variant mt-0.5">
+          Here&apos;s what&apos;s happening across your client portals.
+        </p>
       </div>
 
       {/* KPIs */}
@@ -97,32 +92,14 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-on-surface">Active Clients</h2>
-          <span className="text-sm text-on-surface-variant">{enrichedClients.length} portal{enrichedClients.length !== 1 ? 's' : ''}</span>
+          <span className="text-sm text-on-surface-variant">
+            {enrichedClients.length} portal{enrichedClients.length !== 1 ? 's' : ''}
+          </span>
         </div>
-        <DashboardClientList clients={enrichedClients as Parameters<typeof DashboardClientList>[0]['clients']} />
+        <DashboardClientList
+          clients={enrichedClients as Parameters<typeof DashboardClientList>[0]['clients']}
+        />
       </div>
-    </div>
-  )
-}
-
-function DashboardAddClientButton({ plan, clientCount }: { plan: string; clientCount: number }) {
-  const atLimit = plan === 'free' && clientCount >= 1
-  return (
-    <div className="flex items-center gap-3">
-      {atLimit && (
-        <p className="text-xs text-on-surface-variant hidden md:block">
-          <a href="/dashboard/settings/billing" className="text-ds-secondary font-semibold hover:underline">Upgrade to Pro</a> for unlimited clients
-        </p>
-      )}
-      <a
-        href={atLimit ? '/dashboard/settings/billing' : '#add-client'}
-        id={atLimit ? undefined : 'open-add-client'}
-        data-action="add-client"
-        className="flex items-center gap-2 h-9 px-4 rounded-lg bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors shadow-sm"
-      >
-        <Plus className="size-4" />
-        {atLimit ? 'Upgrade' : 'Add Client'}
-      </a>
     </div>
   )
 }
