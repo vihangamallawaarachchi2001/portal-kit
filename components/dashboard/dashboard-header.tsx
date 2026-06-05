@@ -18,13 +18,13 @@ import { AddClientModal } from './add-client-modal'
 import Link from 'next/link'
 
 const SECTION_TITLES: [string, string][] = [
-  ['/dashboard/settings/billing', 'Billing'],
+  ['/dashboard/settings/billing',       'Billing'],
   ['/dashboard/settings/notifications', 'Notifications'],
-  ['/dashboard/settings', 'Settings'],
-  ['/dashboard/clients', 'Clients'],
-  ['/dashboard/projects', 'Projects'],
-  ['/dashboard/invoices', 'Invoices'],
-  ['/dashboard', 'Dashboard'],
+  ['/dashboard/settings',               'Settings'],
+  ['/dashboard/clients',                'Clients'],
+  ['/dashboard/projects',               'Projects'],
+  ['/dashboard/invoices',               'Invoices'],
+  ['/dashboard',                        'Dashboard'],
 ]
 
 interface DashboardHeaderProps {
@@ -53,23 +53,31 @@ export function DashboardHeader({ profile, unreadCount = 0 }: DashboardHeaderPro
   return (
     <>
       <header
-        className="fixed top-0 right-0 z-30 h-14 bg-white/95 backdrop-blur-sm border-b border-outline-variant flex items-center justify-between px-6"
-        style={{ left: '240px' }}
+        className="fixed top-0 right-0 z-30 h-14 flex items-center justify-between px-6"
+        style={{
+          left: '240px',
+          background: 'rgba(248,249,255,0.85)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(198,198,205,0.6)',
+        }}
       >
-        <h2 className="text-sm font-semibold text-on-surface">{pageTitle}</h2>
+        {/* Page title */}
+        <p className="text-sm font-semibold text-on-surface">{pageTitle}</p>
 
+        {/* Actions */}
         <div className="flex items-center gap-1">
-          {/* Create dropdown */}
+          {/* Create */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors shadow-sm">
+              <button className="flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-ds-secondary text-white text-[13px] font-semibold hover:bg-ds-secondary-container transition-colors shadow-sm">
                 <Plus className="size-3.5" strokeWidth={2.5} />
                 <span>Create</span>
-                <ChevronDown className="size-3 opacity-75" />
+                <ChevronDown className="size-3 opacity-70" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuLabel className="text-[11px] text-on-surface-variant font-medium">Quick actions</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-[11px] text-on-surface-variant font-medium py-1.5">Quick actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setAddClientOpen(true)}>
                 <Users className="size-4 mr-2.5 text-on-surface-variant" />
@@ -90,15 +98,15 @@ export function DashboardHeader({ profile, unreadCount = 0 }: DashboardHeaderPro
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Notifications bell */}
-          <button className="relative size-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors ml-1">
-            <Bell className="size-[18px]" />
+          {/* Bell */}
+          <button className="relative size-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors ml-0.5">
+            <Bell className="size-4.25" />
             {unreadCount > 0 && (
-              <span className="absolute top-2 right-2 size-2 rounded-full bg-ds-secondary ring-2 ring-white" />
+              <span className="absolute top-2 right-2 size-2 rounded-full bg-ds-secondary ring-2 ring-surface" />
             )}
           </button>
 
-          {/* Profile dropdown */}
+          {/* Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-1.5 h-9 pl-2 pr-2 rounded-lg hover:bg-surface-container transition-colors ml-0.5">
@@ -112,9 +120,9 @@ export function DashboardHeader({ profile, unreadCount = 0 }: DashboardHeaderPro
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <div className="px-3 py-2 border-b border-outline-variant">
+              <div className="px-3 py-2.5 border-b border-outline-variant">
                 <p className="text-sm font-semibold text-on-surface truncate">{displayName}</p>
-                <p className="text-xs text-on-surface-variant capitalize">{plan} plan</p>
+                <p className="text-xs text-on-surface-variant capitalize mt-0.5">{plan} plan</p>
               </div>
               <div className="py-1">
                 <DropdownMenuItem asChild>
@@ -131,10 +139,7 @@ export function DashboardHeader({ profile, unreadCount = 0 }: DashboardHeaderPro
                 </DropdownMenuItem>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="text-red-600 focus:text-red-600 focus:bg-red-50"
-              >
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                 <LogOut className="size-4 mr-2.5" />
                 Log out
               </DropdownMenuItem>

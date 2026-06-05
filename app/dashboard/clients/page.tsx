@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardClientList } from '@/components/dashboard/dashboard-client-list'
-import { Plus } from 'lucide-react'
-import { Client, Project } from '@/types/database'
+import { Users } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -31,32 +30,48 @@ export default async function ClientsPage() {
     const projects = (c.projects ?? []).filter((p: { deleted_at: string | null }) => !p.deleted_at)
     const outstanding = (c.invoices ?? [])
       .filter((i: { status: string }) => i.status === 'sent' || i.status === 'overdue')
-      .reduce((s: number, i: { total: number }) => s + Number(i.total), 0)
-    const pending_files_total = projects.reduce((s: number, p: { files: { status: string }[] }) =>
-      s + (p.files ?? []).filter((f: { status: string }) => f.status === 'pending').length, 0)
-    const unread_messages_total = projects.reduce((s: number, p: { messages: { sender_type: string; read_at: string | null }[] }) =>
-      s + (p.messages ?? []).filter((m: { sender_type: string; read_at: string | null }) => m.sender_type === 'client' && !m.read_at).length, 0)
-
+      .reduce((sum: number, i: { total: number }) => sum + Number(i.total), 0)
+    const pending_files_total = projects.reduce((sum: number, p: { files: { status: string }[] }) =>
+      sum + (p.files ?? []).filter((f: { status: string }) => f.status === 'pending').length, 0)
+    const unread_messages_total = projects.reduce((sum: number, p: { messages: { sender_type: string; read_at: string | null }[] }) =>
+      sum + (p.messages ?? []).filter((m: { sender_type: string; read_at: string | null }) => m.sender_type === 'client' && !m.read_at).length, 0)
     return {
       ...c,
-      projects: projects.map((p: Project & { files: { status: string }[]; messages: { sender_type: string; read_at: string | null }[] }) => ({
+      projects: projects.map((p: {
+        id: string; title: string; status: string; due_date: string | null; updated_at: string;
+        files: { status: string }[]; messages: { sender_type: string; read_at: string | null }[]
+      }) => ({
         ...p,
         pending_files: (p.files ?? []).filter((f: { status: string }) => f.status === 'pending').length,
         unread_messages: (p.messages ?? []).filter((m: { sender_type: string; read_at: string | null }) => m.sender_type === 'client' && !m.read_at).length,
       })),
-      outstanding,
-      pending_files_total,
-      unread_messages_total,
+      outstanding, pending_files_total, unread_messages_total,
     }
   })
 
   return (
-    <div className="p-8 flex flex-col gap-6 max-w-7xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-on-surface">Clients</h1>
-        <span className="text-sm text-on-surface-variant">{enrichedClients.length} active portal{enrichedClients.length !== 1 ? 's' : ''}</span>
+    <div className="w-full">
+      {/* Page hero */}
+      <div className="px-8 pt-8 pb-6 border-b border-outline-variant/50 bg-white">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1">Clients</p>
+            <h1 className="text-2xl font-extrabold text-on-surface tracking-tight">Client Portals</h1>
+            <p className="text-sm text-on-surface-variant mt-1">Manage all your active client workspaces.</p>
+          </div>
+          {enrichedClients.length > 0 && (
+            <div className="flex items-center gap-2 shrink-0 bg-surface-container rounded-xl px-4 py-2.5">
+              <Users className="size-4 text-on-surface-variant" />
+              <span className="text-sm font-semibold text-on-surface">{enrichedClients.length}</span>
+              <span className="text-sm text-on-surface-variant">active portal{enrichedClients.length !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+        </div>
       </div>
-      <DashboardClientList clients={enrichedClients as Parameters<typeof DashboardClientList>[0]['clients']} />
+
+      <div className="p-8">
+        <DashboardClientList clients={enrichedClients as Parameters<typeof DashboardClientList>[0]['clients']} />
+      </div>
     </div>
   )
 }

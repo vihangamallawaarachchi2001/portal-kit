@@ -2,8 +2,8 @@
 
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, Users, FileText, Settings, LogOut,
-  Layers, FolderOpen, BookOpen, HelpCircle,
+  LayoutDashboard, Users, FileText, Settings,
+  LogOut, Layers, FolderOpen, BookOpen, LifeBuoy,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -14,10 +14,10 @@ import { Profile } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 
 const NAV = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/projects', label: 'Projects', icon: FolderOpen, exact: false },
-  { href: '/dashboard/clients', label: 'Clients', icon: Users, exact: false },
-  { href: '/dashboard/invoices', label: 'Invoices', icon: FileText, exact: false },
+  { href: '/dashboard',          label: 'Dashboard', icon: LayoutDashboard, exact: true  },
+  { href: '/dashboard/projects', label: 'Projects',  icon: FolderOpen,      exact: false },
+  { href: '/dashboard/clients',  label: 'Clients',   icon: Users,           exact: false },
+  { href: '/dashboard/invoices', label: 'Invoices',  icon: FileText,        exact: false },
 ]
 
 interface SidebarProps {
@@ -46,28 +46,35 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 w-60 flex flex-col bg-white border-r border-outline-variant">
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 h-14 border-b border-outline-variant shrink-0">
-        <span className="flex items-center justify-center size-8 rounded-lg bg-ds-secondary shrink-0 shadow-sm">
+    <aside
+      className="fixed inset-y-0 left-0 z-40 w-60 flex flex-col"
+      style={{ background: '#0b1527', borderRight: '1px solid rgba(255,255,255,0.06)' }}
+    >
+      {/* ── Logo ─────────────────────────────────────── */}
+      <div
+        className="flex items-center gap-3 px-5 h-14 shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <span className="flex items-center justify-center size-8 rounded-xl bg-ds-secondary shadow-lg shrink-0" style={{ boxShadow: '0 0 16px rgba(0,81,213,0.5)' }}>
           <Layers className="size-3.75 text-white" strokeWidth={1.75} />
         </span>
-        <span className="font-bold text-base tracking-tight text-on-surface">PortalKit</span>
+        <span className="font-bold text-[15px] tracking-tight text-white">PortalKit</span>
         {plan !== 'free' && (
           <span className={cn(
             'ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md',
-            plan === 'pro' ? 'bg-ds-secondary/10 text-ds-secondary' : 'bg-amber-50 text-amber-700'
+            plan === 'pro' ? 'bg-blue-500/20 text-blue-300' : 'bg-amber-400/20 text-amber-300'
           )}>
             {plan}
           </span>
         )}
       </div>
 
-      {/* Main nav */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-0.5">
-        <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest px-3 mb-2">
+      {/* ── Main nav ─────────────────────────────────── */}
+      <nav className="flex-1 overflow-y-auto py-5 px-3 flex flex-col gap-0.5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] px-3 mb-2.5" style={{ color: 'rgba(255,255,255,0.22)' }}>
           Menu
         </p>
+
         {NAV.map(item => {
           const active = isActive(item.href, item.exact)
           return (
@@ -75,16 +82,14 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group relative',
+                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
                 active
-                  ? 'bg-ds-secondary text-white shadow-sm'
-                  : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+                  ? 'bg-ds-secondary text-white'
+                  : 'text-slate-400 hover:bg-white/6 hover:text-white'
               )}
+              style={active ? { boxShadow: '0 4px 12px rgba(0,81,213,0.35)' } : undefined}
             >
-              <item.icon className={cn(
-                'size-4 shrink-0 transition-colors',
-                active ? 'text-white' : 'text-on-surface-variant group-hover:text-on-surface'
-              )} />
+              <item.icon className={cn('size-4 shrink-0 transition-colors', active ? 'text-white' : 'text-slate-500 group-hover:text-slate-300')} />
               <span>{item.label}</span>
               {item.label === 'Dashboard' && unreadCount > 0 && (
                 <span className={cn(
@@ -93,16 +98,18 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
                 )}>
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
-
               )}
             </Link>
           )
         })}
       </nav>
 
-      {/* Bottom section */}
-      <div className="px-3 pb-3 flex flex-col gap-0.5 border-t border-outline-variant pt-3 shrink-0">
-        <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest px-3 mb-2">
+      {/* ── Bottom section ───────────────────────────── */}
+      <div
+        className="px-3 pb-4 pt-4 flex flex-col gap-0.5 shrink-0"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] px-3 mb-2.5" style={{ color: 'rgba(255,255,255,0.22)' }}>
           Support
         </p>
 
@@ -111,8 +118,8 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
           className={cn(
             'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
             isActive('/dashboard/settings', false)
-              ? 'bg-ds-secondary text-white shadow-sm'
-              : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+              ? 'bg-ds-secondary text-white'
+              : 'text-slate-400 hover:bg-white/6 hover:text-white'
           )}
         >
           <Settings className="size-4 shrink-0" />
@@ -123,7 +130,7 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
           href="https://docs.portalkit.io"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-white/6 hover:text-white transition-all"
         >
           <BookOpen className="size-4 shrink-0" />
           <span>Guide</span>
@@ -131,29 +138,32 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
 
         <a
           href="mailto:support@portalkit.io"
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-white/6 hover:text-white transition-all"
         >
-          <HelpCircle className="size-4 shrink-0" />
+          <LifeBuoy className="size-4 shrink-0" />
           <span>Help Center</span>
         </a>
 
-        {/* Profile + logout row */}
-        <div className="flex items-center gap-2 px-3 py-2 mt-2 rounded-xl bg-surface-container">
+        {/* ── Profile row ──────────────────────────────── */}
+        <div
+          className="flex items-center gap-2.5 px-3 py-2.5 mt-2 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
           <Avatar className="size-7 shrink-0">
             <AvatarImage src={profile?.avatar_url ?? undefined} />
-            <AvatarFallback className="text-[10px] bg-ds-secondary/15 text-ds-secondary font-bold">
+            <AvatarFallback className="text-[10px] bg-ds-secondary/20 text-blue-300 font-bold">
               {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-on-surface truncate">{displayName}</p>
-            <p className="text-[10px] text-on-surface-variant capitalize">{plan} plan</p>
+            <p className="text-[13px] font-semibold text-white/90 truncate leading-tight">{displayName}</p>
+            <p className="text-[11px] capitalize" style={{ color: 'rgba(255,255,255,0.4)' }}>{plan} plan</p>
           </div>
           <button
             onClick={handleLogout}
             disabled={isPending}
             title="Log out"
-            className="size-6 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/30 hover:text-red-600 transition-colors shrink-0"
+            className="size-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-red-400 transition-colors hover:bg-white/6 shrink-0"
           >
             <LogOut className="size-3.5" />
           </button>
