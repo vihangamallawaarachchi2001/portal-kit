@@ -60,9 +60,10 @@ const CREATE_ACTIONS = [
 interface DashboardHeaderProps {
   profile: Profile | null
   unreadCount?: number
+  sidebarWidth?: number
 }
 
-export function DashboardHeader({ profile, unreadCount = 0 }: DashboardHeaderProps) {
+export function DashboardHeader({ profile, unreadCount = 0, sidebarWidth = 240 }: DashboardHeaderProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [, startTransition] = useTransition()
@@ -86,7 +87,8 @@ export function DashboardHeader({ profile, unreadCount = 0 }: DashboardHeaderPro
       <header
         className="fixed top-0 right-0 z-30 h-14 flex items-center justify-between px-6"
         style={{
-          left: '240px',
+          left: sidebarWidth,
+          transition: 'left 220ms cubic-bezier(0.4,0,0.2,1)',
           background: 'rgba(255,255,255,0.95)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
