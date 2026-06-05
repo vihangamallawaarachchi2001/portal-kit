@@ -2,9 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { KpiCards } from '@/components/dashboard/kpi-cards'
 import { DashboardClientList } from '@/components/dashboard/dashboard-client-list'
+import { DashboardHeroActions } from '@/components/dashboard/dashboard-hero-actions'
+import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist'
 import { DashboardStats } from '@/types/database'
 import Link from 'next/link'
-import { Plus, ArrowRight } from 'lucide-react'
+import { ArrowRight, BookOpen, MessageCircle } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -72,7 +74,7 @@ export default async function DashboardPage() {
   const hasProfile  = !!(profileRow?.full_name && profileRow.full_name.trim())
   const hasClient   = enrichedClients.length > 0
   const hasProject  = allProjects.length > 0
-  const hasFile     = allInvoices.length > 0 // approximate: if invoices exist, files were likely shared
+  const hasFile     = enrichedClients.some(c => (c.projects as { files?: unknown[] }[]).some(p => (p.files ?? []).length > 0))
   const hasSentInvoice = allInvoices.some((i: { status: string }) => i.status !== 'draft')
 
   const completedSteps = [hasProfile, hasClient, hasProject, hasFile, hasSentInvoice]
@@ -80,10 +82,10 @@ export default async function DashboardPage() {
   const showOnboarding = completedCount < completedSteps.length
 
   return (
-    <div className="w-full min-h-screen bg-surface">
+    <div className="w-full min-h-screen bg-white">
       {/* ── Hero ─────────────────────────────────────────── */}
       <div className="px-6 pt-6 pb-0 sm:px-8 sm:pt-8">
-        <div className="relative overflow-hidden rounded-2xl bg-white shadow-sm">
+        <div className="relative overflow-hidden rounded-md bg-white shadow-sm">
           {/* Brand gradient wash — subtle, not gaudy */}
           <div
             className="absolute inset-0 pointer-events-none"
@@ -98,7 +100,7 @@ export default async function DashboardPage() {
           <div className="relative px-6 py-7 sm:px-8 sm:py-8 flex flex-col sm:flex-row sm:items-center gap-6">
             {/* Left: greeting */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-ds-secondary uppercase tracking-[0.1em] mb-2">
+              <p className="text-xs font-semibold text-ds-secondary uppercase tracking-widest mb-2">
                 PortalKit workspace
               </p>
               <h1 className="text-[1.75rem] sm:text-3xl font-extrabold text-on-surface tracking-tight leading-tight">
@@ -126,18 +128,8 @@ export default async function DashboardPage() {
               )}
             </div>
 
-            {/* Right: CTAs */}
-            <div className="flex flex-row sm:flex-col gap-2.5 shrink-0">
-              <DashboardHeroCTA />
-              <Link
-                href="https://docs.portalkit.io"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 h-9 px-4 rounded-xl text-sm font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
-              >
-                View Guide <ArrowRight className="size-3.5" />
-              </Link>
-            </div>
+            {/* Right: CTAs — client component owns modal state */}
+            <DashboardHeroActions />
           </div>
         </div>
       </div>
@@ -147,12 +139,60 @@ export default async function DashboardPage() {
         {/* KPI row */}
         <KpiCards stats={stats} />
 
-        {/* Getting Started — shown when setup incomplete */}
+        {/* Getting Started — side-by-side layout */}
         {showOnboarding && (
-          <OnboardingWidget
-            completed={completedSteps}
-            hasClient={hasClient}
-          />
+          <section className="flex flex-col gap-4 max-w-7xl">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-base font-bold text-on-surface">Getting Started</h2>
+              <span className="text-sm text-on-surface-variant">
+                {completedSteps.filter(Boolean).length}/{completedSteps.length} complete
+              </span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-3 items-start">
+              {/* Checklist — left */}
+              <OnboardingChecklist completed={completedSteps} />
+
+              {/* Action cards — right */}
+              <div className="flex flex-col gap-3 max-w-xl">
+                <a
+                  href="https://docs.portalkit.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-white rounded-md shadow-sm hover:shadow-md transition-shadow p-4 flex items-start gap-3"
+                >
+                  <div className="size-9 rounded-md bg-ds-secondary/10 flex items-center justify-center shrink-0">
+                    <BookOpen className="size-4 text-ds-secondary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-on-surface">Read the Guide</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
+                      Step-by-step setup for PortalKit.
+                    </p>
+                    <span className="flex items-center gap-1 mt-1.5 text-xs font-semibold text-ds-secondary group-hover:gap-1.5 transition-all">
+                      View guide <ArrowRight className="size-3" />
+                    </span>
+                  </div>
+                </a>
+                <a
+                  href="mailto:support@portalkit.io"
+                  className="group bg-white rounded-md shadow-sm hover:shadow-md transition-shadow p-4 flex items-start gap-3"
+                >
+                  <div className="size-9 rounded-md bg-surface-container flex items-center justify-center shrink-0">
+                    <MessageCircle className="size-4 text-on-surface-variant" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-on-surface">Need help?</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
+                      We typically respond within a few hours.
+                    </p>
+                    <span className="flex items-center gap-1 mt-1.5 text-xs font-semibold text-ds-secondary group-hover:gap-1.5 transition-all">
+                      Contact support <ArrowRight className="size-3" />
+                    </span>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Client section */}
@@ -176,123 +216,4 @@ export default async function DashboardPage() {
   )
 }
 
-// Thin client component just for the hero CTA (needs no router)
-function DashboardHeroCTA() {
-  return (
-    <Link
-      href="#"
-      id="open-add-client"
-      data-action="add-client"
-      className="flex items-center justify-center gap-1.5 h-9 px-4 rounded-xl bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors shadow-sm shadow-ds-secondary/25"
-    >
-      <Plus className="size-3.5" strokeWidth={2.5} />
-      New Client
-    </Link>
-  )
-}
 
-const ONBOARDING_STEPS = [
-  {
-    label: 'Complete your profile',
-    description: 'Add your name, business name and a photo.',
-    href: '/dashboard/settings',
-  },
-  {
-    label: 'Add your first client',
-    description: 'Create a portal link you can share with a client.',
-    href: null,
-  },
-  {
-    label: 'Create a project',
-    description: 'Organise your work into trackable projects.',
-    href: '/dashboard/clients',
-  },
-  {
-    label: 'Share a file for review',
-    description: 'Upload a deliverable and collect client sign-off.',
-    href: '/dashboard/clients',
-  },
-  {
-    label: 'Send your first invoice',
-    description: 'Issue an invoice with online payment via Stripe.',
-    href: '/dashboard/invoices',
-  },
-]
-
-function OnboardingWidget({ completed, hasClient }: { completed: boolean[]; hasClient: boolean }) {
-  const total     = ONBOARDING_STEPS.length
-  const doneCount = completed.filter(Boolean).length
-  const pct       = Math.round((doneCount / total) * 100)
-
-  return (
-    <section>
-      <div className="flex items-baseline justify-between mb-4">
-        <h2 className="text-base font-bold text-on-surface">Getting Started</h2>
-        <span className="text-sm text-on-surface-variant">{doneCount}/{total} complete</span>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        {/* Progress bar at top */}
-        <div className="h-1 w-full bg-outline-variant/20">
-          <div
-            className="h-full bg-ds-secondary transition-all duration-500"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-
-        <div className="divide-y divide-outline-variant/30">
-          {ONBOARDING_STEPS.map((step, i) => {
-            const done = completed[i]
-            return (
-              <div
-                key={i}
-                className={`flex items-center gap-4 px-5 py-4 group ${done ? 'opacity-50' : 'hover:bg-surface-container/40 transition-colors'}`}
-              >
-                {/* Step indicator */}
-                <div className={`size-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold transition-all ${
-                  done
-                    ? 'bg-ds-secondary text-white'
-                    : 'bg-surface-container text-on-surface-variant'
-                }`}>
-                  {done ? (
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    i + 1
-                  )}
-                </div>
-
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold leading-tight ${done ? 'line-through text-on-surface-variant' : 'text-on-surface'}`}>
-                    {step.label}
-                  </p>
-                  {!done && (
-                    <p className="text-xs text-on-surface-variant mt-0.5">{step.description}</p>
-                  )}
-                </div>
-
-                {/* CTA arrow — only on incomplete steps */}
-                {!done && (
-                  step.href ? (
-                    <Link
-                      href={step.href}
-                      className="shrink-0 flex items-center gap-1 text-xs font-semibold text-ds-secondary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
-                    >
-                      Start <ArrowRight className="size-3" />
-                    </Link>
-                  ) : (
-                    <span className="shrink-0 text-xs font-semibold text-ds-secondary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                      Use the <strong>+ New Client</strong> button above
-                    </span>
-                  )
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
-}
