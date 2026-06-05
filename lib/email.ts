@@ -1,0 +1,379 @@
+import { Resend } from 'resend'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+const FROM = process.env.RESEND_FROM_EMAIL ?? 'PortalKit <noreply@portalkit.app>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portalkit.app'
+
+interface SendOptions {
+  to: string
+  subject: string
+  html: string
+}
+
+async function send(opts: SendOptions) {
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: opts.subject,
+    html: opts.html,
+  })
+  if (error) console.error('[email]', error)
+}
+
+// ── Email templates ──────────────────────────────────────────────────────────
+
+function baseTemplate(content: string) {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; background: #f8f9ff; margin: 0; padding: 0; }
+    .container { max-width: 560px; margin: 40px auto; background: #ffffff; border-radius: 12px; border: 1px solid #e5eeff; overflow: hidden; }
+    .header { background: linear-gradient(135deg, #0051d5 0%, #316bf3 100%); padding: 28px 32px; }
+    .header h1 { color: #ffffff; font-size: 20px; font-weight: 700; margin: 0; }
+    .header p { color: rgba(255,255,255,0.7); font-size: 13px; margin: 4px 0 0; }
+    .body { padding: 32px; }
+    .body p { color: #0b1c30; font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
+    .body p.muted { color: #45464d; font-size: 13px; }
+    .button { display: inline-block; background: #0051d5; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin: 8px 0; }
+    .divider { border: none; border-top: 1px solid #e5eeff; margin: 24px 0; }
+    .footer { background: #f8f9ff; padding: 20px 32px; border-top: 1px solid #e5eeff; }
+    .footer p { color: #76777d; font-size: 12px; margin: 0; }
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .status-pending { background: #fff8e1; color: #b45309; }
+    .status-approved { background: #f0fdf4; color: #15803d; }
+    .status-changes { background: #fff7ed; color: #b45309; }
+    .status-paid { background: #f0fdf4; color: #15803d; }
+    .status-overdue { background: #fef2f2; color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>PortalKit</h1>
+      <p>Your client collaboration workspace</p>
+    </div>
+    <div class="body">${content}</div>
+    <div class="footer">
+      <p>You're receiving this because you're connected on PortalKit. <a href="${APP_URL}" style="color:#0051d5;">Manage preferences</a></p>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+// Client receives portal magic link
+export async function sendPortalMagicLink({
+  to,
+  clientName,
+  freelancerName,
+  businessName,
+  portalUrl,
+}: {
+  to: string
+  clientName: string
+  freelancerName: string
+  businessName: string
+  portalUrl: string
+}) {
+  await send({
+    to,
+    subject: `${businessName} has shared your client portal`,
+    html: baseTemplate(`
+      <p>Hi ${clientName},</p>
+      <p><strong>${businessName}</strong> (${freelancerName}) has set up a private portal for you to review project updates, files, and invoices.</p>
+      <p>Click the button below to access your portal — no account or password needed.</p>
+      <a href="${portalUrl}" class="button">Open My Portal →</a>
+      <hr class="divider" />
+      <p class="muted">This link is valid for 24 hours. If it expires, you can request a new one from ${freelancerName}.</p>
+    `),
+  })
+}
+
+// Freelancer receives magic link to log in
+export async function sendFreelancerMagicLink({
+  to,
+  loginUrl,
+}: {
+  to: string
+  loginUrl: string
+}) {
+  await send({
+    to,
+    subject: 'Your PortalKit sign-in link',
+    html: baseTemplate(`
+      <p>Here is your sign-in link for PortalKit.</p>
+      <p>Click the button below — it's valid for 24 hours and can only be used once.</p>
+      <a href="${loginUrl}" class="button">Sign In to PortalKit →</a>
+      <hr class="divider" />
+      <p class="muted">If you didn't request this, you can safely ignore this email.</p>
+    `),
+  })
+}
+
+// Client receives notification: new file uploaded
+export async function sendFileUploadedEmail({
+  to,
+  clientName,
+  freelancerName,
+  businessName,
+  projectTitle,
+  filename,
+  portalUrl,
+}: {
+  to: string
+  clientName: string
+  freelancerName: string
+  businessName: string
+  projectTitle: string
+  filename: string
+  portalUrl: string
+}) {
+  await send({
+    to,
+    subject: `New file ready for review: ${filename}`,
+    html: baseTemplate(`
+      <p>Hi ${clientName},</p>
+      <p><strong>${businessName}</strong> has uploaded a new file for your review on the <strong>${projectTitle}</strong> project.</p>
+      <p><strong>File:</strong> ${filename}</p>
+      <p>Open your portal to review it and leave feedback.</p>
+      <a href="${portalUrl}/files" class="button">Review File →</a>
+      <hr class="divider" />
+      <p class="muted">Sent by ${freelancerName} via PortalKit.</p>
+    `),
+  })
+}
+
+// Freelancer receives notification: client reviewed a file
+export async function sendFileReviewedEmail({
+  to,
+  freelancerName,
+  clientName,
+  projectTitle,
+  filename,
+  status,
+  comment,
+  dashboardUrl,
+}: {
+  to: string
+  freelancerName: string
+  clientName: string
+  projectTitle: string
+  filename: string
+  status: 'approved' | 'changes_requested'
+  comment: string | null
+  dashboardUrl: string
+}) {
+  const statusLabel = status === 'approved' ? 'Approved' : 'Changes Requested'
+  const statusClass = status === 'approved' ? 'status-approved' : 'status-changes'
+
+  await send({
+    to,
+    subject: `${clientName} ${status === 'approved' ? 'approved' : 'requested changes on'} "${filename}"`,
+    html: baseTemplate(`
+      <p>Hi ${freelancerName},</p>
+      <p><strong>${clientName}</strong> has reviewed <strong>${filename}</strong> on the <strong>${projectTitle}</strong> project.</p>
+      <p>Status: <span class="status-badge ${statusClass}">${statusLabel}</span></p>
+      ${comment ? `<p><strong>Comment:</strong> "${comment}"</p>` : ''}
+      <a href="${dashboardUrl}" class="button">View in Dashboard →</a>
+    `),
+  })
+}
+
+// Client receives notification: invoice sent
+export async function sendInvoiceSentEmail({
+  to,
+  clientName,
+  freelancerName,
+  businessName,
+  invoiceNumber,
+  total,
+  currency,
+  dueDate,
+  portalUrl,
+}: {
+  to: string
+  clientName: string
+  freelancerName: string
+  businessName: string
+  invoiceNumber: string
+  total: number
+  currency: string
+  dueDate: string | null
+  portalUrl: string
+}) {
+  const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(total)
+  const due = dueDate ? new Date(dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Upon receipt'
+
+  await send({
+    to,
+    subject: `Invoice ${invoiceNumber} from ${businessName} — ${formatted} due`,
+    html: baseTemplate(`
+      <p>Hi ${clientName},</p>
+      <p><strong>${businessName}</strong> has sent you an invoice.</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+        <tr><td style="padding:8px 0;color:#45464d;font-size:14px;">Invoice number</td><td style="padding:8px 0;font-weight:600;text-align:right;">${invoiceNumber}</td></tr>
+        <tr><td style="padding:8px 0;color:#45464d;font-size:14px;">Amount due</td><td style="padding:8px 0;font-weight:700;font-size:18px;color:#0051d5;text-align:right;">${formatted}</td></tr>
+        <tr><td style="padding:8px 0;color:#45464d;font-size:14px;">Due date</td><td style="padding:8px 0;font-weight:600;text-align:right;">${due}</td></tr>
+      </table>
+      <a href="${portalUrl}/invoices" class="button">Pay Invoice →</a>
+      <hr class="divider" />
+      <p class="muted">Payment is processed securely by Stripe. Sent by ${freelancerName} via PortalKit.</p>
+    `),
+  })
+}
+
+// Freelancer receives notification: invoice paid
+export async function sendInvoicePaidEmail({
+  to,
+  freelancerName,
+  clientName,
+  invoiceNumber,
+  total,
+  currency,
+  dashboardUrl,
+}: {
+  to: string
+  freelancerName: string
+  clientName: string
+  invoiceNumber: string
+  total: number
+  currency: string
+  dashboardUrl: string
+}) {
+  const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(total)
+
+  await send({
+    to,
+    subject: `Payment received: ${invoiceNumber} — ${formatted}`,
+    html: baseTemplate(`
+      <p>Hi ${freelancerName},</p>
+      <p>Great news — <strong>${clientName}</strong> has paid invoice <strong>${invoiceNumber}</strong>.</p>
+      <p style="font-size:24px;font-weight:700;color:#15803d;">${formatted} received</p>
+      <p class="muted">Stripe will process your payout according to your normal payout schedule.</p>
+      <a href="${dashboardUrl}" class="button">View Dashboard →</a>
+    `),
+  })
+}
+
+// Client receives: project status changed
+export async function sendStatusChangedEmail({
+  to,
+  clientName,
+  freelancerName,
+  businessName,
+  projectTitle,
+  newStatus,
+  portalUrl,
+}: {
+  to: string
+  clientName: string
+  freelancerName: string
+  businessName: string
+  projectTitle: string
+  newStatus: string
+  portalUrl: string
+}) {
+  const labels: Record<string, string> = {
+    briefing: 'Briefing',
+    in_progress: 'In Progress',
+    review: 'Ready for Review',
+    done: 'Complete',
+  }
+  const label = labels[newStatus] ?? newStatus
+
+  await send({
+    to,
+    subject: `Project update: ${projectTitle} is now "${label}"`,
+    html: baseTemplate(`
+      <p>Hi ${clientName},</p>
+      <p><strong>${businessName}</strong> has updated the status of <strong>${projectTitle}</strong>.</p>
+      <p>New status: <strong>${label}</strong></p>
+      <a href="${portalUrl}" class="button">View Portal →</a>
+      <hr class="divider" />
+      <p class="muted">Sent by ${freelancerName} via PortalKit.</p>
+    `),
+  })
+}
+
+// Recipient receives: new message
+export async function sendNewMessageEmail({
+  to,
+  recipientName,
+  senderName,
+  senderBusiness,
+  projectTitle,
+  messagePreview,
+  portalUrl,
+}: {
+  to: string
+  recipientName: string
+  senderName: string
+  senderBusiness: string
+  projectTitle: string
+  messagePreview: string
+  portalUrl: string
+}) {
+  const preview = messagePreview.length > 200 ? messagePreview.slice(0, 200) + '…' : messagePreview
+
+  await send({
+    to,
+    subject: `New message from ${senderBusiness} on "${projectTitle}"`,
+    html: baseTemplate(`
+      <p>Hi ${recipientName},</p>
+      <p><strong>${senderName}</strong> sent you a message on <strong>${projectTitle}</strong>:</p>
+      <blockquote style="border-left:3px solid #0051d5;margin:16px 0;padding:12px 16px;background:#eff4ff;border-radius:0 8px 8px 0;color:#0b1c30;font-size:14px;line-height:1.6;">
+        ${preview}
+      </blockquote>
+      <a href="${portalUrl}/messages" class="button">Reply →</a>
+    `),
+  })
+}
+
+// Freelancer receives: weekly digest
+export async function sendWeeklyDigest({
+  to,
+  freelancerName,
+  pendingApprovals,
+  outstandingAmount,
+  currency,
+  unreadMessages,
+  dashboardUrl,
+}: {
+  to: string
+  freelancerName: string
+  pendingApprovals: number
+  outstandingAmount: number
+  currency: string
+  unreadMessages: number
+  dashboardUrl: string
+}) {
+  const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(outstandingAmount)
+
+  await send({
+    to,
+    subject: `Your PortalKit weekly summary`,
+    html: baseTemplate(`
+      <p>Hi ${freelancerName},</p>
+      <p>Here's your weekly summary:</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+        <tr style="background:#eff4ff;border-radius:8px;">
+          <td style="padding:12px 16px;font-size:14px;color:#45464d;">Files pending approval</td>
+          <td style="padding:12px 16px;font-weight:700;text-align:right;font-size:16px;">${pendingApprovals}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px;font-size:14px;color:#45464d;">Outstanding invoices</td>
+          <td style="padding:12px 16px;font-weight:700;text-align:right;font-size:16px;color:#0051d5;">${formatted}</td>
+        </tr>
+        <tr style="background:#eff4ff;">
+          <td style="padding:12px 16px;font-size:14px;color:#45464d;">Unread messages</td>
+          <td style="padding:12px 16px;font-weight:700;text-align:right;font-size:16px;">${unreadMessages}</td>
+        </tr>
+      </table>
+      <a href="${dashboardUrl}" class="button">Open Dashboard →</a>
+    `),
+  })
+}

@@ -4,9 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Layers, Check, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Header } from '@/components/public/header'
-import Footer from '@/components/public/footer'
 import { Button } from '@/components/ui/button'
+import { useSearchParams } from 'next/navigation'
 
 const FEATURES = [
   'Branded client portal — your name, your domain',
@@ -22,9 +21,13 @@ const TESTIMONIAL = {
 }
 
 export default function AuthPage() {
+  const searchParams = useSearchParams()
+  const urlError = searchParams.get('error')
+  const next = searchParams.get('next') ?? ''
+
   const [email, setEmail]           = useState('')
   const [submitted, setSubmitted]   = useState(false)
-  const [error, setError]           = useState<string | null>(null)
+  const [error, setError]           = useState<string | null>(urlError)
   const [loading, setLoading]       = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -34,10 +37,14 @@ export default function AuthPage() {
 
     const supabase = createClient()
 
+    // Thread `next` through so the callback can redirect back to the original page
+    const callbackUrl = new URL(`${window.location.origin}/auth/callback`)
+    if (next) callbackUrl.searchParams.set('next', next)
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl.toString(),
       },
     })
 

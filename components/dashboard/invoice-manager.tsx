@@ -1,0 +1,358 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { Invoice, Project, LineItem } from '@/types/database'
+import { formatCurrency, formatDate } from '@/lib/format'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
+import {
+  Plus, Trash2, Send, FileText, Loader2, ChevronDown, ChevronUp, X,
+} from 'lucide-react'
+import { EmptyState } from './empty-state'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+const CURRENCIES = ['USD', 'AUD', 'GBP', 'EUR', 'CAD', 'NZD']
+
+const STATUS_CONFIG: Record<Invoice['status'], { label: string; className: string }> = {
+  draft:   { label: 'Draft',   className: 'bg-surface-container text-on-surface-variant border-outline-variant' },
+  sent:    { label: 'Sent',    className: 'bg-blue-50 text-blue-600 border-blue-200' },
+  paid:    { label: 'Paid',    className: 'bg-green-50 text-green-700 border-green-200' },
+  overdue: { label: 'Overdue', className: 'bg-red-50 text-red-600 border-red-200' },
+}
+
+interface InvoiceManagerProps {
+  clientId: string
+  clientName: string
+  clientEmail: string
+  invoices: Invoice[]
+  projects: Pick<Project, 'id' | 'title'>[]
+  freelancerName: string
+  businessName: string
+}
+
+const EMPTY_LINE: LineItem = { description: '', quantity: 1, unit_price: 0 }
+
+export function InvoiceManager({
+  clientId, clientName, invoices, projects,
+}: InvoiceManagerProps) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [modalOpen, setModalOpen] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  // Form state
+  const [lineItems, setLineItems] = useState<LineItem[]>([{ ...EMPTY_LINE }])
+  const [taxRate, setTaxRate] = useState('0')
+  const [currency, setCurrency] = useState('USD')
+  const [dueDate, setDueDate] = useState('')
+  const [projectId, setProjectId] = useState('')
+  const [notes, setNotes] = useState('')
+
+  function addLine() { setLineItems(l => [...l, { ...EMPTY_LINE }]) }
+  function removeLine(i: number) { setLineItems(l => l.filter((_, idx) => idx !== i)) }
+  function updateLine(i: number, field: keyof LineItem, value: string) {
+    setLineItems(l => l.map((item, idx) =>
+      idx === i ? { ...item, [field]: field === 'description' ? value : parseFloat(value) || 0 } : item
+    ))
+  }
+
+  const subtotal = lineItems.reduce((s, l) => s + l.quantity * l.unit_price, 0)
+  const taxAmt = subtotal * (parseFloat(taxRate) / 100 || 0)
+  const total = subtotal + taxAmt
+
+  function resetForm() {
+    setLineItems([{ ...EMPTY_LINE }])
+    setTaxRate('0')
+    setCurrency('USD')
+    setDueDate('')
+    setProjectId('')
+    setNotes('')
+  }
+
+  function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    startTransition(async () => {
+      const res = await fetch(`/api/clients/${clientId}/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          line_items: lineItems.filter(l => l.description),
+          tax_rate: parseFloat(taxRate) || 0,
+          currency,
+          due_date: dueDate || null,
+          project_id: projectId || null,
+          notes: notes || null,
+        }),
+      })
+      if (res.ok) {
+        toast.success('Invoice created')
+        resetForm()
+        setModalOpen(false)
+        router.refresh()
+      } else {
+        const d = await res.json()
+        toast.error(d.error ?? 'Failed to create invoice')
+      }
+    })
+  }
+
+  function handleSend(invoiceId: string) {
+    startTransition(async () => {
+      const res = await fetch(`/api/invoices/${invoiceId}/send`, { method: 'POST' })
+      if (res.ok) {
+        toast.success('Invoice sent to client')
+        router.refresh()
+      } else {
+        toast.error('Failed to send invoice')
+      }
+    })
+  }
+
+  function handleDelete(invoiceId: string) {
+    startTransition(async () => {
+      const res = await fetch(`/api/invoices/${invoiceId}`, { method: 'DELETE' })
+      if (res.ok) {
+        toast.success('Invoice deleted')
+        router.refresh()
+      } else {
+        toast.error('Cannot delete a paid invoice')
+      }
+    })
+  }
+
+  return (
+    <div className="max-w-4xl flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-on-surface">Invoices for {clientName}</h2>
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors"
+        >
+          <Plus className="size-4" />New invoice
+        </button>
+      </div>
+
+      {invoices.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="No invoices yet"
+          description="Create an invoice for this client and send it directly through their portal."
+        />
+      ) : (
+        <div className="bg-white rounded-xl border border-outline-variant overflow-hidden">
+          <div className="divide-y divide-outline-variant">
+            {invoices.map(inv => {
+              const cfg = STATUS_CONFIG[inv.status]
+              const expanded = expandedId === inv.id
+
+              return (
+                <div key={inv.id} className="group">
+                  <div className="flex items-center gap-4 px-5 py-4 hover:bg-surface-container/40 transition-colors">
+                    <button
+                      onClick={() => setExpandedId(expanded ? null : inv.id)}
+                      className="shrink-0 text-on-surface-variant"
+                    >
+                      {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                    </button>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-on-surface">{inv.invoice_number}</span>
+                        <span className={cn('text-[11px] font-semibold px-1.5 py-0.5 rounded-md border', cfg.className)}>
+                          {cfg.label}
+                        </span>
+                      </div>
+                      {inv.due_date && (
+                        <p className="text-xs text-on-surface-variant">Due {formatDate(inv.due_date)}</p>
+                      )}
+                    </div>
+
+                    <span className="text-base font-bold text-on-surface">
+                      {formatCurrency(inv.total, inv.currency)}
+                    </span>
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {inv.status === 'draft' && (
+                        <button
+                          onClick={() => handleSend(inv.id)}
+                          disabled={isPending}
+                          className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-semibold text-white bg-ds-secondary hover:bg-ds-secondary-container transition-colors"
+                          title="Send to client"
+                        >
+                          <Send className="size-3" />Send
+                        </button>
+                      )}
+                      {inv.status !== 'paid' && (
+                        <button
+                          onClick={() => handleDelete(inv.id)}
+                          className="size-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {expanded && (
+                    <div className="px-5 pb-4 bg-surface-container/30 border-t border-outline-variant">
+                      <div className="pt-3 flex flex-col gap-2">
+                        <div className="grid grid-cols-[1fr_80px_80px_100px] text-[11px] font-bold text-on-surface-variant uppercase tracking-wider pb-2 border-b border-outline-variant">
+                          <span>Description</span>
+                          <span className="text-right">Qty</span>
+                          <span className="text-right">Unit price</span>
+                          <span className="text-right">Total</span>
+                        </div>
+                        {(inv.line_items as LineItem[]).map((item, i) => (
+                          <div key={i} className="grid grid-cols-[1fr_80px_80px_100px] text-sm">
+                            <span className="text-on-surface">{item.description}</span>
+                            <span className="text-right text-on-surface-variant">{item.quantity}</span>
+                            <span className="text-right text-on-surface-variant">{formatCurrency(item.unit_price, inv.currency)}</span>
+                            <span className="text-right font-semibold">{formatCurrency(item.quantity * item.unit_price, inv.currency)}</span>
+                          </div>
+                        ))}
+                        <div className="flex flex-col items-end gap-1 pt-2 border-t border-outline-variant text-sm">
+                          <span className="text-on-surface-variant">Subtotal: {formatCurrency(inv.subtotal, inv.currency)}</span>
+                          {inv.tax_rate > 0 && (
+                            <span className="text-on-surface-variant">Tax ({inv.tax_rate}%): {formatCurrency(inv.tax_amount, inv.currency)}</span>
+                          )}
+                          <span className="font-bold text-base text-on-surface">Total: {formatCurrency(inv.total, inv.currency)}</span>
+                        </div>
+                        {inv.notes && (
+                          <p className="text-xs text-on-surface-variant mt-1 italic">Note: {inv.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Create invoice modal */}
+      <Dialog open={modalOpen} onOpenChange={v => { if (!v) resetForm(); setModalOpen(v) }}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New invoice</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleCreate} className="flex flex-col gap-5 py-2">
+            {/* Line items */}
+            <div className="flex flex-col gap-2">
+              <Label>Line items *</Label>
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-[1fr_64px_100px_32px] gap-2 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider px-1">
+                  <span>Description</span><span>Qty</span><span>Unit price</span><span />
+                </div>
+                {lineItems.map((item, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_64px_100px_32px] gap-2 items-center">
+                    <Input
+                      value={item.description}
+                      onChange={e => updateLine(i, 'description', e.target.value)}
+                      placeholder="Service description"
+                      required
+                    />
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      onChange={e => updateLine(i, 'quantity', e.target.value)}
+                      min="0.01"
+                      step="0.01"
+                      className="text-right"
+                    />
+                    <Input
+                      type="number"
+                      value={item.unit_price}
+                      onChange={e => updateLine(i, 'unit_price', e.target.value)}
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="text-right"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeLine(i)}
+                      disabled={lineItems.length === 1}
+                      className="size-8 flex items-center justify-center text-on-surface-variant hover:text-red-500 disabled:opacity-30"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={addLine} className="flex items-center gap-1.5 text-xs font-semibold text-ds-secondary hover:underline w-fit">
+                <Plus className="size-3.5" />Add line
+              </button>
+            </div>
+
+            {/* Totals preview */}
+            <div className="bg-surface-container rounded-xl p-4 flex flex-col gap-1.5 text-sm">
+              <div className="flex justify-between text-on-surface-variant">
+                <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
+              </div>
+              {parseFloat(taxRate) > 0 && (
+                <div className="flex justify-between text-on-surface-variant">
+                  <span>Tax ({taxRate}%)</span><span>{formatCurrency(taxAmt)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-base border-t border-outline-variant pt-1.5 mt-0.5">
+                <span>Total</span><span>{formatCurrency(total)} {currency}</span>
+              </div>
+            </div>
+
+            {/* Settings row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label>Currency</Label>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Tax rate (%)</Label>
+                <Input type="number" value={taxRate} onChange={e => setTaxRate(e.target.value)} min="0" max="100" step="0.01" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Due date</Label>
+                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Project (optional)</Label>
+                <Select value={projectId} onValueChange={setProjectId}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>Notes (visible to client)</Label>
+              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Payment terms, bank details, etc." rows={2} />
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isPending || lineItems.every(l => !l.description)}>
+                {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
+                Create invoice
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
