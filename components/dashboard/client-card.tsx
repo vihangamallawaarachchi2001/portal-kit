@@ -54,7 +54,7 @@ export function ClientCard({ client, onSendMagicLink, onArchive }: ClientCardPro
   return (
     <Link
       href={`/dashboard/clients/${client.id}`}
-      className="group block bg-white rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-200 overflow-hidden"
+      className="group block bg-white rounded-md shadow-sm hover:shadow-lg transition-shadow duration-200 overflow-hidden"
     >
       {/* ── Card body ─────────────────────────────────── */}
       <div className="p-5">
@@ -62,7 +62,7 @@ export function ClientCard({ client, onSendMagicLink, onArchive }: ClientCardPro
         <div className="flex items-start gap-3">
           {/* Avatar */}
           <div
-            className="size-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5"
+            className="size-9 rounded-md flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5"
             style={{ background: accent }}
           >
             {getInitials(client.name)}
@@ -107,13 +107,13 @@ export function ClientCard({ client, onSendMagicLink, onArchive }: ClientCardPro
         {/* Project status */}
         <div className="mt-3.5">
           {statusCfg ? (
-            <span className={cn('inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1 rounded-lg', statusCfg.bg, statusCfg.text)}>
+            <span className={cn('inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1 rounded-md', statusCfg.bg, statusCfg.text)}>
               <span className={cn('size-1.5 rounded-full', statusCfg.dot)} />
               {statusCfg.label}
               <span className="opacity-60">· {latestActive?.title}</span>
             </span>
           ) : (
-            <span className="inline-flex items-center text-[12px] font-medium px-2.5 py-1 rounded-lg bg-surface-container text-on-surface-variant">
+            <span className="inline-flex items-center text-[12px] font-medium px-2.5 py-1 rounded-md bg-surface-container text-on-surface-variant">
               No active projects
             </span>
           )}
