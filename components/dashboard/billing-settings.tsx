@@ -69,7 +69,7 @@ export function BillingSettings({ plan, subscriptionStatus, hasBilling, usage, j
   return (
     <div className="flex flex-col gap-6">
       {/* Current plan + usage */}
-      <div className="bg-white rounded-2xl border border-outline-variant overflow-hidden">
+      <div className="bg-white rounded-md border border-outline-variant overflow-hidden">
         <div className="px-6 py-4 border-b border-outline-variant bg-surface-container/40">
           <h2 className="text-sm font-bold text-on-surface">Current Plan</h2>
           <p className="text-xs text-on-surface-variant mt-0.5">Your active subscription and usage.</p>
@@ -77,7 +77,7 @@ export function BillingSettings({ plan, subscriptionStatus, hasBilling, usage, j
         <div className="p-6 flex flex-col gap-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-ds-secondary/10 flex items-center justify-center">
+              <div className="size-10 rounded-md bg-ds-secondary/10 flex items-center justify-center">
                 <CreditCard className="size-5 text-ds-secondary" />
               </div>
               <div>
@@ -88,7 +88,7 @@ export function BillingSettings({ plan, subscriptionStatus, hasBilling, usage, j
               </div>
             </div>
             {hasBilling && (
-              <Button variant="outline" size="sm" onClick={handleManageBilling} disabled={isPending} className="rounded-xl h-9">
+              <Button variant="outline" size="sm" onClick={handleManageBilling} disabled={isPending} className="rounded-md h-9">
                 {isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
                 Manage billing
               </Button>
@@ -104,15 +104,15 @@ export function BillingSettings({ plan, subscriptionStatus, hasBilling, usage, j
 
       {/* Upgrade */}
       {plan === 'free' && (
-        <div className="bg-white rounded-2xl border border-outline-variant overflow-hidden">
+        <div className="bg-white rounded-md border border-outline-variant overflow-hidden">
           <div className="px-6 py-4 border-b border-outline-variant bg-surface-container/40 flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h2 className="text-sm font-bold text-on-surface">Upgrade Your Plan</h2>
               <p className="text-xs text-on-surface-variant mt-0.5">Unlock unlimited portals, more storage, and premium features.</p>
             </div>
-            <div className="flex items-center bg-surface-container border border-outline-variant rounded-xl p-0.5">
+            <div className="flex items-center bg-surface-container border border-outline-variant rounded-md p-0.5">
               {(['monthly', 'annual'] as const).map(p => (
-                <button key={p} onClick={() => setBilling(p)} className={cn('px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all', billing === p ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}>
+                <button key={p} onClick={() => setBilling(p)} className={cn('px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all', billing === p ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}>
                   {p === 'monthly' ? 'Monthly' : 'Annual · 20% off'}
                 </button>
               ))}
@@ -121,7 +121,7 @@ export function BillingSettings({ plan, subscriptionStatus, hasBilling, usage, j
 
           <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {PLANS.filter(p => p.id !== 'free').map(p => (
-              <div key={p.id} className={cn('rounded-2xl border-2 p-5 flex flex-col gap-4 relative overflow-hidden', p.popular ? 'border-ds-secondary' : 'border-outline-variant')}>
+              <div key={p.id} className={cn('rounded-md border-2 p-5 flex flex-col gap-4 relative overflow-hidden', p.popular ? 'border-ds-secondary' : 'border-outline-variant')}>
                 {p.popular && (
                   <div className="absolute top-0 right-0">
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white uppercase tracking-wider bg-ds-secondary px-3 py-1 rounded-bl-xl">
@@ -148,7 +148,7 @@ export function BillingSettings({ plan, subscriptionStatus, hasBilling, usage, j
                 <button
                   onClick={() => handleUpgrade(p.id)}
                   disabled={isPending}
-                  className={cn('h-10 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2', p.popular ? 'bg-ds-secondary text-white hover:bg-ds-secondary-container shadow-md shadow-ds-secondary/20' : 'border-2 border-ds-secondary/30 text-ds-secondary hover:bg-ds-secondary/5')}
+                  className={cn('h-10 rounded-md font-semibold text-sm transition-colors flex items-center justify-center gap-2', p.popular ? 'bg-ds-secondary text-white hover:bg-ds-secondary-container shadow-md shadow-ds-secondary/20' : 'border-2 border-ds-secondary/30 text-ds-secondary hover:bg-ds-secondary/5')}
                 >
                   {loadingPlan === p.id && isPending ? <Loader2 className="size-4 animate-spin" /> : <><ArrowRight className="size-4" />Upgrade to {p.name}</>}
                 </button>
@@ -165,7 +165,7 @@ function UsageCard({ icon: Icon, label, used, max, unit }: { icon: React.Element
   const pct     = max != null ? Math.min((used / max) * 100, 100) : 0
   const atLimit = max != null && used >= max
   return (
-    <div className="flex flex-col gap-2.5 p-4 rounded-xl bg-surface-container/50 border border-outline-variant/60">
+    <div className="flex flex-col gap-2.5 p-4 rounded-md bg-surface-container/50 border border-outline-variant/60">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon className="size-4 text-on-surface-variant" />
