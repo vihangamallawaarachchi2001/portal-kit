@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { DashboardClientList } from '@/components/dashboard/dashboard-client-list'
-import { Users } from 'lucide-react'
+import { ClientsView, type EnrichedClient } from '@/components/dashboard/clients-view'
 
 export const revalidate = 0
 
@@ -26,7 +25,7 @@ export default async function ClientsPage() {
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
 
-  const enrichedClients = (clients ?? []).map(c => {
+  const enrichedClients: EnrichedClient[] = (clients ?? []).map(c => {
     const projects = (c.projects ?? []).filter((p: { deleted_at: string | null }) => !p.deleted_at)
     const outstanding = (c.invoices ?? [])
       .filter((i: { status: string }) => i.status === 'sent' || i.status === 'overdue')
@@ -47,31 +46,7 @@ export default async function ClientsPage() {
       })),
       outstanding, pending_files_total, unread_messages_total,
     }
-  })
+  }) as EnrichedClient[]
 
-  return (
-    <div className="w-full">
-      {/* Page hero */}
-      <div className="px-8 pt-8 pb-6 border-b border-outline-variant/50 bg-white">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1">Clients</p>
-            <h1 className="text-2xl font-extrabold text-on-surface tracking-tight">Client Portals</h1>
-            <p className="text-sm text-on-surface-variant mt-1">Manage all your active client workspaces.</p>
-          </div>
-          {enrichedClients.length > 0 && (
-            <div className="flex items-center gap-2 shrink-0 bg-surface-container rounded-xl px-4 py-2.5">
-              <Users className="size-4 text-on-surface-variant" />
-              <span className="text-sm font-semibold text-on-surface">{enrichedClients.length}</span>
-              <span className="text-sm text-on-surface-variant">active portal{enrichedClients.length !== 1 ? 's' : ''}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="p-8">
-        <DashboardClientList clients={enrichedClients as Parameters<typeof DashboardClientList>[0]['clients']} />
-      </div>
-    </div>
-  )
+  return <ClientsView clients={enrichedClients} />
 }

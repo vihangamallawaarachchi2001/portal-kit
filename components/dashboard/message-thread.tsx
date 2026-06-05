@@ -134,7 +134,7 @@ export function MessageThread({ clientId, clientName, projects, currentUser, sen
           description="Create a project first to start messaging."
         />
       ) : (
-        <div className="flex-1 bg-white rounded-xl border border-outline-variant flex flex-col overflow-hidden">
+        <div className="flex-1 bg-white rounded-md border border-outline-variant flex flex-col overflow-hidden">
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
             {messages.length === 0 ? (
@@ -162,7 +162,7 @@ export function MessageThread({ clientId, clientName, projects, currentUser, sen
                     </Avatar>
                     <div className={cn('flex flex-col gap-1', isMe ? 'items-end' : 'items-start')}>
                       <div className={cn(
-                        'px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed',
+                        'px-3.5 py-2.5 rounded-md text-sm leading-relaxed',
                         isMe
                           ? 'bg-ds-secondary text-white rounded-tr-sm'
                           : 'bg-surface-container text-on-surface rounded-tl-sm'
@@ -207,7 +207,7 @@ export function MessageThread({ clientId, clientName, projects, currentUser, sen
               <button
                 type="submit"
                 disabled={!content.trim() || isSending}
-                className="size-10 rounded-xl bg-ds-secondary text-white flex items-center justify-center hover:bg-ds-secondary-container transition-colors disabled:opacity-50 shrink-0"
+                className="size-10 rounded-md bg-ds-secondary text-white flex items-center justify-center hover:bg-ds-secondary-container transition-colors disabled:opacity-50 shrink-0"
               >
                 {isSending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               </button>

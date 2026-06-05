@@ -1,9 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from '@/components/dashboard/sidebar'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardShell } from '@/components/dashboard/dashboard-shell'
 import { Profile } from '@/types/database'
-import { Toaster } from '@/components/ui/sonner'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -18,6 +16,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .single()
 
   if (!profile?.onboarding_completed) redirect('/onboarding')
+
+  const { count: clientCount } = await supabase
+    .from('clients')
+    .select('id', { count: 'exact', head: true })
+    .eq('freelancer_id', user.id)
+    .eq('status', 'active')
+    .is('deleted_at', null)
 
   const { count: unreadCount } = await supabase
     .from('messages')
@@ -36,13 +41,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     )
 
   return (
-    <div className="min-h-screen bg-surface flex">
-      <Sidebar profile={profile as Profile} unreadCount={unreadCount ?? 0} />
-      <div className="flex-1 min-w-0 flex flex-col" style={{ marginLeft: '240px' }}>
-        <DashboardHeader profile={profile as Profile} unreadCount={unreadCount ?? 0} />
-        <main className="flex-1 pt-14 min-h-screen">{children}</main>
-      </div>
-      <Toaster position="bottom-right" richColors />
-    </div>
+    <DashboardShell
+      profile={profile as Profile}
+      unreadCount={unreadCount ?? 0}
+      clientCount={clientCount ?? 0}
+    >
+      {children}
+    </DashboardShell>
   )
 }

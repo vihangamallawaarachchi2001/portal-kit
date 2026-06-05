@@ -282,9 +282,9 @@
   --muted:              var(--surface-container);          /* #e5eeff */
   --muted-foreground:   var(--on-surface-variant);         /* #45464d */
 
-  /* Accent — green for approved/success states */
-  --accent:             var(--ds-tertiary-action);         /* #009842 */
-  --accent-foreground:  #ffffff;
+  /* Accent — subtle blue tint for hover states (dropdowns, menus) */
+  --accent:             var(--surface-container-low);      /* #eff4ff */
+  --accent-foreground:  var(--ds-secondary);               /* #0051d5 */
 
   /* Destructive */
   --destructive:        var(--ds-error);                   /* #ba1a1a */

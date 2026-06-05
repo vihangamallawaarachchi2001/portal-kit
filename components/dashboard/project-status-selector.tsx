@@ -64,7 +64,7 @@ export function ProjectStatusSelector({ projectId, currentStatus }: ProjectStatu
         <button
           disabled={isPending}
           className={cn(
-            'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors shrink-0',
+            'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-semibold transition-colors shrink-0',
             STATUS_STYLES[status]
           )}
         >

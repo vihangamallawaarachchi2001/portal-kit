@@ -3,13 +3,12 @@
 import { useState, useRef, useTransition } from 'react'
 import { Profile } from '@/types/database'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/format'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Camera, Loader2, User, Building2, MessageSquare, Mail } from 'lucide-react'
+import { Camera, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface ProfileSettingsProps {
@@ -55,7 +54,6 @@ export function ProfileSettings({ profile, email }: ProfileSettingsProps) {
         const { data } = supabase.storage.from('portalkit_bucket').getPublicUrl(path)
         avatarUrl = data.publicUrl
       }
-
       const res = await fetch('/api/settings/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -74,93 +72,135 @@ export function ProfileSettings({ profile, email }: ProfileSettingsProps) {
   const displayName = form.business_name || form.full_name || 'Me'
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      {/* Avatar card */}
-      <div className="bg-white rounded-2xl border border-outline-variant overflow-hidden">
-        <div className="px-6 py-4 border-b border-outline-variant bg-surface-container/40">
-          <h2 className="text-sm font-bold text-on-surface">Profile Photo</h2>
-          <p className="text-xs text-on-surface-variant mt-0.5">This appears on your portal and emails.</p>
-        </div>
-        <div className="p-6 flex items-center gap-5">
+    <form onSubmit={handleSubmit}>
+      {/* ── Page title ────────────────────────────── */}
+      <div className="px-8 pt-8 pb-8">
+        <h2 className="text-lg font-bold text-on-surface tracking-tight">Profile</h2>
+        <p className="text-sm text-on-surface-variant mt-0.5">
+          This information is shown to your clients in their portals.
+        </p>
+      </div>
+
+      {/* ── Avatar row ────────────────────────────── */}
+      <SettingsRow
+        label="Avatar"
+        description="Shown on your client portal and outgoing emails."
+      >
+        <div className="flex items-center gap-5">
           <div className="relative shrink-0">
-            <Avatar className="size-20">
+            <Avatar className="size-16">
               <AvatarImage src={avatarPreview ?? form.avatar_url} />
-              <AvatarFallback className="text-2xl bg-ds-secondary/10 text-ds-secondary font-bold">
+              <AvatarFallback className="text-xl bg-ds-secondary/10 text-ds-secondary font-bold">
                 {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute -bottom-1 -right-1 size-7 rounded-full bg-ds-secondary text-white flex items-center justify-center shadow-md hover:bg-ds-secondary-container transition-colors"
+              className="absolute -bottom-1 -right-1 size-6 rounded-full bg-ds-secondary text-white flex items-center justify-center shadow-md hover:bg-ds-secondary-container transition-colors"
             >
-              <Camera className="size-3.5" />
+              <Camera className="size-3" />
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
-          <div>
-            <p className="text-base font-semibold text-on-surface">{displayName}</p>
-            <p className="text-sm text-on-surface-variant">{email}</p>
+          <div className="flex flex-col gap-1.5">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-xs text-ds-secondary hover:underline mt-1 font-medium"
+              className="text-sm font-semibold text-ds-secondary hover:text-ds-secondary-container transition-colors text-left"
             >
-              Change photo
+              Upload new photo
             </button>
+            <p className="text-xs text-on-surface-variant">JPG, PNG or GIF. Max 2MB.</p>
           </div>
         </div>
-      </div>
+      </SettingsRow>
 
-      {/* Profile fields */}
-      <div className="bg-white rounded-2xl border border-outline-variant overflow-hidden">
-        <div className="px-6 py-4 border-b border-outline-variant bg-surface-container/40">
-          <h2 className="text-sm font-bold text-on-surface">Personal Details</h2>
-          <p className="text-xs text-on-surface-variant mt-0.5">Your name and business info shown to clients.</p>
+      <Divider />
+
+      {/* ── Name fields ───────────────────────────── */}
+      <SettingsRow
+        label="Full Name"
+        description="Your personal name used on emails and the portal."
+      >
+        <Input
+          value={form.full_name}
+          onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+          placeholder="Jane Smith"
+          className="rounded-md h-10 max-w-xs"
+        />
+      </SettingsRow>
+
+      <Divider />
+
+      <SettingsRow
+        label="Business Name"
+        description="Shown as your sender identity on client portals."
+      >
+        <Input
+          value={form.business_name}
+          onChange={e => setForm(f => ({ ...f, business_name: e.target.value }))}
+          placeholder="Acme Design Co."
+          className="rounded-md h-10 max-w-xs"
+        />
+      </SettingsRow>
+
+      <Divider />
+
+      {/* ── Tagline ───────────────────────────────── */}
+      <SettingsRow
+        label="Tagline"
+        description="A short line shown below your name on client portals."
+      >
+        <Input
+          value={form.tagline}
+          onChange={e => setForm(f => ({ ...f, tagline: e.target.value }))}
+          placeholder="Design that drives results"
+          className="rounded-md h-10 max-w-sm"
+        />
+      </SettingsRow>
+
+      <Divider />
+
+      {/* ── Email (read-only) ─────────────────────── */}
+      <SettingsRow
+        label="Email"
+        description="Your login email. Contact support to change it."
+      >
+        <div className="h-10 px-3.5 rounded-md border border-outline-variant/60 bg-surface-container/60 flex items-center max-w-xs">
+          <span className="text-sm text-on-surface-variant select-all">{email}</span>
         </div>
-        <div className="p-6 flex flex-col gap-5">
-          {/* Email — read-only */}
-          <div className="flex flex-col gap-1.5">
-            <Label className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              <Mail className="size-3.5" /> Email
-            </Label>
-            <div className="h-10 px-3.5 rounded-xl border border-outline-variant bg-surface-container/50 flex items-center">
-              <span className="text-sm text-on-surface-variant">{email}</span>
-            </div>
-            <p className="text-xs text-on-surface-variant">Login email — cannot be changed here.</p>
-          </div>
+      </SettingsRow>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="s-name" className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                <User className="size-3.5" /> Full Name
-              </Label>
-              <Input id="s-name" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Jane Smith" className="h-10 rounded-xl" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="s-biz" className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                <Building2 className="size-3.5" /> Business Name
-              </Label>
-              <Input id="s-biz" value={form.business_name} onChange={e => setForm(f => ({ ...f, business_name: e.target.value }))} placeholder="Acme Design Co." className="h-10 rounded-xl" />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="s-tagline" className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              <MessageSquare className="size-3.5" /> Tagline
-            </Label>
-            <Input id="s-tagline" value={form.tagline} onChange={e => setForm(f => ({ ...f, tagline: e.target.value }))} placeholder="Design that drives results" className="h-10 rounded-xl" />
-            <p className="text-xs text-on-surface-variant">Shown on your client portal header.</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isPending} className="h-10 px-6 rounded-xl">
+      {/* ── Footer ────────────────────────────────── */}
+      <div className="px-8 py-6 flex justify-end border-t border-outline-variant/30 mt-2">
+        <Button type="submit" disabled={isPending} className="h-10 px-6 rounded-md">
           {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
           Save changes
         </Button>
       </div>
     </form>
   )
+}
+
+function SettingsRow({ label, description, children }: {
+  label: string
+  description: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="px-8 py-5 flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-8">
+      {/* Left: label + description */}
+      <div className="sm:w-52 shrink-0">
+        <p className="text-sm font-semibold text-on-surface">{label}</p>
+        <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">{description}</p>
+      </div>
+      {/* Right: control */}
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  )
+}
+
+function Divider() {
+  return <div className="mx-8 h-px bg-outline-variant/25" />
 }
