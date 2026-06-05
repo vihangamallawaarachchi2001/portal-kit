@@ -8,11 +8,11 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Trash2, Send, FileText, Loader2, ChevronDown, ChevronUp, X,
+  Receipt, CalendarDays, Percent, FolderOpen,
 } from 'lucide-react'
 import { EmptyState } from './empty-state'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -132,7 +132,7 @@ export function InvoiceManager({
         <h2 className="text-base font-semibold text-on-surface">Invoices for {clientName}</h2>
         <button
           onClick={() => setModalOpen(true)}
-          className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors"
+          className="flex items-center gap-1.5 h-9 px-4 rounded-md bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors"
         >
           <Plus className="size-4" />New invoice
         </button>
@@ -145,7 +145,7 @@ export function InvoiceManager({
           description="Create an invoice for this client and send it directly through their portal."
         />
       ) : (
-        <div className="bg-white rounded-xl border border-outline-variant overflow-hidden">
+        <div className="bg-white rounded-md border border-outline-variant overflow-hidden">
           <div className="divide-y divide-outline-variant">
             {invoices.map(inv => {
               const cfg = STATUS_CONFIG[inv.status]
@@ -182,7 +182,7 @@ export function InvoiceManager({
                         <button
                           onClick={() => handleSend(inv.id)}
                           disabled={isPending}
-                          className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-semibold text-white bg-ds-secondary hover:bg-ds-secondary-container transition-colors"
+                          className="flex items-center gap-1 h-7 px-2.5 rounded-md text-xs font-semibold text-white bg-ds-secondary hover:bg-ds-secondary-container transition-colors"
                           title="Send to client"
                         >
                           <Send className="size-3" />Send
@@ -191,7 +191,7 @@ export function InvoiceManager({
                       {inv.status !== 'paid' && (
                         <button
                           onClick={() => handleDelete(inv.id)}
-                          className="size-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-colors"
+                          className="size-7 rounded-md flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -238,118 +238,231 @@ export function InvoiceManager({
 
       {/* Create invoice modal */}
       <Dialog open={modalOpen} onOpenChange={v => { if (!v) resetForm(); setModalOpen(v) }}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>New invoice</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-xl p-0 overflow-hidden gap-0 max-h-[92vh] flex flex-col">
+          <DialogTitle className="sr-only">New invoice</DialogTitle>
+          <DialogDescription className="sr-only">Create a new invoice for this client.</DialogDescription>
 
-          <form onSubmit={handleCreate} className="flex flex-col gap-5 py-2">
-            {/* Line items */}
-            <div className="flex flex-col gap-2">
-              <Label>Line items *</Label>
+          {/* ── Header ───────────────────────────────── */}
+          <div
+            className="px-6 pt-6 pb-5 border-b border-outline-variant/30 shrink-0"
+            style={{ background: 'linear-gradient(135deg, rgba(0,81,213,0.06) 0%, transparent 70%)' }}
+          >
+            <div className="flex items-start gap-4">
+              <div className="size-10 rounded-md bg-ds-secondary/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Receipt className="size-5 text-ds-secondary" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-on-surface">New invoice</h2>
+                <p className="text-sm text-on-surface-variant mt-0.5 leading-relaxed">
+                  Create an invoice for <span className="font-semibold text-on-surface">{clientName}</span> and send it for online payment.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Scrollable form body ─────────────────── */}
+          <form onSubmit={handleCreate} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+
+              {/* Line items */}
               <div className="flex flex-col gap-2">
-                <div className="grid grid-cols-[1fr_64px_100px_32px] gap-2 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider px-1">
-                  <span>Description</span><span>Qty</span><span>Unit price</span><span />
-                </div>
-                {lineItems.map((item, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_64px_100px_32px] gap-2 items-center">
-                    <Input
-                      value={item.description}
-                      onChange={e => updateLine(i, 'description', e.target.value)}
-                      placeholder="Service description"
-                      required
-                    />
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={e => updateLine(i, 'quantity', e.target.value)}
-                      min="0.01"
-                      step="0.01"
-                      className="text-right"
-                    />
-                    <Input
-                      type="number"
-                      value={item.unit_price}
-                      onChange={e => updateLine(i, 'unit_price', e.target.value)}
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="text-right"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeLine(i)}
-                      disabled={lineItems.length === 1}
-                      className="size-8 flex items-center justify-center text-on-surface-variant hover:text-red-500 disabled:opacity-30"
-                    >
-                      <X className="size-3.5" />
-                    </button>
+                <label className="text-xs font-semibold text-on-surface">
+                  Line items <span className="text-red-500">*</span>
+                </label>
+
+                <div className="rounded-md border border-outline-variant overflow-hidden">
+                  {/* Column headers */}
+                  <div className="grid grid-cols-[1fr_60px_96px_32px] gap-2 px-3 py-2 bg-surface-container/60 border-b border-outline-variant">
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Description</span>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider text-center">Qty</span>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider text-right">Unit price</span>
+                    <span />
                   </div>
-                ))}
-              </div>
-              <button type="button" onClick={addLine} className="flex items-center gap-1.5 text-xs font-semibold text-ds-secondary hover:underline w-fit">
-                <Plus className="size-3.5" />Add line
-              </button>
-            </div>
 
-            {/* Totals preview */}
-            <div className="bg-surface-container rounded-xl p-4 flex flex-col gap-1.5 text-sm">
-              <div className="flex justify-between text-on-surface-variant">
-                <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
-              </div>
-              {parseFloat(taxRate) > 0 && (
-                <div className="flex justify-between text-on-surface-variant">
-                  <span>Tax ({taxRate}%)</span><span>{formatCurrency(taxAmt)}</span>
+                  {/* Rows */}
+                  <div className="divide-y divide-outline-variant/40">
+                    {lineItems.map((item, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_60px_96px_32px] gap-2 items-center px-3 py-2">
+                        <Input
+                          value={item.description}
+                          onChange={e => updateLine(i, 'description', e.target.value)}
+                          placeholder="Service or product description"
+                          required
+                          className="h-9 rounded-md border-0 shadow-none focus-visible:ring-0 px-0 text-sm bg-transparent"
+                        />
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={e => updateLine(i, 'quantity', e.target.value)}
+                          min="0.01"
+                          step="0.01"
+                          className="h-9 rounded-md text-center text-sm"
+                        />
+                        <Input
+                          type="number"
+                          value={item.unit_price}
+                          onChange={e => updateLine(i, 'unit_price', e.target.value)}
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          className="h-9 rounded-md text-right text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeLine(i)}
+                          disabled={lineItems.length === 1}
+                          className="size-7 flex items-center justify-center rounded-md text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-25"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-              <div className="flex justify-between font-bold text-base border-t border-outline-variant pt-1.5 mt-0.5">
-                <span>Total</span><span>{formatCurrency(total)} {currency}</span>
+
+                <button
+                  type="button"
+                  onClick={addLine}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-ds-secondary hover:text-ds-secondary/80 transition-colors w-fit"
+                >
+                  <Plus className="size-3.5" />Add line
+                </button>
               </div>
+
+              {/* Totals preview */}
+              <div className="rounded-md bg-surface-container/60 border border-outline-variant overflow-hidden">
+                <div className="px-4 py-3 flex flex-col gap-1.5">
+                  <div className="flex justify-between items-center text-sm text-on-surface-variant">
+                    <span>Subtotal</span>
+                    <span className="tabular-nums">{formatCurrency(subtotal)}</span>
+                  </div>
+                  {parseFloat(taxRate) > 0 && (
+                    <div className="flex justify-between items-center text-sm text-on-surface-variant">
+                      <span>Tax ({taxRate}%)</span>
+                      <span className="tabular-nums">{formatCurrency(taxAmt)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-between items-center px-4 py-3 bg-ds-secondary/8 border-t border-ds-secondary/15">
+                  <span className="text-sm font-bold text-ds-secondary">Total due</span>
+                  <span className="text-xl font-extrabold text-ds-secondary tabular-nums tracking-tight">
+                    {formatCurrency(total)} <span className="text-sm font-semibold opacity-70">{currency}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Settings grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-on-surface">Currency</label>
+                  <Select value={currency} onValueChange={setCurrency}>
+                    <SelectTrigger className="h-10 rounded-md border-outline-variant">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map(c => <SelectItem key={c} value={c} className="rounded-md">{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-on-surface">Tax rate</label>
+                  <div className="relative">
+                    <Percent className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-on-surface-variant/60 pointer-events-none" />
+                    <Input
+                      type="number"
+                      value={taxRate}
+                      onChange={e => setTaxRate(e.target.value)}
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className="h-10 rounded-md pr-8"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-on-surface">Due date</label>
+                  <div className="relative">
+                    <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-on-surface-variant/60 pointer-events-none" />
+                    <Input
+                      type="date"
+                      value={dueDate}
+                      onChange={e => setDueDate(e.target.value)}
+                      className="h-10 rounded-md pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-on-surface">
+                    Project <span className="text-[10px] font-normal text-on-surface-variant">(optional)</span>
+                  </label>
+                  <Select
+                    value={projectId || '__none__'}
+                    onValueChange={v => setProjectId(v === '__none__' ? '' : v)}
+                  >
+                    <SelectTrigger className="h-10 rounded-md border-outline-variant">
+                      {projectId ? (
+                        <span className="flex items-center gap-2 flex-1 min-w-0">
+                          <FolderOpen className="size-3.5 text-on-surface-variant shrink-0" />
+                          <span className="text-sm truncate">{projects.find(p => p.id === projectId)?.title ?? 'Project'}</span>
+                        </span>
+                      ) : (
+                        <SelectValue placeholder="None" />
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__" className="rounded-md">
+                        <span className="text-on-surface-variant">None</span>
+                      </SelectItem>
+                      {projects.map(p => (
+                        <SelectItem key={p.id} value={p.id} className="rounded-md">
+                          <span className="flex items-center gap-2">
+                            <FolderOpen className="size-3.5 text-on-surface-variant shrink-0" />
+                            {p.title}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-on-surface">
+                  Notes <span className="text-[10px] font-normal text-on-surface-variant">(visible to client)</span>
+                </label>
+                <Textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Payment terms, bank details, thank-you note…"
+                  rows={2}
+                  className="rounded-md resize-none text-sm"
+                />
+              </div>
+
             </div>
 
-            {/* Settings row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label>Currency</Label>
-                <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Tax rate (%)</Label>
-                <Input type="number" value={taxRate} onChange={e => setTaxRate(e.target.value)} min="0" max="100" step="0.01" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Due date</Label>
-                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Project (optional)</Label>
-                <Select value={projectId} onValueChange={setProjectId}>
-                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">None</SelectItem>
-                    {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label>Notes (visible to client)</Label>
-              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Payment terms, bank details, etc." rows={2} />
-            </div>
-
-            <DialogFooter className="gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isPending || lineItems.every(l => !l.description)}>
+            {/* ── Footer ──────────────────────────────── */}
+            <div className="px-6 py-4 border-t border-outline-variant/30 flex items-center justify-end gap-2.5 bg-surface-container/20 shrink-0">
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                disabled={isPending}
+                className="inline-flex items-center h-9 px-4 rounded-md text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+              >
+                Cancel
+              </button>
+              <Button
+                type="submit"
+                disabled={isPending || lineItems.every(l => !l.description)}
+                className="inline-flex items-center h-9 px-5 rounded-md"
+              >
                 {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
                 Create invoice
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
