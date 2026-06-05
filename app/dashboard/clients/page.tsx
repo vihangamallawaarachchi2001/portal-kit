@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardClientList } from '@/components/dashboard/dashboard-client-list'
-import { Users } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -49,27 +48,51 @@ export default async function ClientsPage() {
     }
   })
 
+  const totalOutstanding = enrichedClients.reduce((s, c) => s + (c.outstanding ?? 0), 0)
+  const totalPending     = enrichedClients.reduce((s, c) => s + (c.pending_files_total ?? 0), 0)
+  const totalUnread      = enrichedClients.reduce((s, c) => s + (c.unread_messages_total ?? 0), 0)
+
   return (
-    <div className="w-full">
-      {/* Page hero */}
-      <div className="px-8 pt-8 pb-6 border-b border-outline-variant/50 bg-white">
-        <div className="flex items-end justify-between gap-4">
+    <div className="w-full min-h-screen">
+      {/* ── Page header ─────────────────────────────── */}
+      <div className="px-8 pt-8 pb-6">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1">Clients</p>
-            <h1 className="text-2xl font-extrabold text-on-surface tracking-tight">Client Portals</h1>
-            <p className="text-sm text-on-surface-variant mt-1">Manage all your active client workspaces.</p>
+            <h1 className="text-xl font-bold text-on-surface tracking-tight">Clients</h1>
+            <p className="text-sm text-on-surface-variant mt-0.5">
+              {enrichedClients.length > 0
+                ? `${enrichedClients.length} active portal${enrichedClients.length !== 1 ? 's' : ''}`
+                : 'Add clients to create their portals'}
+            </p>
+
+            {/* Quick stat chips — only when data exists */}
+            {enrichedClients.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                {totalOutstanding > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-ds-secondary/10 text-ds-secondary">
+                    <span className="size-1.5 rounded-full bg-ds-secondary" />
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalOutstanding)} outstanding
+                  </span>
+                )}
+                {totalPending > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
+                    <span className="size-1.5 rounded-full bg-amber-500" />
+                    {totalPending} file{totalPending !== 1 ? 's' : ''} awaiting review
+                  </span>
+                )}
+                {totalUnread > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
+                    <span className="size-1.5 rounded-full bg-blue-500" />
+                    {totalUnread} unread message{totalUnread !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-          {enrichedClients.length > 0 && (
-            <div className="flex items-center gap-2 shrink-0 bg-surface-container rounded-xl px-4 py-2.5">
-              <Users className="size-4 text-on-surface-variant" />
-              <span className="text-sm font-semibold text-on-surface">{enrichedClients.length}</span>
-              <span className="text-sm text-on-surface-variant">active portal{enrichedClients.length !== 1 ? 's' : ''}</span>
-            </div>
-          )}
         </div>
       </div>
 
-      <div className="p-8">
+      <div className="px-8 pb-12">
         <DashboardClientList clients={enrichedClients as Parameters<typeof DashboardClientList>[0]['clients']} />
       </div>
     </div>
