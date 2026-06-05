@@ -72,11 +72,11 @@ export function KpiCards({ stats }: KpiCardsProps) {
         <Link
           key={card.label}
           href={card.href}
-          className="group bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3"
+          className="group bg-white rounded-md p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3"
         >
           {/* Icon + label row */}
           <div className="flex items-center justify-between">
-            <div className={cn('size-8 rounded-xl flex items-center justify-center shrink-0', card.iconBg)}>
+            <div className={cn('size-8 rounded-md flex items-center justify-center shrink-0', card.iconBg)}>
               <card.icon className={cn('size-4', card.iconColor)} />
             </div>
             {card.alert && (
