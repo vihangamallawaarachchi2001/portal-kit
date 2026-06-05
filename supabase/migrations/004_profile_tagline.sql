@@ -1,2 +1,2 @@
 ALTER TABLE profiles
-ADD COLUMN tagline TEXT,
+ADD COLUMN tagline TEXT;
