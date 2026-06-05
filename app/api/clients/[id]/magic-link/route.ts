@@ -44,13 +44,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portalkit.app'
   const portalUrl = `${appUrl}/p/${client.portal_slug}?token=${rawToken}`
 
-  await sendPortalMagicLink({
+  sendPortalMagicLink({
     to: client.email,
     clientName: client.name,
     freelancerName: profile?.full_name ?? 'Your freelancer',
     businessName: profile?.business_name || profile?.full_name || 'PortalKit',
     portalUrl,
-  })
+  }).catch(err => console.error('[email] magic-link', err))
 
-  return ok({ sent: true })
+  return ok({ sent: true, portalUrl })
 }
