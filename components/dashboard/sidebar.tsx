@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Users, FileText, Settings,
-  LogOut, Layers, FolderOpen, BookOpen, LifeBuoy,
+  LogOut, Layers, FolderOpen, BookOpen, LifeBuoy, Zap,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -23,9 +23,10 @@ const NAV = [
 interface SidebarProps {
   profile: Profile | null
   unreadCount?: number
+  clientCount?: number
 }
 
-export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
+export function Sidebar({ profile, unreadCount = 0, clientCount = 0 }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -55,7 +56,7 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
         className="flex items-center gap-3 px-5 h-14 shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
-        <span className="flex items-center justify-center size-8 rounded-xl bg-ds-secondary shadow-lg shrink-0" style={{ boxShadow: '0 0 16px rgba(0,81,213,0.5)' }}>
+        <span className="flex items-center justify-center size-8 rounded-md bg-ds-secondary shadow-lg shrink-0" style={{ boxShadow: '0 0 16px rgba(0,81,213,0.5)' }}>
           <Layers className="size-3.75 text-white" strokeWidth={1.75} />
         </span>
         <span className="font-bold text-[15px] tracking-tight text-white">PortalKit</span>
@@ -82,7 +83,7 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
+                'flex items-center gap-2.5 px-3 py-2.5 rounded-md text-sm font-medium transition-all group',
                 active
                   ? 'bg-ds-secondary text-white'
                   : 'text-slate-400 hover:bg-white/6 hover:text-white'
@@ -116,7 +117,7 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
         <Link
           href="/dashboard/settings"
           className={cn(
-            'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+            'flex items-center gap-2.5 px-3 py-2.5 rounded-md text-sm font-medium transition-all',
             isActive('/dashboard/settings', false)
               ? 'bg-ds-secondary text-white'
               : 'text-slate-400 hover:bg-white/6 hover:text-white'
@@ -130,7 +131,7 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
           href="https://docs.portalkit.io"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-white/6 hover:text-white transition-all"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-md text-sm font-medium text-slate-400 hover:bg-white/6 hover:text-white transition-all"
         >
           <BookOpen className="size-4 shrink-0" />
           <span>Guide</span>
@@ -138,15 +139,48 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
 
         <a
           href="mailto:support@portalkit.io"
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-white/6 hover:text-white transition-all"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-md text-sm font-medium text-slate-400 hover:bg-white/6 hover:text-white transition-all"
         >
           <LifeBuoy className="size-4 shrink-0" />
           <span>Help Center</span>
         </a>
 
+        {/* ── Upgrade card (free plan only) ───────────── */}
+        {plan === 'free' && (
+          <Link
+            href="/dashboard/settings/billing"
+            className="group flex flex-col gap-2 p-3 rounded-md mb-1 mt-1 transition-all duration-200 hover:brightness-110"
+            style={{
+              background: 'linear-gradient(135deg, rgba(0,81,213,0.25) 0%, rgba(124,58,237,0.15) 100%)',
+              border: '1px solid rgba(0,81,213,0.3)',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Zap className="size-3 text-amber-400 fill-amber-400" />
+                <span className="text-[11px] font-bold text-white/90 uppercase tracking-wider">Free Plan</span>
+              </div>
+              <span className="text-[10px] font-semibold text-ds-secondary-container group-hover:text-white transition-colors">
+                Upgrade →
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
+                <div
+                  className="h-full rounded-full bg-amber-400 transition-all"
+                  style={{ width: `${Math.min((clientCount / 1) * 100, 100)}%` }}
+                />
+              </div>
+              <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                {clientCount}/1 client{clientCount === 1 ? ' limit reached' : clientCount === 0 ? ' used' : ' used'}
+              </p>
+            </div>
+          </Link>
+        )}
+
         {/* ── Profile row ──────────────────────────────── */}
         <div
-          className="flex items-center gap-2.5 px-3 py-2.5 mt-2 rounded-xl"
+          className="flex items-center gap-2.5 px-3 py-2.5 mt-2 rounded-md"
           style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           <Avatar className="size-7 shrink-0">
@@ -163,7 +197,7 @@ export function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
             onClick={handleLogout}
             disabled={isPending}
             title="Log out"
-            className="size-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-red-400 transition-colors hover:bg-white/6 shrink-0"
+            className="size-7 rounded-md flex items-center justify-center text-slate-500 hover:text-red-400 transition-colors hover:bg-white/6 shrink-0"
           >
             <LogOut className="size-3.5" />
           </button>
