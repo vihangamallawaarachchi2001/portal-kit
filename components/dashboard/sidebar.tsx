@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Users, FileText, Settings,
   LogOut, Layers, FolderOpen, BookOpen, LifeBuoy, Zap,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, MessageSquare,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -16,10 +16,11 @@ import { createClient } from '@/lib/supabase/client'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 const NAV = [
-  { href: '/dashboard',          label: 'Dashboard', icon: LayoutDashboard, exact: true  },
-  { href: '/dashboard/projects', label: 'Projects',  icon: FolderOpen,      exact: false },
-  { href: '/dashboard/clients',  label: 'Clients',   icon: Users,           exact: false },
-  { href: '/dashboard/invoices', label: 'Invoices',  icon: FileText,        exact: false },
+  { href: '/dashboard',          label: 'Dashboard', icon: LayoutDashboard, exact: true,  badge: false },
+  { href: '/dashboard/projects', label: 'Projects',  icon: FolderOpen,      exact: false, badge: false },
+  { href: '/dashboard/clients',  label: 'Clients',   icon: Users,           exact: false, badge: false },
+  { href: '/dashboard/chats',    label: 'Chats',     icon: MessageSquare,   exact: false, badge: true  },
+  { href: '/dashboard/invoices', label: 'Invoices',  icon: FileText,        exact: false, badge: false },
 ]
 
 interface SidebarProps {
@@ -150,6 +151,7 @@ export function Sidebar({
 
           {NAV.map(item => {
             const active = isActive(item.href, item.exact)
+            const showBadge = item.badge && unreadCount > 0
             return (
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>
@@ -158,15 +160,23 @@ export function Sidebar({
                     className={itemCls(active)}
                     style={active ? { boxShadow: '0 4px 12px rgba(0,81,213,0.35)' } : undefined}
                   >
-                    <item.icon
-                      className={cn(
-                        'shrink-0 transition-colors',
-                        collapsed ? 'size-4.5' : 'size-4',
-                        active ? 'text-white' : 'text-slate-500 group-hover:text-slate-300',
+                    {/* Icon — with optional dot indicator when collapsed */}
+                    <div className="relative shrink-0">
+                      <item.icon
+                        className={cn(
+                          'transition-colors',
+                          collapsed ? 'size-4.5' : 'size-4',
+                          active ? 'text-white' : 'text-slate-500 group-hover:text-slate-300',
+                        )}
+                      />
+                      {collapsed && showBadge && (
+                        <span className="absolute -top-1 -right-1.5 min-w-4 h-4 rounded-full bg-ds-secondary text-white text-[8px] font-bold flex items-center justify-center px-0.5 leading-none">
+                          {unreadCount > 99 ? '99' : unreadCount}
+                        </span>
                       )}
-                    />
+                    </div>
                     <Label collapsed={collapsed}>{item.label}</Label>
-                    {!collapsed && item.label === 'Dashboard' && unreadCount > 0 && (
+                    {!collapsed && showBadge && (
                       <span className={cn(
                         'ml-auto text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-4.5 text-center',
                         active ? 'bg-white/25 text-white' : 'bg-ds-secondary text-white',
@@ -178,7 +188,7 @@ export function Sidebar({
                 </TooltipTrigger>
                 {collapsed && (
                   <TooltipContent side="right" sideOffset={14}>
-                    {item.label}{item.label === 'Dashboard' && unreadCount > 0 ? ` · ${unreadCount} unread` : ''}
+                    {item.label}{showBadge ? ` · ${unreadCount} unread` : ''}
                   </TooltipContent>
                 )}
               </Tooltip>
