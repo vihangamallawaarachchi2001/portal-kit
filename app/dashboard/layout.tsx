@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/dashboard/sidebar'
+import { DashboardHeader } from '@/components/dashboard/dashboard-header'
 import { Profile } from '@/types/database'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -18,7 +19,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!profile?.onboarding_completed) redirect('/onboarding')
 
-  // Unread messages count for badge
   const { count: unreadCount } = await supabase
     .from('messages')
     .select('id', { count: 'exact', head: true })
@@ -38,8 +38,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen bg-surface flex">
       <Sidebar profile={profile as Profile} unreadCount={unreadCount ?? 0} />
-      <div className="flex-1 ml-60 flex flex-col min-h-screen">
-        <main className="flex-1">{children}</main>
+      <div className="flex-1 min-w-0 flex flex-col" style={{ marginLeft: '240px' }}>
+        <DashboardHeader profile={profile as Profile} unreadCount={unreadCount ?? 0} />
+        <main className="flex-1 pt-14 min-h-screen">{children}</main>
       </div>
       <Toaster position="bottom-right" richColors />
     </div>

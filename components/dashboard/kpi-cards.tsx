@@ -1,77 +1,101 @@
 import { DashboardStats } from '@/types/database'
 import { formatCurrency } from '@/lib/format'
-import { DollarSign, AlertTriangle, Clock, MessageSquare, Users, FolderOpen } from 'lucide-react'
+import { DollarSign, AlertTriangle, Users, FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
 interface KpiCardsProps {
   stats: DashboardStats
 }
 
 export function KpiCards({ stats }: KpiCardsProps) {
-  const cards = [
+  const cards: {
+    label: string
+    value: string
+    sub: string
+    icon: React.ElementType
+    href: string
+    alert: boolean
+    alertColor: string
+    iconBg: string
+    iconColor: string
+  }[] = [
     {
       label: 'Outstanding',
       value: formatCurrency(stats.total_outstanding),
+      sub: stats.total_outstanding > 0 ? `${formatCurrency(stats.total_outstanding)} to collect` : 'No unpaid invoices',
       icon: DollarSign,
-      color: 'text-ds-secondary',
-      bg: 'bg-ds-secondary/8',
-      description: 'Invoices sent & unpaid',
+      href: '/dashboard/invoices',
+      alert: stats.total_outstanding > 0,
+      alertColor: 'text-ds-secondary',
+      iconBg: 'bg-ds-secondary/10',
+      iconColor: 'text-ds-secondary',
     },
     {
       label: 'Overdue',
       value: formatCurrency(stats.total_overdue),
+      sub: stats.total_overdue > 0 ? 'Requires attention' : 'Nothing past due',
       icon: AlertTriangle,
-      color: stats.total_overdue > 0 ? 'text-red-600' : 'text-on-surface-variant',
-      bg: stats.total_overdue > 0 ? 'bg-red-50' : 'bg-surface-container',
-      description: 'Past due date',
-    },
-    {
-      label: 'Pending Approvals',
-      value: String(stats.pending_approvals),
-      icon: Clock,
-      color: stats.pending_approvals > 0 ? 'text-amber-600' : 'text-on-surface-variant',
-      bg: stats.pending_approvals > 0 ? 'bg-amber-50' : 'bg-surface-container',
-      description: 'Files awaiting review',
-    },
-    {
-      label: 'Unread Messages',
-      value: String(stats.unread_messages),
-      icon: MessageSquare,
-      color: stats.unread_messages > 0 ? 'text-ds-secondary' : 'text-on-surface-variant',
-      bg: stats.unread_messages > 0 ? 'bg-ds-secondary/8' : 'bg-surface-container',
-      description: 'From clients',
+      href: '/dashboard/invoices',
+      alert: stats.total_overdue > 0,
+      alertColor: 'text-red-600',
+      iconBg: stats.total_overdue > 0 ? 'bg-red-50' : 'bg-surface-container',
+      iconColor: stats.total_overdue > 0 ? 'text-red-500' : 'text-on-surface-variant',
     },
     {
       label: 'Active Clients',
       value: String(stats.active_clients),
+      sub: stats.active_clients === 1 ? '1 active portal' : `${stats.active_clients} active portals`,
       icon: Users,
-      color: 'text-on-surface-variant',
-      bg: 'bg-surface-container',
-      description: 'Non-archived portals',
+      href: '/dashboard/clients',
+      alert: false,
+      alertColor: 'text-on-surface',
+      iconBg: 'bg-surface-container',
+      iconColor: 'text-on-surface-variant',
     },
     {
       label: 'Active Projects',
       value: String(stats.active_projects),
+      sub: stats.active_projects === 1 ? '1 in progress' : `${stats.active_projects} in progress`,
       icon: FolderOpen,
-      color: 'text-on-surface-variant',
-      bg: 'bg-surface-container',
-      description: 'In progress or review',
+      href: '/dashboard/projects',
+      alert: false,
+      alertColor: 'text-on-surface',
+      iconBg: 'bg-surface-container',
+      iconColor: 'text-on-surface-variant',
     },
   ]
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {cards.map(card => (
-        <div key={card.label} className="bg-white rounded-xl border border-outline-variant p-4 flex flex-col gap-3">
-          <div className={cn('size-9 rounded-lg flex items-center justify-center', card.bg)}>
-            <card.icon className={cn('size-4', card.color)} />
+        <Link
+          key={card.label}
+          href={card.href}
+          className="group bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3"
+        >
+          {/* Icon + label row */}
+          <div className="flex items-center justify-between">
+            <div className={cn('size-8 rounded-xl flex items-center justify-center shrink-0', card.iconBg)}>
+              <card.icon className={cn('size-4', card.iconColor)} />
+            </div>
+            {card.alert && (
+              <span className={cn('size-2 rounded-full shrink-0', card.label === 'Overdue' ? 'bg-red-500' : 'bg-ds-secondary')} />
+            )}
           </div>
+
+          {/* Value + label */}
           <div>
-            <p className={cn('text-xl font-bold leading-tight', card.color)}>{card.value}</p>
-            <p className="text-xs font-semibold text-on-surface mt-0.5">{card.label}</p>
-            <p className="text-[11px] text-on-surface-variant mt-0.5">{card.description}</p>
+            <p className={cn(
+              'text-[1.6rem] font-extrabold leading-none tracking-tight tabular-nums',
+              card.alert ? card.alertColor : 'text-on-surface'
+            )}>
+              {card.value}
+            </p>
+            <p className="text-xs font-semibold text-on-surface mt-1.5">{card.label}</p>
+            <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">{card.sub}</p>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   )
