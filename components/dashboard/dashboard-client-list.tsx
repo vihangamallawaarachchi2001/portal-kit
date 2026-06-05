@@ -56,7 +56,7 @@ export function DashboardClientList({ clients }: DashboardClientListProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {clients.map(client => (
           <ClientCard
             key={client.id}
@@ -68,12 +68,15 @@ export function DashboardClientList({ clients }: DashboardClientListProps) {
         {/* Add new client card */}
         <button
           onClick={() => setModalOpen(true)}
-          className="min-h-40 rounded-md border-2 border-dashed border-outline-variant/60 hover:border-ds-secondary/40 hover:bg-ds-secondary/2 transition-all flex flex-col items-center justify-center gap-2.5 text-on-surface-variant hover:text-ds-secondary group"
+          className="min-h-55 rounded-xl border-2 border-dashed border-outline-variant/50 hover:border-ds-secondary/50 hover:bg-white transition-all flex flex-col items-center justify-center gap-3 text-on-surface-variant hover:text-ds-secondary group"
         >
-          <div className="size-8 rounded-md bg-surface-container group-hover:bg-ds-secondary/10 flex items-center justify-center transition-colors">
-            <Plus className="size-4" />
+          <div className="size-10 rounded-xl bg-surface-container group-hover:bg-ds-secondary/10 flex items-center justify-center transition-colors shadow-sm">
+            <Plus className="size-5" />
           </div>
-          <span className="text-[13px] font-semibold">Add client</span>
+          <div className="text-center">
+            <p className="text-[13px] font-semibold">Add client</p>
+            <p className="text-[11px] text-on-surface-variant/50 mt-0.5">Create a new portal</p>
+          </div>
         </button>
       </div>
       <AddClientModal open={modalOpen} onOpenChange={setModalOpen} />

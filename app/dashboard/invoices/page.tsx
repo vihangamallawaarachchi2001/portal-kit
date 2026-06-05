@@ -1,21 +1,38 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, getInitials } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import {
-  FileText, ExternalLink, TrendingUp, AlertTriangle,
-  CheckCircle2, Clock, Banknote, ArrowUpRight,
+  TrendingUp, AlertTriangle, CheckCircle2, FileText,
+  ArrowRight, Banknote, ArrowUpRight,
 } from 'lucide-react'
 
 export const revalidate = 0
 
-const STATUS_CONFIG = {
-  draft:   { label: 'Draft',   cls: 'bg-surface-container text-on-surface-variant',       icon: Clock,          dot: 'bg-slate-400' },
-  sent:    { label: 'Sent',    cls: 'bg-blue-50 text-blue-700',                           icon: TrendingUp,     dot: 'bg-blue-500'  },
-  paid:    { label: 'Paid',    cls: 'bg-emerald-50 text-emerald-700',                     icon: CheckCircle2,   dot: 'bg-emerald-500'},
-  overdue: { label: 'Overdue', cls: 'bg-red-50 text-red-700',                             icon: AlertTriangle,  dot: 'bg-red-500'   },
+/* ── Status config ─────────────────────────────────────── */
+const STATUS_CFG = {
+  draft:   { label: 'Draft',   pill: 'bg-slate-100 text-slate-600',          dot: 'bg-slate-400',   accent: '#94a3b8' },
+  sent:    { label: 'Sent',    pill: 'bg-blue-50 text-blue-700',              dot: 'bg-blue-500',    accent: '#3b82f6' },
+  paid:    { label: 'Paid',    pill: 'bg-emerald-50 text-emerald-700',        dot: 'bg-emerald-500', accent: '#10b981' },
+  overdue: { label: 'Overdue', pill: 'bg-red-50 text-red-700',                dot: 'bg-red-500',     accent: '#ef4444' },
 }
+
+/* ── Client accent colour (deterministic by name) ──────── */
+const ACCENTS = ['#0051d5','#7c3aed','#059669','#d97706','#dc2626','#0891b2','#9333ea','#16a34a']
+function clientAccent(name: string) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0
+  return ACCENTS[Math.abs(h) % ACCENTS.length]
+}
+
+/* ── Group ordering ─────────────────────────────────────── */
+const GROUPS = [
+  { key: 'overdue', label: 'Overdue',           headerCls: 'text-red-600'     },
+  { key: 'sent',    label: 'Awaiting Payment',  headerCls: 'text-blue-600'    },
+  { key: 'draft',   label: 'Drafts',            headerCls: 'text-on-surface-variant' },
+  { key: 'paid',    label: 'Paid',              headerCls: 'text-emerald-600' },
+] as const
 
 export default async function InvoicesPage() {
   const supabase = await createClient()
@@ -29,130 +46,183 @@ export default async function InvoicesPage() {
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
-  const list             = invoices ?? []
+  const list = invoices ?? []
+
   const totalOutstanding = list.filter(i => i.status === 'sent').reduce((s, i) => s + Number(i.total), 0)
   const totalOverdue     = list.filter(i => i.status === 'overdue').reduce((s, i) => s + Number(i.total), 0)
   const totalPaid        = list.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total), 0)
-  const sentCount        = list.filter(i => i.status === 'sent').length
-  const overdueCount     = list.filter(i => i.status === 'overdue').length
-  const paidCount        = list.filter(i => i.status === 'paid').length
+  const totalDraft       = list.filter(i => i.status === 'draft').reduce((s, i) => s + Number(i.total), 0)
+
+  const sentCount    = list.filter(i => i.status === 'sent').length
+  const overdueCount = list.filter(i => i.status === 'overdue').length
+  const paidCount    = list.filter(i => i.status === 'paid').length
+  const draftCount   = list.filter(i => i.status === 'draft').length
+
+  const groups = GROUPS
+    .map(g => ({ ...g, items: list.filter(i => i.status === g.key) }))
+    .filter(g => g.items.length > 0)
 
   return (
-    <div className="w-full min-h-screen">
+    <div className="w-full min-h-screen" style={{ background: '#f4f6fa' }}>
+
       {/* ── Page header ─────────────────────────────── */}
-      <div className="px-8 pt-8 pb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-on-surface tracking-tight">Invoices</h1>
-          <p className="text-sm text-on-surface-variant mt-0.5">
-            {list.length > 0 ? `${list.length} total · ${paidCount} paid` : 'Create and send invoices to clients'}
-          </p>
-        </div>
+      <div className="bg-white border-b border-outline-variant/30 px-8 pt-7 pb-6">
+        <h1 className="text-[22px] font-bold text-on-surface tracking-tight">Invoices</h1>
+        <p className="text-sm text-on-surface-variant mt-0.5">
+          {list.length > 0
+            ? `${list.length} total · ${paidCount} paid · ${formatCurrency(totalPaid)} collected`
+            : 'Create and send invoices to clients'}
+        </p>
       </div>
 
-      <div className="px-8 pb-12 flex flex-col gap-6">
+      {/* ── Content ─────────────────────────────────── */}
+      <div className="px-8 py-8 pb-14 flex flex-col gap-8">
         {list.length === 0 ? (
           <EmptyInvoices />
         ) : (
           <>
-            {/* ── Summary metrics ─────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* ── 4 Metric cards ──────────────────── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <MetricCard
-                label="Outstanding"
-                value={formatCurrency(totalOutstanding)}
-                sub={`${sentCount} invoice${sentCount !== 1 ? 's' : ''} sent`}
                 icon={TrendingUp}
-                highlight={totalOutstanding > 0}
-                highlightClass="bg-ds-secondary text-white"
+                label="Outstanding"
+                amount={formatCurrency(totalOutstanding)}
+                count={`${sentCount} invoice${sentCount !== 1 ? 's' : ''} sent`}
+                iconBg="bg-ds-secondary/10"
+                iconColor="text-ds-secondary"
+                pulse={totalOutstanding > 0}
+                pulseColor="bg-ds-secondary"
               />
               <MetricCard
-                label="Overdue"
-                value={formatCurrency(totalOverdue)}
-                sub={`${overdueCount} past due date`}
                 icon={AlertTriangle}
-                highlight={totalOverdue > 0}
-                highlightClass="bg-red-600 text-white"
+                label="Overdue"
+                amount={formatCurrency(totalOverdue)}
+                count={`${overdueCount} past due date`}
+                iconBg="bg-red-50"
+                iconColor="text-red-600"
+                pulse={totalOverdue > 0}
+                pulseColor="bg-red-500"
+                urgent={totalOverdue > 0}
               />
               <MetricCard
-                label="Collected"
-                value={formatCurrency(totalPaid)}
-                sub={`${paidCount} invoice${paidCount !== 1 ? 's' : ''} paid`}
                 icon={CheckCircle2}
-                highlight={false}
-                highlightClass=""
+                label="Collected"
+                amount={formatCurrency(totalPaid)}
+                count={`${paidCount} invoice${paidCount !== 1 ? 's' : ''} paid`}
+                iconBg="bg-emerald-50"
+                iconColor="text-emerald-600"
+              />
+              <MetricCard
+                icon={FileText}
+                label="Drafts"
+                amount={formatCurrency(totalDraft)}
+                count={`${draftCount} draft${draftCount !== 1 ? 's' : ''}`}
+                iconBg="bg-slate-100"
+                iconColor="text-slate-500"
               />
             </div>
 
-            {/* ── Invoice list ────────────────────────── */}
-            <div className="bg-white rounded-md shadow-sm overflow-hidden">
-              {/* Table header */}
-              <div className="grid grid-cols-[1fr_160px_130px_110px_72px] gap-4 px-5 py-3 bg-surface-container/50">
-                <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Invoice</p>
-                <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Client</p>
-                <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Due</p>
-                <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">Amount</p>
-                <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">Status</p>
-              </div>
+            {/* ── Grouped invoice list ─────────────── */}
+            {groups.map(group => (
+              <section key={group.key}>
+                {/* Group header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <span className={cn('text-[11px] font-bold uppercase tracking-widest whitespace-nowrap', group.headerCls)}>
+                    {group.label}
+                  </span>
+                  <span className="text-[11px] font-semibold bg-white border border-outline-variant/30 text-on-surface-variant/50 px-2 py-0.5 rounded-full">
+                    {group.items.length}
+                  </span>
+                  <div className="flex-1 h-px bg-outline-variant/25" />
+                </div>
 
-              <div className="divide-y divide-outline-variant/30">
-                {list.map(inv => {
-                  const cfg = STATUS_CONFIG[inv.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.draft
-                  const StatusIcon = cfg.icon
-                  const client = inv.clients as { id: string; name: string } | null
-                  const invNum = (inv as Record<string, unknown>).invoice_number as string
-                    ?? `INV-${inv.id.slice(0, 6).toUpperCase()}`
-                  const isOverdue = inv.status === 'overdue'
-                  const isPaid    = inv.status === 'paid'
+                {/* Invoice rows */}
+                <div className="bg-white rounded-xl border border-black/6 shadow-sm overflow-hidden divide-y divide-outline-variant/15">
+                  {group.items.map(inv => {
+                    const cfg      = STATUS_CFG[inv.status as keyof typeof STATUS_CFG] ?? STATUS_CFG.draft
+                    const client   = inv.clients as { id: string; name: string } | null
+                    const accent   = client ? clientAccent(client.name) : '#94a3b8'
+                    const invNum   = (inv as Record<string, unknown>).invoice_number as string
+                      ?? `INV-${inv.id.slice(0, 6).toUpperCase()}`
+                    const isOverdue = inv.status === 'overdue'
+                    const isPaid    = inv.status === 'paid'
+                    const href      = client ? `/dashboard/clients/${client.id}/invoices` : '#'
 
-                  return (
-                    <div
-                      key={inv.id}
-                      className={cn(
-                        'relative grid grid-cols-[1fr_160px_130px_110px_72px] gap-4 items-center pl-5 pr-5 py-4 transition-colors group',
-                        isOverdue ? 'bg-red-50/40 hover:bg-red-50/70' : 'hover:bg-surface-container/30'
-                      )}
-                    >
-                      {/* Status left border accent */}
-                      <div className={cn(
-                        'absolute left-0 top-0 bottom-0 w-0.75',
-                        isOverdue ? 'bg-red-500' : isPaid ? 'bg-emerald-500' : 'bg-transparent'
-                      )} />
-
-                      {/* Invoice # */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={cn('size-2 rounded-full shrink-0', cfg.dot)} />
-                        <p className="text-sm font-semibold text-on-surface">{invNum}</p>
-                      </div>
-
-                      {/* Client */}
-                      <p className="text-sm text-on-surface-variant truncate">{client?.name ?? '—'}</p>
-
-                      {/* Due date */}
-                      <p className={cn('text-sm', isOverdue ? 'text-red-600 font-semibold' : 'text-on-surface-variant')}>
-                        {inv.due_date ? formatDate(inv.due_date) : '—'}
-                      </p>
-
-                      {/* Amount */}
-                      <p className={cn('text-sm font-bold text-right tabular-nums', isPaid ? 'text-emerald-600' : isOverdue ? 'text-red-700' : 'text-on-surface')}>
-                        {formatCurrency(Number(inv.total))}
-                      </p>
-
-                      {/* Status + action */}
-                      <div className="flex items-center justify-end gap-2">
-                        <span className={cn('inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full', cfg.cls)}>
-                          <StatusIcon className="size-2.5" />
-                          {cfg.label}
-                        </span>
-                        {client && (
-                          <Link href={`/dashboard/clients/${client.id}/invoices`} className="opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant hover:text-ds-secondary">
-                            <ExternalLink className="size-3.5" />
-                          </Link>
+                    return (
+                      <Link
+                        key={inv.id}
+                        href={href}
+                        className={cn(
+                          'relative flex items-center gap-4 px-5 py-3.5 group transition-colors',
+                          isOverdue ? 'bg-red-50/40 hover:bg-red-50/70' : 'hover:bg-surface-container/20',
                         )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+                      >
+                        {/* Status left accent strip */}
+                        <div
+                          className="absolute left-0 top-0 bottom-0 w-[3px]"
+                          style={{ background: cfg.accent }}
+                        />
+
+                        {/* Client avatar */}
+                        <div
+                          className="size-9 rounded-lg flex items-center justify-center text-white text-[11px] font-bold shrink-0 select-none"
+                          style={{ background: accent }}
+                        >
+                          {client ? getInitials(client.name) : '?'}
+                        </div>
+
+                        {/* Client name + invoice # */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-on-surface truncate leading-tight">
+                            {client?.name ?? 'No client'}
+                          </p>
+                          <p className="text-[11px] text-on-surface-variant/55 mt-0.5">{invNum}</p>
+                        </div>
+
+                        {/* Due date */}
+                        <div className="hidden sm:block w-28 shrink-0">
+                          {inv.due_date ? (
+                            <p className={cn(
+                              'text-[12px] font-medium',
+                              isOverdue ? 'text-red-600 font-semibold' : 'text-on-surface-variant',
+                            )}>
+                              {formatDate(inv.due_date)}
+                            </p>
+                          ) : (
+                            <p className="text-[12px] text-on-surface-variant/35">—</p>
+                          )}
+                        </div>
+
+                        {/* Amount */}
+                        <div className="w-24 text-right shrink-0">
+                          <p className={cn(
+                            'text-sm font-bold tabular-nums',
+                            isPaid    ? 'text-emerald-600' :
+                            isOverdue ? 'text-red-700'     : 'text-on-surface',
+                          )}>
+                            {formatCurrency(Number(inv.total))}
+                          </p>
+                        </div>
+
+                        {/* Status pill */}
+                        <div className="hidden md:flex w-20 justify-end shrink-0">
+                          <span className={cn(
+                            'inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full',
+                            cfg.pill,
+                          )}>
+                            <span className={cn('size-1.5 rounded-full', cfg.dot)} />
+                            {cfg.label}
+                          </span>
+                        </div>
+
+                        {/* Hover arrow */}
+                        <ArrowRight className="size-4 text-on-surface-variant/25 opacity-0 group-hover:opacity-100 group-hover:text-ds-secondary transition-all shrink-0" />
+                      </Link>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
           </>
         )}
       </div>
@@ -160,32 +230,47 @@ export default async function InvoicesPage() {
   )
 }
 
-function MetricCard({ label, value, sub, icon: Icon, highlight, highlightClass }: {
-  label: string; value: string; sub: string
-  icon: React.ElementType; highlight: boolean; highlightClass: string
+/* ── Metric card ────────────────────────────────────────── */
+function MetricCard({
+  icon: Icon, label, amount, count,
+  iconBg, iconColor, pulse, pulseColor, urgent,
+}: {
+  icon: React.ElementType
+  label: string
+  amount: string
+  count: string
+  iconBg: string
+  iconColor: string
+  pulse?: boolean
+  pulseColor?: string
+  urgent?: boolean
 }) {
   return (
-    <div className={cn('rounded-md p-5 relative overflow-hidden', highlight ? highlightClass : 'bg-white shadow-sm')}>
-      {highlight && (
-        <>
-          <div className="absolute -right-6 -top-6 size-28 rounded-full bg-white/6" />
-          <div className="absolute -right-2 bottom-0 size-16 rounded-full bg-white/4" />
-        </>
-      )}
-      <div className={cn('size-8 rounded-md flex items-center justify-center mb-3 relative', highlight ? 'bg-white/15' : 'bg-surface-container')}>
-        <Icon className={cn('size-4', highlight ? 'text-white' : 'text-on-surface-variant')} />
+    <div className={cn(
+      'bg-white rounded-xl border shadow-sm p-4 flex flex-col gap-3',
+      urgent ? 'border-red-100' : 'border-black/6',
+    )}>
+      <div className="flex items-center justify-between">
+        <div className={cn('size-9 rounded-lg flex items-center justify-center shrink-0', iconBg)}>
+          <Icon className={cn('size-4', iconColor)} />
+        </div>
+        {pulse && pulseColor && (
+          <span className={cn('size-2 rounded-full', pulseColor, urgent ? 'animate-pulse' : '')} />
+        )}
       </div>
-      <p className={cn('text-2xl font-extrabold tracking-tight relative', highlight ? 'text-white' : 'text-on-surface')}>{value}</p>
-      <p className={cn('text-sm font-semibold mt-1 relative', highlight ? 'text-white/80' : 'text-on-surface')}>{label}</p>
-      <p className={cn('text-xs mt-0.5 relative', highlight ? 'text-white/55' : 'text-on-surface-variant')}>{sub}</p>
+      <div>
+        <p className="text-[22px] font-extrabold text-on-surface tracking-tight leading-none">{amount}</p>
+        <p className="text-[13px] font-semibold text-on-surface mt-1.5">{label}</p>
+        <p className="text-[11px] text-on-surface-variant/55 mt-0.5">{count}</p>
+      </div>
     </div>
   )
 }
 
+/* ── Empty state ────────────────────────────────────────── */
 function EmptyInvoices() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[58vh] text-center px-6">
-      {/* Layered illustration */}
       <div className="relative mb-8">
         <div className="size-28 rounded-3xl bg-emerald-50 flex items-center justify-center">
           <div className="size-18 rounded-2xl bg-emerald-100 flex items-center justify-center">
@@ -199,9 +284,7 @@ function EmptyInvoices() {
         <div className="absolute top-3 -left-4 size-2.5 rounded-full bg-ds-secondary/20" />
       </div>
 
-      <h2 className="text-2xl font-bold text-on-surface tracking-tight max-w-xs">
-        No invoices yet
-      </h2>
+      <h2 className="text-2xl font-bold text-on-surface tracking-tight max-w-xs">No invoices yet</h2>
       <p className="text-base text-on-surface-variant mt-3 max-w-sm leading-relaxed">
         Create invoices inside a client portal and let your clients pay securely online via Stripe.
       </p>
