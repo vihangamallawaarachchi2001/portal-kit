@@ -14,6 +14,7 @@ export async function GET() {
     .eq('freelancer_id', user.id)
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
+    .limit(200)
 
   if (error) return internalError(error.message)
   return ok(data)

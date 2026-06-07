@@ -29,6 +29,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .eq('freelancer_id', user.id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+    .limit(200)
 
   if (error) return internalError(error.message)
   return ok(data)

@@ -22,7 +22,8 @@ export default async function FilesPage() {
       `)
       .eq('freelancer_id', user.id)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(500),
     supabase
       .from('profiles')
       .select('plan')

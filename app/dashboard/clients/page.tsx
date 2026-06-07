@@ -24,7 +24,12 @@ export default async function ClientsPage() {
       .eq('freelancer_id', user.id)
       .eq('status', 'active')
       .is('deleted_at', null)
-      .order('updated_at', { ascending: false }),
+      .order('updated_at', { ascending: false })
+      .limit(200)
+      .limit(50, { referencedTable: 'projects' })
+      .limit(200, { referencedTable: 'files' })
+      .limit(200, { referencedTable: 'messages' })
+      .limit(200, { referencedTable: 'invoices' }),
     supabase
       .from('profiles')
       .select('plan')

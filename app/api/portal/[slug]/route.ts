@@ -36,6 +36,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     .eq('client_id', clientId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+    .limit(50)
 
   const { data: invoices } = await service
     .from('invoices')
@@ -43,6 +44,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     .eq('client_id', clientId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+    .limit(200)
 
   return ok({ ...client, projects: projects ?? [], invoices: invoices ?? [] })
 }
