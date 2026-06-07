@@ -1,6 +1,6 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/service'
+import { ADMIN_COOKIE, getEmailFromSession } from '@/lib/admin-auth'
 import AdminDashboard from '@/components/admin/admin-dashboard'
 
 export const revalidate = 0
@@ -27,9 +27,10 @@ function monthlyBins(n: number): string[] {
 }
 
 export default async function AdminPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || user.email !== process.env.ADMIN_EMAIL) redirect('/dashboard')
+  const cookieStore = await cookies()
+  const adminEmail  = getEmailFromSession(cookieStore.get(ADMIN_COOKIE)?.value ?? '')
+    ?? process.env.ADMIN_EMAIL
+    ?? 'admin'
 
   const service = createServiceClient()
   const sevenDaysAgo   = new Date(Date.now() -  7 * 86400000).toISOString()
@@ -230,5 +231,5 @@ export default async function AdminPage() {
     },
   }
 
-  return <AdminDashboard data={data} adminEmail={user.email!} />
+  return <AdminDashboard data={data} adminEmail={adminEmail} />
 }
