@@ -42,7 +42,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (error) return internalError(error.message)
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portalkit.app'
-  const portalUrl = `${appUrl}/p/${client.portal_slug}?token=${rawToken}`
+  const portalUrl = `${appUrl}/p/${client.portal_slug}/access?token=${rawToken}`
 
   sendPortalMagicLink({
     to: client.email,
