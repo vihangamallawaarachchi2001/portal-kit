@@ -3,14 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { User, CreditCard, Bell, LifeBuoy, Users } from 'lucide-react'
+import { User, CreditCard, Bell, LifeBuoy, Users, Globe } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/format'
 
 const NAV = [
   { href: '/dashboard/settings',              label: 'Profile',       icon: User,       exact: true,  badge: null        },
   { href: '/dashboard/settings/billing',       label: 'Billing',       icon: CreditCard, exact: false, badge: null        },
-  { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell,       exact: false, badge: null        },
+  { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell,       exact: false, badge: null       },
+  { href: '/dashboard/settings/portal',        label: 'Portal',        icon: Globe,      exact: false, badge: 'Pro'       },
   { href: '/dashboard/settings/team',          label: 'Team',          icon: Users,      exact: false, badge: 'Business'  },
 ]
 
