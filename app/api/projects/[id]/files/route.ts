@@ -23,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data, error } = await supabase
     .from('files')
-    .select('*')
+    .select('id, filename, status, file_size, mime_type, version, client_comment, reviewed_at, created_at, storage_path, parent_file_id')
     .eq('project_id', id)
     .eq('freelancer_id', user.id)
     .is('deleted_at', null)

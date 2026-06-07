@@ -17,7 +17,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('team_invites')
-    .select('*')
+    .select('id, email, role, status, invited_at, accepted_at')
     .eq('owner_id', user.id)
     .order('invited_at', { ascending: false })
 

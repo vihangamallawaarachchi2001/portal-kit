@@ -21,7 +21,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data, error } = await supabase
     .from('invoices')
-    .select('*')
+    .select('id, invoice_number, status, subtotal, tax_rate, tax_amount, total, currency, due_date, paid_at, created_at, updated_at, client_id, project_id, notes')
     .eq('client_id', id)
     .eq('freelancer_id', user.id)
     .is('deleted_at', null)

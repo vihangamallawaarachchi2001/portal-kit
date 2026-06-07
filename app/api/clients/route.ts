@@ -10,7 +10,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('clients')
-    .select('*')
+    .select('id, name, email, portal_slug, status, created_at, updated_at')
     .eq('freelancer_id', user.id)
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })

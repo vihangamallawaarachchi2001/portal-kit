@@ -24,7 +24,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data, error } = await supabase
     .from('projects')
-    .select('*')
+    .select('id, title, description, status, due_date, client_id, created_at, updated_at')
     .eq('client_id', id)
     .eq('freelancer_id', user.id)
     .is('deleted_at', null)
