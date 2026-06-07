@@ -3,14 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { User, CreditCard, Bell, LifeBuoy } from 'lucide-react'
+import { User, CreditCard, Bell, LifeBuoy, Users } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/format'
 
 const NAV = [
-  { href: '/dashboard/settings',              label: 'Profile',       icon: User,       exact: true  },
-  { href: '/dashboard/settings/billing',       label: 'Billing',       icon: CreditCard, exact: false },
-  { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell,       exact: false },
+  { href: '/dashboard/settings',              label: 'Profile',       icon: User,       exact: true,  badge: null        },
+  { href: '/dashboard/settings/billing',       label: 'Billing',       icon: CreditCard, exact: false, badge: null        },
+  { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell,       exact: false, badge: null        },
+  { href: '/dashboard/settings/team',          label: 'Team',          icon: Users,      exact: false, badge: 'Business'  },
 ]
 
 interface SettingsNavProps {
@@ -65,7 +66,12 @@ export function SettingsNav({ displayName, avatarUrl, plan }: SettingsNavProps) 
             )}
           >
             <item.icon className={cn('size-4 shrink-0', active ? 'text-ds-secondary' : 'text-on-surface-variant')} />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.badge && (
+              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">
+                {item.badge}
+              </span>
+            )}
           </Link>
         )
       })}

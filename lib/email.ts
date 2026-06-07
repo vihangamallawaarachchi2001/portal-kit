@@ -451,3 +451,31 @@ export async function sendPaymentReceiptEmail({
     `),
   })
 }
+
+// Team member receives: invitation to join a workspace
+export async function sendTeamInviteEmail({
+  to,
+  ownerName,
+  businessName,
+  role,
+  acceptUrl,
+}: {
+  to: string
+  ownerName: string
+  businessName: string
+  role: string
+  acceptUrl: string
+}) {
+  await send({
+    to,
+    subject: `${ownerName} invited you to join ${businessName} on PortalKit`,
+    html: baseTemplate(`
+      <p>Hi there,</p>
+      <p><strong>${ownerName}</strong> has invited you to join their PortalKit workspace as a <strong>${role}</strong>.</p>
+      <p>PortalKit is a client portal platform for freelancers and agencies. As a team member, you'll be able to manage clients, projects, files, and invoices together.</p>
+      <a href="${acceptUrl}" class="button">Accept invitation →</a>
+      <hr class="divider" />
+      <p class="muted">This invitation expires in 7 days. If you didn't expect this, you can safely ignore this email.</p>
+    `),
+  })
+}

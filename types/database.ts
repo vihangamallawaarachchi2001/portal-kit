@@ -51,6 +51,20 @@ export interface Profile {
   updated_at: string
 }
 
+export type TeamRole   = 'admin' | 'member'
+export type TeamStatus = 'pending' | 'accepted'
+
+export interface TeamInvite {
+  id: string
+  owner_id: string
+  email: string
+  role: TeamRole
+  status: TeamStatus
+  token: string
+  invited_at: string
+  accepted_at: string | null
+}
+
 export interface Client {
   id: string
   freelancer_id: string
