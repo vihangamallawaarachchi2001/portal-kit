@@ -56,6 +56,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     .order('created_at', { ascending: true })
 
   if (since) query = query.gt('created_at', since)
+  query = query.limit(500)
 
   const { data, error } = await query
   if (error) return internalError(error.message)
