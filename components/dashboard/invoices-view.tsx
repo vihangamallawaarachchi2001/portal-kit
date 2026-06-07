@@ -6,7 +6,7 @@ import { formatCurrency, formatDate, getInitials } from '@/lib/format'
 import {
   TrendingUp, AlertTriangle, CheckCircle2, FileText,
   Search, Check, SlidersHorizontal, Banknote,
-  ArrowUpRight, ArrowRight, User, Plus, ChevronRight,
+  ArrowUpRight, ArrowRight, User, Plus, ChevronRight, Zap,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -27,6 +27,7 @@ interface Props {
   invoices: InvoiceRow[]
   clients: { id: string; name: string }[]
   baseCurrency?: string
+  plan?: string
 }
 
 /* ── Config ──────────────────────────────────────── */
@@ -47,7 +48,37 @@ function clientAccent(name: string) {
 const INV_COL = 'grid-cols-[minmax(0,1fr)_130px_120px_110px_100px_96px]'
 
 /* ── Main component ──────────────────────────────── */
-export function InvoicesView({ invoices, clients, baseCurrency = 'USD' }: Props) {
+export function InvoicesView({ invoices, clients, baseCurrency = 'USD', plan = 'free' }: Props) {
+  if (plan === 'free') {
+    return (
+      <div className="w-full min-h-screen" style={{ background: '#f4f6fa' }}>
+        <div className="bg-white border-b border-outline-variant/30 px-4 sm:px-8 pt-7 pb-6">
+          <h1 className="text-[22px] font-bold text-on-surface tracking-tight">Invoices</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 px-8">
+          <div className="size-20 rounded-2xl bg-amber-50 flex items-center justify-center">
+            <Zap className="size-9 text-amber-500" />
+          </div>
+          <div className="text-center max-w-sm">
+            <p className="text-xl font-bold text-on-surface">Invoicing is a Pro feature</p>
+            <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
+              Create and send professional invoices, track payments, and collect money online — available on Pro and Business plans.
+            </p>
+          </div>
+          <div className="flex flex-col items-center gap-3">
+            <Link
+              href="/dashboard/settings/billing"
+              className="inline-flex items-center gap-1.5 h-10 px-6 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors shadow-sm"
+            >
+              <Zap className="size-4" />
+              Upgrade to Pro
+            </Link>
+            <p className="text-xs text-on-surface-variant">Includes unlimited invoices, custom domain, and weekly digest</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')

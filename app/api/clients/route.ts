@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ok, created, unauthorized, badRequest, conflict, internalError, fromZodError } from '@/lib/api'
+import { ok, created, unauthorized, badRequest, conflict, paymentRequired, internalError, fromZodError } from '@/lib/api'
 import { createClientSchema } from '@/lib/validations'
 import { ZodError } from 'zod'
 
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       .is('deleted_at', null)
 
     if ((count ?? 0) >= 1) {
-      return conflict('Free tier allows 1 active client portal. Upgrade to Pro for unlimited.')
+      return paymentRequired('Free plan allows 1 active client portal. Upgrade to Pro for unlimited.', { code: 'client_limit', limit: 1, current: count })
     }
   }
 

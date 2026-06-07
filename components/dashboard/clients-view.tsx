@@ -41,9 +41,10 @@ const COL = 'grid-cols-[minmax(0,1fr)_minmax(0,180px)_112px_130px_96px]'
 /* ── Root component ─────────────────────────────────────── */
 interface ClientsViewProps {
   clients: EnrichedClient[]
+  plan?: string
 }
 
-export function ClientsView({ clients }: ClientsViewProps) {
+export function ClientsView({ clients, plan = 'free' }: ClientsViewProps) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [view, setView]     = useState<'table' | 'cards'>('table')
@@ -213,7 +214,7 @@ export function ClientsView({ clients }: ClientsViewProps) {
         )}
       </div>
 
-      <AddClientModal open={addOpen} onOpenChange={setAddOpen} />
+      <AddClientModal open={addOpen} onOpenChange={setAddOpen} plan={plan} clientCount={clients.length} />
     </div>
   )
 }

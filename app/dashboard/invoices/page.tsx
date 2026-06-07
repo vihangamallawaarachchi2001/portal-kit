@@ -25,7 +25,7 @@ export default async function InvoicesPage() {
       .order('name', { ascending: true }),
     supabase
       .from('profiles')
-      .select('base_currency')
+      .select('base_currency, plan')
       .eq('id', user.id)
       .single(),
   ])
@@ -35,6 +35,7 @@ export default async function InvoicesPage() {
       invoices={(invoices ?? []) as never}
       clients={(clients ?? []) as { id: string; name: string }[]}
       baseCurrency={profile?.base_currency ?? 'USD'}
+      plan={profile?.plan ?? 'free'}
     />
   )
 }

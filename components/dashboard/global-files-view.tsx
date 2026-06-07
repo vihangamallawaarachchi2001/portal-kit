@@ -6,7 +6,7 @@ import { formatFileSize, formatRelativeTime } from '@/lib/format'
 import {
   Paperclip, Search, Check, SlidersHorizontal,
   FileText, ImageIcon, Video, Archive, Clock,
-  CheckCircle, XCircle, User, FolderOpen, ArrowRight, Download, Loader2,
+  CheckCircle, XCircle, User, FolderOpen, ArrowRight, Download, Loader2, Zap,
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -22,7 +22,9 @@ export type GlobalFile = {
   projects: RawProject | null
 }
 
-interface Props { rawFiles: GlobalFile[] }
+const FREE_FILE_LIMIT = 3
+
+interface Props { rawFiles: GlobalFile[]; plan?: string }
 
 /* ── Status config ───────────────────────────────── */
 const FILE_STATUS: Record<string, { label: string; cls: string; dot: string }> = {
@@ -48,7 +50,9 @@ function getClient(f: GlobalFile): RawClient | null {
 const COL_STYLE = 'minmax(0,1fr) 160px 160px 96px 72px 104px 64px'
 
 /* ── Main component ──────────────────────────────── */
-export function GlobalFilesView({ rawFiles }: Props) {
+export function GlobalFilesView({ rawFiles, plan = 'free' }: Props) {
+  const isFreePlan = plan === 'free'
+  const rootFileCount = rawFiles.filter(f => !f.parent_file_id).length
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
@@ -154,6 +158,32 @@ export function GlobalFilesView({ rawFiles }: Props) {
       <PageHeader count={rootFiles.length} pendingCount={pendingCount} />
 
       <div className="px-4 sm:px-8 py-6 flex flex-col gap-5">
+
+        {/* ── Free plan limit banner ───────────────── */}
+        {isFreePlan && (
+          <div className={cn(
+            'flex items-center justify-between gap-4 px-4 py-3 rounded-xl border',
+            rootFileCount >= FREE_FILE_LIMIT
+              ? 'bg-red-50 border-red-200/70'
+              : 'bg-amber-50 border-amber-200/70',
+          )}>
+            <div className="flex items-center gap-2.5">
+              <Zap className={cn('size-4 shrink-0', rootFileCount >= FREE_FILE_LIMIT ? 'text-red-500' : 'text-amber-500')} />
+              <p className={cn('text-sm font-semibold', rootFileCount >= FREE_FILE_LIMIT ? 'text-red-700' : 'text-amber-700')}>
+                {rootFileCount >= FREE_FILE_LIMIT
+                  ? `File limit reached (${FREE_FILE_LIMIT}/${FREE_FILE_LIMIT}) — upgrade to upload more`
+                  : `Free plan: ${rootFileCount} of ${FREE_FILE_LIMIT} files used`}
+              </p>
+            </div>
+            <Link
+              href="/dashboard/settings/billing"
+              className="shrink-0 inline-flex items-center gap-1 h-7 px-3 rounded-lg bg-amber-500 text-white text-[11px] font-semibold hover:bg-amber-600 transition-colors"
+            >
+              <Zap className="size-3" />
+              Upgrade
+            </Link>
+          </div>
+        )}
 
         {/* ── Stat chips ──────────────────────────── */}
         <div className="flex items-center gap-2.5 flex-wrap">

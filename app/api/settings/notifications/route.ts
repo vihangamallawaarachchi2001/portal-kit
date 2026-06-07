@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { ok, unauthorized, badRequest, internalError } from '@/lib/api'
+import { ok, unauthorized, badRequest, paymentRequired, internalError } from '@/lib/api'
 import { DEFAULT_NOTIFICATION_PREFERENCES, NotificationPreferences } from '@/types/database'
 
 const ALLOWED_KEYS: Array<keyof NotificationPreferences> = [
@@ -50,6 +50,18 @@ export async function PATCH(req: Request) {
   if (Object.keys(sanitized).length === 0) return badRequest('No valid preference keys')
 
   const service = createServiceClient()
+
+  // Gate weekly_digest behind Pro/Business
+  if ('weekly_digest' in sanitized && sanitized.weekly_digest === true) {
+    const { data: profile } = await service
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single()
+    if (profile?.plan === 'free') {
+      return paymentRequired('Weekly digest is available on Pro and Business plans.', { code: 'weekly_digest_gating' })
+    }
+  }
 
   // Merge with existing preferences (don't overwrite keys not in this request)
   const { data: existing } = await service
