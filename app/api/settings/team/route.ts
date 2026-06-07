@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   const bizName     = profile?.business_name || profile?.full_name || 'PortalKit workspace'
   const acceptUrl   = `${appUrl}/team-invite/accept?token=${invite.token}`
 
-  sendTeamInviteEmail({ to: email, ownerName, businessName: bizName, role, acceptUrl }).catch(() => {})
+  sendTeamInviteEmail({ to: email, ownerName, businessName: bizName, role, acceptUrl }).catch((err) => console.error('[email] team-invite send failed', err))
 
   return created(invite)
 }

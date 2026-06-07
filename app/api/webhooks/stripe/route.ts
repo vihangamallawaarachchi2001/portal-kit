@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { sendInvoicePaidEmail, sendPaymentReceiptEmail } from '@/lib/email'
 import { getNotificationPref } from '@/lib/notification-prefs'
+import { sendPushToSubscriber } from '@/lib/web-push'
 
 function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' }) }
 
@@ -49,19 +50,28 @@ export async function POST(req: Request) {
       const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
       // Notify freelancer (respects their invoice_paid preference)
-      if (authUser?.user?.email) {
-        const allowed = await getNotificationPref(invoice.freelancer_id, 'invoice_paid').catch(() => true)
-        if (allowed) {
-          await sendInvoicePaidEmail({
-            to: authUser.user.email,
-            freelancerName: profile?.full_name ?? '',
-            clientName: client?.name ?? '',
-            invoiceNumber: invoice.invoice_number,
-            total: invoice.total,
-            currency: invoice.currency,
-            dashboardUrl: `${appUrl}/dashboard`,
-          }).catch(() => {})
-        }
+      const allowed = await getNotificationPref(invoice.freelancer_id, 'invoice_paid').catch(() => true)
+
+      if (authUser?.user?.email && allowed) {
+        await sendInvoicePaidEmail({
+          to: authUser.user.email,
+          freelancerName: profile?.full_name ?? '',
+          clientName: client?.name ?? '',
+          invoiceNumber: invoice.invoice_number,
+          total: invoice.total,
+          currency: invoice.currency,
+          dashboardUrl: `${appUrl}/dashboard`,
+        }).catch((err) => console.error('[email] invoice-paid notification failed', err))
+      }
+
+      // Push notification to freelancer
+      if (allowed) {
+        sendPushToSubscriber('freelancer', invoice.freelancer_id, {
+          title: 'Invoice paid',
+          body: `${client?.name ?? 'A client'} paid invoice ${invoice.invoice_number}`,
+          tag: `invoice-paid-${invoiceId}`,
+          data: { url: '/dashboard/invoices' },
+        }).catch(() => {})
       }
 
       // Send receipt to client
@@ -76,7 +86,7 @@ export async function POST(req: Request) {
           paidAt,
           lineItems: invoice.line_items ?? [],
           portalUrl: `${appUrl}/p/${client.portal_slug}`,
-        }).catch(() => {})
+        }).catch((err) => console.error('[email] payment-receipt failed', err))
       }
       break
     }
@@ -112,6 +122,19 @@ export async function POST(req: Request) {
           .update({ stripe_connect_onboarded: true })
           .eq('stripe_connect_account_id', account.id)
       }
+      break
+    }
+
+    case 'invoice.payment_failed': {
+      // Stripe subscription invoice failed — mark subscription as past_due
+      const inv = event.data.object as Stripe.Invoice
+      const customerId = (typeof inv.customer === 'string' ? inv.customer : inv.customer?.id) ?? null
+      if (!customerId) break
+
+      await service
+        .from('profiles')
+        .update({ subscription_status: 'past_due' })
+        .eq('stripe_customer_id', customerId)
       break
     }
 

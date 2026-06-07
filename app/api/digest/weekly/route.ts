@@ -90,7 +90,7 @@ async function runDigest() {
       currency:          profile.base_currency ?? 'USD',
       unreadMessages:    unreadMessages ?? 0,
       dashboardUrl:      `${appUrl}/dashboard`,
-    }).catch(() => {})
+    }).catch((err) => console.error('[email] weekly-digest send failed', err))
 
     sent++
   }

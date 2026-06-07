@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { ok, created, unauthorized, notFound, badRequest, internalError } from '@/lib/api'
+import { sendPushToSubscriber } from '@/lib/web-push'
 import { cookies } from 'next/headers'
 
 async function getClientAndProject(projectId: string) {
@@ -71,5 +72,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .single()
 
   if (error) return internalError(error.message)
+
+  // Notify freelancer of new client upload (fire-and-forget)
+  sendPushToSubscriber('freelancer', ctx.project.freelancer_id, {
+    title: 'Client uploaded a file',
+    body: `New file "${filename}" is ready for your review`,
+    tag: `client-upload-${id}`,
+    data: { url: '/dashboard/files' },
+  }).catch(() => {})
+
   return created(data)
 }

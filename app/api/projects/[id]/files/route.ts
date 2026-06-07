@@ -80,7 +80,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       projectTitle: project.title,
       filename: input.filename,
       portalUrl: `${appUrl}/p/${client.portal_slug}`,
-    }).catch(() => {})
+    }).catch((err) => console.error('[email] file-uploaded notification failed', err))
   }
 
   return created(data)

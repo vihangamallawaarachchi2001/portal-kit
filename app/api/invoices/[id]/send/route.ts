@@ -49,7 +49,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       currency: invoice.currency,
       dueDate: invoice.due_date,
       portalUrl: `${appUrl}/p/${client.portal_slug}`,
-    }).catch(() => {})
+    }).catch((err) => console.error('[email] invoice-sent notification failed', err))
   }
 
   return ok(data)

@@ -3,6 +3,7 @@ import { ok, unauthorized, notFound, badRequest, internalError, fromZodError } f
 import { reviewFileSchema } from '@/lib/validations'
 import { sendFileReviewedEmail } from '@/lib/email'
 import { getNotificationPref } from '@/lib/notification-prefs'
+import { sendPushToSubscriber } from '@/lib/web-push'
 import { cookies } from 'next/headers'
 import { ZodError } from 'zod'
 
@@ -57,21 +58,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { data: authUser } = await service.auth.admin.getUserById(file.freelancer_id)
   const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
 
-  if (authUser?.user?.email) {
-    const allowed = await getNotificationPref(file.freelancer_id, 'file_review').catch(() => true)
-    if (allowed) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-      await sendFileReviewedEmail({
-        to: authUser.user.email,
-        freelancerName: freelancerProfile?.full_name ?? '',
-        clientName: client?.name ?? 'Your client',
-        projectTitle: project.title,
-        filename: file.filename,
-        status: input.status as 'approved' | 'changes_requested',
-        comment: input.client_comment ?? null,
-        dashboardUrl: `${appUrl}/dashboard`,
-      }).catch(() => {})
-    }
+  const allowed = await getNotificationPref(file.freelancer_id, 'file_review').catch(() => true)
+
+  if (authUser?.user?.email && allowed) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+    await sendFileReviewedEmail({
+      to: authUser.user.email,
+      freelancerName: freelancerProfile?.full_name ?? '',
+      clientName: client?.name ?? 'Your client',
+      projectTitle: project.title,
+      filename: file.filename,
+      status: input.status as 'approved' | 'changes_requested',
+      comment: input.client_comment ?? null,
+      dashboardUrl: `${appUrl}/dashboard`,
+    }).catch((err) => console.error('[email] file-review notification failed', err))
+  }
+
+  // Push notification to freelancer
+  if (allowed) {
+    const label = input.status === 'approved' ? 'approved' : 'requested changes on'
+    sendPushToSubscriber('freelancer', file.freelancer_id, {
+      title: 'File reviewed',
+      body: `${client?.name ?? 'A client'} ${label} "${file.filename}"`,
+      tag: `file-review-${id}`,
+      data: { url: '/dashboard' },
+    }).catch(() => {})
   }
 
   return ok(data)
