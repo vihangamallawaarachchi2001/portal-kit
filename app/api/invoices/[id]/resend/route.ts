@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ok, unauthorized, notFound, badRequest, internalError } from '@/lib/api'
+import { ok, unauthorized, notFound, badRequest, internalError, tooManyRequests } from '@/lib/api'
 import { sendInvoiceSentEmail } from '@/lib/email'
 
 // Resend an invoice email — unlike /send, this allows sent and overdue statuses
@@ -20,6 +20,16 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!invoice) return notFound('Invoice not found')
   if (invoice.status === 'paid') return badRequest('Cannot resend a paid invoice')
   if (invoice.status === 'draft') return badRequest('Send the invoice first before resending')
+
+  // Rate limit: 15-minute cooldown between resends to prevent inbox flooding
+  if (invoice.last_resent_at) {
+    const cooldownMs = 15 * 60 * 1000
+    const elapsed = Date.now() - new Date(invoice.last_resent_at).getTime()
+    if (elapsed < cooldownMs) {
+      const waitMin = Math.ceil((cooldownMs - elapsed) / 60000)
+      return tooManyRequests(`Please wait ${waitMin} more minute${waitMin === 1 ? '' : 's'} before resending.`)
+    }
+  }
 
   // Send email notification
   const client = Array.isArray(invoice.clients) ? (invoice.clients[0] ?? null) : invoice.clients
@@ -45,6 +55,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     if (!sent) return internalError('Failed to send email')
   }
+
+  // Record resend timestamp for cooldown enforcement
+  await supabase
+    .from('invoices')
+    .update({ last_resent_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('freelancer_id', user.id)
 
   return ok({ resent: true })
 }
