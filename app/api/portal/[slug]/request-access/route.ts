@@ -29,6 +29,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   // Always return success to avoid email enumeration
   if (!client) return ok({ sent: true })
 
+  // Rate limit: max 3 magic links per client per hour to prevent Resend quota abuse
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  const { count } = await service
+    .from('portal_sessions')
+    .select('id', { count: 'exact', head: true })
+    .eq('client_id', client.id)
+    .gte('created_at', oneHourAgo)
+  if ((count ?? 0) >= 3) return ok({ sent: true })
+
   const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles
 
   const rawToken = randomBytes(32).toString('hex')
