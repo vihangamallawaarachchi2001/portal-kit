@@ -8,12 +8,14 @@ export async function updateProfile({
   tagline,
   avatarUrl,
   plan = 'free',
+  baseCurrency = 'USD',
 }: {
   fullName: string
   businessName: string
   tagline: string
   avatarUrl: string | null
   plan?: string
+  baseCurrency?: string
 }) {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -29,6 +31,7 @@ export async function updateProfile({
       tagline: tagline || null,
       avatar_url: avatarUrl,
       plan: plan === 'free' ? 'free' : (plan as 'pro' | 'business'),
+      base_currency: baseCurrency || 'USD',
       onboarding_completed: true,
       updated_at: new Date().toISOString(),
     })

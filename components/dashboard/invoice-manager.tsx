@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Trash2, Send, FileText, Loader2, ChevronDown, ChevronUp, X,
-  Receipt, CalendarDays, Percent, FolderOpen,
+  Receipt, CalendarDays, Percent, FolderOpen, Download,
 } from 'lucide-react'
 import { EmptyState } from './empty-state'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -16,8 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-
-const CURRENCIES = ['USD', 'AUD', 'GBP', 'EUR', 'CAD', 'NZD']
+import { CURRENCIES } from '@/lib/currencies'
 
 const STATUS_CONFIG: Record<Invoice['status'], { label: string; className: string }> = {
   draft:   { label: 'Draft',   className: 'bg-surface-container text-on-surface-variant border-outline-variant' },
@@ -34,12 +33,13 @@ interface InvoiceManagerProps {
   projects: Pick<Project, 'id' | 'title'>[]
   freelancerName: string
   businessName: string
+  baseCurrency?: string
 }
 
 const EMPTY_LINE: LineItem = { description: '', quantity: 1, unit_price: 0 }
 
 export function InvoiceManager({
-  clientId, clientName, invoices, projects,
+  clientId, clientName, invoices, projects, baseCurrency = 'USD',
 }: InvoiceManagerProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -49,7 +49,7 @@ export function InvoiceManager({
   // Form state
   const [lineItems, setLineItems] = useState<LineItem[]>([{ ...EMPTY_LINE }])
   const [taxRate, setTaxRate] = useState('0')
-  const [currency, setCurrency] = useState('USD')
+  const [currency, setCurrency] = useState(baseCurrency)
   const [dueDate, setDueDate] = useState('')
   const [projectId, setProjectId] = useState('')
   const [notes, setNotes] = useState('')
@@ -69,7 +69,7 @@ export function InvoiceManager({
   function resetForm() {
     setLineItems([{ ...EMPTY_LINE }])
     setTaxRate('0')
-    setCurrency('USD')
+    setCurrency(baseCurrency)
     setDueDate('')
     setProjectId('')
     setNotes('')
@@ -114,6 +114,18 @@ export function InvoiceManager({
     })
   }
 
+  function handleResend(invoiceId: string) {
+    startTransition(async () => {
+      const res = await fetch(`/api/invoices/${invoiceId}/resend`, { method: 'POST' })
+      if (res.ok) {
+        toast.success('Invoice resent to client')
+      } else {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error ?? 'Failed to resend invoice')
+      }
+    })
+  }
+
   function handleDelete(invoiceId: string) {
     startTransition(async () => {
       const res = await fetch(`/api/invoices/${invoiceId}`, { method: 'DELETE' })
@@ -126,13 +138,15 @@ export function InvoiceManager({
     })
   }
 
+  const INV_COL = 'grid-cols-[minmax(0,1fr)_110px_130px_120px_100px]'
+
   return (
-    <div className="max-w-4xl flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-on-surface">Invoices for {clientName}</h2>
         <button
           onClick={() => setModalOpen(true)}
-          className="flex items-center gap-1.5 h-9 px-4 rounded-md bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors"
+          className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors"
         >
           <Plus className="size-4" />New invoice
         </button>
@@ -145,93 +159,144 @@ export function InvoiceManager({
           description="Create an invoice for this client and send it directly through their portal."
         />
       ) : (
-        <div className="bg-white rounded-md border border-outline-variant overflow-hidden">
-          <div className="divide-y divide-outline-variant">
-            {invoices.map(inv => {
-              const cfg = STATUS_CONFIG[inv.status]
-              const expanded = expandedId === inv.id
+        <div className="overflow-x-auto">
+          <div className="min-w-150 bg-white rounded-lg border border-outline-variant/20 shadow-sm overflow-hidden">
+            {/* Table header */}
+            <div className={cn('grid px-5 py-2.5 bg-surface-container/50 border-b border-outline-variant/15', INV_COL)}>
+              {['Invoice', 'Status', 'Amount', 'Due Date', ''].map((h, i) => (
+                <p key={i} className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{h}</p>
+              ))}
+            </div>
+            {/* Rows */}
+            <div className="divide-y divide-outline-variant/10">
+              {invoices.map(inv => {
+                const cfg      = STATUS_CONFIG[inv.status]
+                const expanded = expandedId === inv.id
+                const isOverdue = inv.status === 'overdue'
+                const isPaid    = inv.status === 'paid'
 
-              return (
-                <div key={inv.id} className="group">
-                  <div className="flex items-center gap-4 px-5 py-4 hover:bg-surface-container/40 transition-colors">
-                    <button
-                      onClick={() => setExpandedId(expanded ? null : inv.id)}
-                      className="shrink-0 text-on-surface-variant"
-                    >
-                      {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-                    </button>
+                return (
+                  <div key={inv.id} className="group">
+                    <div className={cn(
+                      'relative grid items-center px-5 py-3.5 transition-colors',
+                      INV_COL,
+                      isOverdue ? 'bg-red-50/30 hover:bg-red-50/60' : 'hover:bg-surface-container/20',
+                    )}>
+                      {/* Left accent */}
+                      <div className={cn(
+                        'absolute left-0 top-0 bottom-0 w-0.75',
+                        isOverdue ? 'bg-red-500' : isPaid ? 'bg-emerald-500' : 'bg-transparent',
+                      )} />
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-on-surface">{inv.invoice_number}</span>
-                        <span className={cn('text-[11px] font-semibold px-1.5 py-0.5 rounded-md border', cfg.className)}>
-                          {cfg.label}
-                        </span>
+                      {/* Invoice # + expand toggle */}
+                      <div className="flex items-center gap-2 min-w-0 pr-3">
+                        <button
+                          onClick={() => setExpandedId(expanded ? null : inv.id)}
+                          className="shrink-0 text-on-surface-variant hover:text-on-surface transition-colors"
+                        >
+                          {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+                        </button>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-on-surface truncate">{inv.invoice_number}</p>
+                        </div>
                       </div>
-                      {inv.due_date && (
-                        <p className="text-xs text-on-surface-variant">Due {formatDate(inv.due_date)}</p>
-                      )}
-                    </div>
 
-                    <span className="text-base font-bold text-on-surface">
-                      {formatCurrency(inv.total, inv.currency)}
-                    </span>
+                      {/* Status */}
+                      <span className={cn('w-fit inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border', cfg.className)}>
+                        {cfg.label}
+                      </span>
 
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {inv.status === 'draft' && (
-                        <button
-                          onClick={() => handleSend(inv.id)}
-                          disabled={isPending}
-                          className="flex items-center gap-1 h-7 px-2.5 rounded-md text-xs font-semibold text-white bg-ds-secondary hover:bg-ds-secondary-container transition-colors"
-                          title="Send to client"
+                      {/* Amount */}
+                      <span className={cn(
+                        'text-sm font-bold tabular-nums',
+                        isPaid ? 'text-emerald-600' : isOverdue ? 'text-red-600' : 'text-on-surface',
+                      )}>
+                        {formatCurrency(inv.total, inv.currency)}
+                      </span>
+
+                      {/* Due date */}
+                      <p className={cn(
+                        'text-[12px]',
+                        isOverdue ? 'text-red-500 font-medium' : 'text-on-surface-variant',
+                      )}>
+                        {inv.due_date ? formatDate(inv.due_date) : '—'}
+                      </p>
+
+                      {/* Actions */}
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {inv.status === 'draft' && (
+                          <button
+                            onClick={() => handleSend(inv.id)}
+                            disabled={isPending}
+                            className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-semibold text-white bg-ds-secondary hover:bg-ds-secondary-container transition-colors"
+                          >
+                            <Send className="size-3" />Send
+                          </button>
+                        )}
+                        {(inv.status === 'sent' || inv.status === 'overdue') && (
+                          <button
+                            onClick={() => handleResend(inv.id)}
+                            disabled={isPending}
+                            title="Resend invoice email to client"
+                            className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-semibold text-ds-secondary bg-ds-secondary/8 hover:bg-ds-secondary/15 transition-colors"
+                          >
+                            <Send className="size-3" />Resend
+                          </button>
+                        )}
+                        <a
+                          href={`/api/invoices/${inv.id}/pdf`}
+                          download={`invoice-${inv.invoice_number}.pdf`}
+                          title="Download PDF"
+                          className="size-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-ds-secondary hover:bg-ds-secondary/8 transition-colors"
                         >
-                          <Send className="size-3" />Send
-                        </button>
-                      )}
-                      {inv.status !== 'paid' && (
-                        <button
-                          onClick={() => handleDelete(inv.id)}
-                          className="size-7 rounded-md flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {expanded && (
-                    <div className="px-5 pb-4 bg-surface-container/30 border-t border-outline-variant">
-                      <div className="pt-3 flex flex-col gap-2">
-                        <div className="grid grid-cols-[1fr_80px_80px_100px] text-[11px] font-bold text-on-surface-variant uppercase tracking-wider pb-2 border-b border-outline-variant">
-                          <span>Description</span>
-                          <span className="text-right">Qty</span>
-                          <span className="text-right">Unit price</span>
-                          <span className="text-right">Total</span>
-                        </div>
-                        {(inv.line_items as LineItem[]).map((item, i) => (
-                          <div key={i} className="grid grid-cols-[1fr_80px_80px_100px] text-sm">
-                            <span className="text-on-surface">{item.description}</span>
-                            <span className="text-right text-on-surface-variant">{item.quantity}</span>
-                            <span className="text-right text-on-surface-variant">{formatCurrency(item.unit_price, inv.currency)}</span>
-                            <span className="text-right font-semibold">{formatCurrency(item.quantity * item.unit_price, inv.currency)}</span>
-                          </div>
-                        ))}
-                        <div className="flex flex-col items-end gap-1 pt-2 border-t border-outline-variant text-sm">
-                          <span className="text-on-surface-variant">Subtotal: {formatCurrency(inv.subtotal, inv.currency)}</span>
-                          {inv.tax_rate > 0 && (
-                            <span className="text-on-surface-variant">Tax ({inv.tax_rate}%): {formatCurrency(inv.tax_amount, inv.currency)}</span>
-                          )}
-                          <span className="font-bold text-base text-on-surface">Total: {formatCurrency(inv.total, inv.currency)}</span>
-                        </div>
-                        {inv.notes && (
-                          <p className="text-xs text-on-surface-variant mt-1 italic">Note: {inv.notes}</p>
+                          <Download className="size-3.5" />
+                        </a>
+                        {inv.status !== 'paid' && (
+                          <button
+                            onClick={() => handleDelete(inv.id)}
+                            className="size-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
                         )}
                       </div>
                     </div>
-                  )}
-                </div>
-              )
-            })}
+
+                    {/* Expanded line items */}
+                    {expanded && (
+                      <div className="px-10 pb-4 bg-surface-container/20 border-t border-outline-variant/15">
+                        <div className="pt-3 flex flex-col gap-2">
+                          <div className="grid grid-cols-[1fr_80px_80px_100px] text-[11px] font-bold text-on-surface-variant uppercase tracking-wider pb-2 border-b border-outline-variant/30">
+                            <span>Description</span>
+                            <span className="text-right">Qty</span>
+                            <span className="text-right">Unit price</span>
+                            <span className="text-right">Total</span>
+                          </div>
+                          {(inv.line_items as LineItem[]).map((item, i) => (
+                            <div key={i} className="grid grid-cols-[1fr_80px_80px_100px] text-sm">
+                              <span className="text-on-surface">{item.description}</span>
+                              <span className="text-right text-on-surface-variant">{item.quantity}</span>
+                              <span className="text-right text-on-surface-variant">{formatCurrency(item.unit_price, inv.currency)}</span>
+                              <span className="text-right font-semibold">{formatCurrency(item.quantity * item.unit_price, inv.currency)}</span>
+                            </div>
+                          ))}
+                          <div className="flex flex-col items-end gap-1 pt-2 border-t border-outline-variant/30 text-sm">
+                            <span className="text-on-surface-variant">Subtotal: {formatCurrency(inv.subtotal, inv.currency)}</span>
+                            {inv.tax_rate > 0 && (
+                              <span className="text-on-surface-variant">Tax ({inv.tax_rate}%): {formatCurrency(inv.tax_amount, inv.currency)}</span>
+                            )}
+                            <span className="font-bold text-base text-on-surface">Total: {formatCurrency(inv.total, inv.currency)}</span>
+                          </div>
+                          {inv.notes && (
+                            <p className="text-xs text-on-surface-variant mt-1 italic">Note: {inv.notes}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -355,14 +420,15 @@ export function InvoiceManager({
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-on-surface">Currency</label>
-                  <Select value={currency} onValueChange={setCurrency}>
-                    <SelectTrigger className="h-10 rounded-md border-outline-variant">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CURRENCIES.map(c => <SelectItem key={c} value={c} className="rounded-md">{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    value={currency}
+                    onChange={e => setCurrency(e.target.value)}
+                    className="h-10 px-3 rounded-md border border-input bg-background text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0 transition-all"
+                  >
+                    {CURRENCIES.map(c => (
+                      <option key={c.code} value={c.code}>{c.code} – {c.name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="flex flex-col gap-1.5">

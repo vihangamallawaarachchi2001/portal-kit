@@ -14,7 +14,7 @@ export default async function ClientInvoicesPage({ params }: { params: Promise<{
     supabase.from('clients').select('id, name, email').eq('id', id).eq('freelancer_id', user.id).is('deleted_at', null).single(),
     supabase.from('invoices').select('*').eq('client_id', id).eq('freelancer_id', user.id).is('deleted_at', null).order('created_at', { ascending: false }),
     supabase.from('projects').select('id, title').eq('client_id', id).eq('freelancer_id', user.id).is('deleted_at', null),
-    supabase.from('profiles').select('full_name, business_name').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name, business_name, base_currency').eq('id', user.id).single(),
   ])
 
   if (!client) notFound()
@@ -28,6 +28,7 @@ export default async function ClientInvoicesPage({ params }: { params: Promise<{
       projects={projects ?? []}
       freelancerName={profile?.full_name ?? ''}
       businessName={profile?.business_name || profile?.full_name || ''}
+      baseCurrency={profile?.base_currency ?? 'USD'}
     />
   )
 }
