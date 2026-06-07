@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import { ok, created, unauthorized, notFound, badRequest, internalError, fromZodError } from '@/lib/api'
+import { ok, created, unauthorized, notFound, badRequest, internalError, paymentRequired, fromZodError } from '@/lib/api'
 import { createProjectSchema } from '@/lib/validations'
 import { ZodError } from 'zod'
+
+const PROJECT_LIMITS: Record<string, number> = { free: 2, pro: Infinity, business: Infinity }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -47,6 +49,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .single()
 
   if (!client) return notFound('Client not found')
+
+  // Enforce per-plan project limit
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', user.id)
+    .single()
+
+  const limit = PROJECT_LIMITS[profile?.plan ?? 'free'] ?? 2
+  if (isFinite(limit)) {
+    const { count } = await supabase
+      .from('projects')
+      .select('id', { count: 'exact', head: true })
+      .eq('freelancer_id', user.id)
+      .is('deleted_at', null)
+
+    if ((count ?? 0) >= limit) {
+      return paymentRequired(
+        `Free plan allows ${limit} projects. Upgrade to Pro for unlimited projects.`,
+        { limit, current: count ?? 0, code: 'project_limit' },
+      )
+    }
+  }
 
   let body: Record<string, unknown>
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }

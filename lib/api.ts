@@ -33,6 +33,10 @@ export function conflict(message: string) {
   return NextResponse.json({ error: message }, { status: 409 })
 }
 
+export function paymentRequired(message: string, meta?: Record<string, unknown>) {
+  return NextResponse.json({ error: message, ...meta }, { status: 402 })
+}
+
 export function internalError(message = 'Internal server error') {
   return NextResponse.json({ error: message }, { status: 500 })
 }
