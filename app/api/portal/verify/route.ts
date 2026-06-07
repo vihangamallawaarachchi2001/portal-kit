@@ -23,23 +23,34 @@ export async function POST(req: Request) {
 
   if (!client) return notFound('Portal not found')
 
-  // Validate session token
+  // Atomically mark the session as used — the WHERE conditions ensure we only
+  // succeed if the token exists, is not yet used, and is not expired.
+  // This eliminates the TOCTOU window where two concurrent requests could both
+  // pass the used_at check before either updates the row.
+  const usedAt = new Date().toISOString()
   const { data: session } = await service
     .from('portal_sessions')
-    .select('id, expires_at, used_at')
+    .update({ used_at: usedAt })
     .eq('token_hash', tokenHash)
     .eq('client_id', client.id)
-    .single()
+    .is('used_at', null)
+    .gt('expires_at', usedAt)
+    .select('id')
+    .maybeSingle()
 
-  if (!session) return badRequest('Invalid or expired link')
-  if (session.used_at) return badRequest('This link has already been used. Request a new one from your freelancer.')
-  if (new Date(session.expires_at) < new Date()) return badRequest('This link has expired. Request a new one.')
+  if (!session) {
+    // Update matched nothing — do a read-only diagnostic to give a helpful message
+    const { data: check } = await service
+      .from('portal_sessions')
+      .select('used_at, expires_at')
+      .eq('token_hash', tokenHash)
+      .eq('client_id', client.id)
+      .maybeSingle()
 
-  // Mark used
-  await service
-    .from('portal_sessions')
-    .update({ used_at: new Date().toISOString() })
-    .eq('id', session.id)
+    if (!check) return badRequest('Invalid or expired link')
+    if (check.used_at) return badRequest('This link has already been used. Request a new one from your freelancer.')
+    return badRequest('This link has expired. Request a new one.')
+  }
 
   // Set portal session cookie (httpOnly, 30 days)
   const cookieStore = await cookies()

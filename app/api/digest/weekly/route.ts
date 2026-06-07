@@ -7,8 +7,6 @@ function isAuthorized(req: Request): boolean {
   if (authHeader === `Bearer ${process.env.CRON_SECRET}`) return true
   const xSecret = req.headers.get('x-cron-secret')
   if (xSecret === process.env.CRON_SECRET) return true
-  const urlSecret = new URL(req.url).searchParams.get('secret')
-  if (urlSecret === process.env.CRON_SECRET) return true
   return false
 }
 
@@ -38,20 +36,22 @@ async function runDigest() {
   const userIds  = eligible.map(p => p.id)
   const weekAgo  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-  // Batch all three queries across all eligible users in parallel (not per-user loops)
+  // Batch all queries in parallel — limits prevent OOM on large datasets;
+  // single listUsers call replaces the prior N×getUserById loop
   const [
     { data: pendingFiles },
     { data: outstandingInvoices },
     { data: recentMessages },
-    { data: authUsers },
+    authUsersResult,
   ] = await Promise.all([
-    // Pending files per freelancer — COUNT grouped by freelancer_id
+    // Pending files per freelancer
     service
       .from('files')
       .select('freelancer_id')
       .in('freelancer_id', userIds)
       .eq('status', 'pending')
-      .is('deleted_at', null),
+      .is('deleted_at', null)
+      .limit(5000),
 
     // Outstanding invoices per freelancer
     service
@@ -59,7 +59,8 @@ async function runDigest() {
       .select('freelancer_id, total, currency')
       .in('freelancer_id', userIds)
       .in('status', ['sent', 'overdue'])
-      .is('deleted_at', null),
+      .is('deleted_at', null)
+      .limit(5000),
 
     // Unread client messages in the last 7 days, via project join
     service
@@ -68,10 +69,11 @@ async function runDigest() {
       .in('projects.freelancer_id', userIds)
       .eq('sender_type', 'client')
       .is('read_at', null)
-      .gte('created_at', weekAgo),
+      .gte('created_at', weekAgo)
+      .limit(50000),
 
-    // Auth emails — no batch API; fetch all in parallel
-    (async () => ({ data: await Promise.all(userIds.map(id => service.auth.admin.getUserById(id))) }))(),
+    // Single bulk fetch instead of N×getUserById
+    service.auth.admin.listUsers({ perPage: 1000 }),
   ])
 
   // Build lookup maps
@@ -83,15 +85,15 @@ async function runDigest() {
 
   const unreadMap = new Map<string, number>()
   for (const msg of recentMessages ?? []) {
-    const project = Array.isArray(msg.projects) ? msg.projects[0] : msg.projects
+    const project = Array.isArray(msg.projects) ? (msg.projects[0] ?? null) : msg.projects
     const fid = (project as { freelancer_id: string } | null)?.freelancer_id
     if (fid) unreadMap.set(fid, (unreadMap.get(fid) ?? 0) + 1)
   }
 
   const emailMap = new Map<string, string>()
-  for (const res of (authUsers as { data: { user: { id: string; email?: string } | null } }[]) ?? []) {
-    const u = res.data?.user
-    if (u?.id && u.email) emailMap.set(u.id, u.email)
+  const eligibleSet = new Set(userIds)
+  for (const u of (authUsersResult.data?.users ?? []) as { id: string; email?: string }[]) {
+    if (u.id && u.email && eligibleSet.has(u.id)) emailMap.set(u.id, u.email)
   }
 
   let sent = 0
