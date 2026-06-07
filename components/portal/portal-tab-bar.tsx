@@ -12,12 +12,12 @@ const TABS = [
   { href: '/messages', label: 'Messages',  icon: MessageSquare },
 ]
 
-export function PortalTabBar({ slug }: { slug: string }) {
+export function PortalTabBar({ slug, dark }: { slug: string; dark?: boolean }) {
   const pathname = usePathname()
   const base = `/p/${slug}`
 
   return (
-    <nav className="flex max-w-4xl mx-auto px-6 gap-0.5 -mb-px overflow-x-auto">
+    <nav className="flex gap-0.5 overflow-x-auto scrollbar-hide">
       {TABS.map(tab => {
         const href = `${base}${tab.href}`
         const exact = tab.href === ''
@@ -28,13 +28,17 @@ export function PortalTabBar({ slug }: { slug: string }) {
             key={tab.href}
             href={href}
             className={cn(
-              'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
-              active
-                ? 'border-ds-secondary text-ds-secondary'
-                : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline-variant/60'
+              'flex items-center gap-1.5 px-4 py-3 text-sm font-semibold border-b-2 transition-all whitespace-nowrap',
+              dark
+                ? active
+                  ? 'border-white text-white'
+                  : 'border-transparent text-white/55 hover:text-white/85 hover:border-white/30'
+                : active
+                  ? 'border-ds-secondary text-ds-secondary'
+                  : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline-variant/60'
             )}
           >
-            <tab.icon className="size-3.5" />
+            <tab.icon className="size-3.5 shrink-0" />
             {tab.label}
           </Link>
         )
