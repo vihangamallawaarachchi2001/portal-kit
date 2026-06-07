@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/format'
-import { Bell, BellRing, X, MessageSquare, FileText, CheckCheck, FolderOpen, Loader2 } from 'lucide-react'
+import { Bell, BellRing, X, MessageSquare, FileText, CheckCheck, FolderOpen } from 'lucide-react'
 import Link from 'next/link'
 import { usePushSubscription } from '@/hooks/use-push-subscription'
 
@@ -138,8 +138,16 @@ export function NotificationBell({ unreadCount }: Props) {
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="size-5 text-on-surface-variant/40 animate-spin" />
+            <div className="flex flex-col divide-y divide-outline-variant/10">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex gap-3 px-4 py-3.5 animate-pulse">
+                  <div className="size-8 rounded-full bg-surface-container-high shrink-0 mt-0.5" />
+                  <div className="flex-1 flex flex-col gap-2 pt-0.5">
+                    <div className="h-3 bg-surface-container-high rounded-full w-3/4" />
+                    <div className="h-2.5 bg-surface-container rounded-full w-1/2" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : total === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-3">

@@ -31,9 +31,14 @@ export async function POST(req: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('stripe_customer_id, full_name')
+    .select('stripe_customer_id, full_name, subscription_status, plan')
     .eq('id', user.id)
     .single()
+
+  // Prevent double-submit: if already on this plan and active, bail early
+  if (profile?.plan === plan && profile?.subscription_status === 'active') {
+    return badRequest('Already subscribed to this plan')
+  }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
