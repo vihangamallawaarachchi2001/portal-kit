@@ -16,6 +16,11 @@ async function runDigest() {
   const service = createServiceClient()
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
+  // Bring overdue invoices up to date before computing digest stats
+  await service.rpc('mark_overdue_invoices').catch(err =>
+    console.error('[digest] mark_overdue_invoices failed', err)
+  )
+
   // Find all Pro/Business users with weekly_digest preference enabled
   const { data: profiles } = await service
     .from('profiles')

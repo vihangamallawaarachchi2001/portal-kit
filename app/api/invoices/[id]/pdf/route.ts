@@ -74,6 +74,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       'Content-Type':        'application/pdf',
       'Content-Disposition': `attachment; filename="${filename}"`,
       'Content-Length':      String(bytes.length),
+      // Cache for 24h — PDFs are immutable once generated; paid invoices never change.
+      // private: scoped to the individual user, not shared caches.
+      'Cache-Control':       'private, max-age=86400, immutable',
     },
   })
 }
