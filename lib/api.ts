@@ -37,6 +37,10 @@ export function paymentRequired(message: string, meta?: Record<string, unknown>)
   return NextResponse.json({ error: message, ...meta }, { status: 402 })
 }
 
+export function tooManyRequests(message = 'Too many requests') {
+  return NextResponse.json({ error: message }, { status: 429 })
+}
+
 export function internalError(message = 'Internal server error') {
   return NextResponse.json({ error: message }, { status: 500 })
 }
