@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ok, created, unauthorized, notFound, badRequest, internalError, fromZodError } from '@/lib/api'
 import { registerFileSchema } from '@/lib/validations'
 import { sendFileUploadedEmail } from '@/lib/email'
+import { sendPushToSubscriber } from '@/lib/web-push'
 import { ZodError } from 'zod'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -81,6 +82,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       filename: input.filename,
       portalUrl: `${appUrl}/p/${client.portal_slug}`,
     }).catch((err) => console.error('[email] file-uploaded notification failed', err))
+
+    // Push notification to client
+    if (client.id) {
+      sendPushToSubscriber('client', client.id, {
+        title: 'New file ready for review',
+        body: `"${input.filename}" was uploaded in "${project.title}"`,
+        tag: `file-upload-${data.id}`,
+        data: { url: '/dashboard' },
+      }).catch(() => {})
+    }
   }
 
   return created(data)
