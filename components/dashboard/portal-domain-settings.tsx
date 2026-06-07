@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
-import { Globe, CheckCircle2, XCircle, Loader2, Zap, Copy, Trash2, RefreshCw } from 'lucide-react'
+import { Globe, CheckCircle2, XCircle, Loader2, Zap, Copy, Trash2, RefreshCw, EyeOff } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -11,16 +11,20 @@ interface PortalDomainSettingsProps {
   plan: string
   initialDomain: string | null
   initialVerified: boolean
+  initialHideBranding: boolean
 }
 
-export function PortalDomainSettings({ plan, initialDomain, initialVerified }: PortalDomainSettingsProps) {
-  const [domain, setDomain]       = useState(initialDomain ?? '')
-  const [saved, setSaved]         = useState(initialDomain)
-  const [verified, setVerified]   = useState(initialVerified)
+export function PortalDomainSettings({ plan, initialDomain, initialVerified, initialHideBranding }: PortalDomainSettingsProps) {
+  const [domain, setDomain]         = useState(initialDomain ?? '')
+  const [saved, setSaved]           = useState(initialDomain)
+  const [verified, setVerified]     = useState(initialVerified)
+  const [hideBranding, setHideBranding] = useState(initialHideBranding)
+  const [brandingPending, setBrandingPending] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [verifying, setVerifying] = useState(false)
+  const [verifying, setVerifying]   = useState(false)
 
   const isProOrBusiness = plan === 'pro' || plan === 'business'
+  const isBusinessPlan  = plan === 'business'
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -79,6 +83,31 @@ export function PortalDomainSettings({ plan, initialDomain, initialVerified }: P
 
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text).then(() => toast.success('Copied to clipboard'))
+  }
+
+  async function toggleBranding() {
+    setBrandingPending(true)
+    const next = !hideBranding
+    setHideBranding(next)
+    try {
+      const res = await fetch('/api/settings/portal', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hide_branding: next }),
+      })
+      if (res.ok) {
+        toast.success(next ? 'PortalKit branding hidden' : 'PortalKit branding restored')
+      } else {
+        setHideBranding(!next)
+        if (res.status === 402) toast.error('White-label requires the Business plan.')
+        else toast.error('Failed to update branding setting')
+      }
+    } catch {
+      setHideBranding(!next)
+      toast.error('Failed to update branding setting')
+    } finally {
+      setBrandingPending(false)
+    }
   }
 
   const cnameTarget = process.env.NEXT_PUBLIC_PORTAL_CNAME_TARGET ?? 'portals.portalkit.io'
@@ -223,6 +252,77 @@ export function PortalDomainSettings({ plan, initialDomain, initialVerified }: P
                 </div>
               )}
             </>
+          )}
+        </div>
+      </div>
+
+      {/* White-label card */}
+      <div className="bg-white rounded-md shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-outline-variant/40 bg-surface-container/30 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="size-7 rounded-md bg-ds-secondary/10 flex items-center justify-center">
+              <EyeOff className="size-3.5 text-ds-secondary" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-on-surface">White-label</p>
+              <p className="text-xs text-on-surface-variant">Remove PortalKit branding from your client portals.</p>
+            </div>
+          </div>
+          {!isBusinessPlan && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 text-amber-700">Business</span>
+          )}
+        </div>
+
+        <div className="px-5 py-4">
+          {!isBusinessPlan ? (
+            <div className="flex flex-col items-center text-center gap-4 py-4">
+              <div className="size-12 rounded-xl bg-amber-50 flex items-center justify-center">
+                <Zap className="size-6 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-on-surface">White-label requires the Business plan</p>
+                <p className="text-xs text-on-surface-variant mt-1.5 max-w-sm leading-relaxed">
+                  Remove the "PortalKit" badge and "Secured by PortalKit" footer from all client-facing portal pages.
+                </p>
+              </div>
+              <Link
+                href="/dashboard/settings/billing"
+                className="inline-flex items-center gap-1.5 h-9 px-5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
+              >
+                <Zap className="size-3.5" />
+                Upgrade to Business
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-on-surface">Hide PortalKit branding</p>
+                <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
+                  {hideBranding
+                    ? 'PortalKit branding is hidden from your client portals.'
+                    : 'Clients see "Secured by PortalKit" and the PortalKit badge on their portal pages.'}
+                </p>
+              </div>
+              <button
+                onClick={toggleBranding}
+                disabled={brandingPending}
+                aria-checked={hideBranding}
+                role="switch"
+                className={cn(
+                  'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60',
+                  hideBranding ? 'bg-ds-secondary' : 'bg-outline-variant/60',
+                )}
+              >
+                {brandingPending ? (
+                  <Loader2 className="size-3.5 text-white absolute inset-0 m-auto animate-spin" />
+                ) : (
+                  <span className={cn(
+                    'pointer-events-none inline-block size-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 mt-0.5',
+                    hideBranding ? 'translate-x-4' : 'translate-x-0.5',
+                  )} />
+                )}
+              </button>
+            </div>
           )}
         </div>
       </div>

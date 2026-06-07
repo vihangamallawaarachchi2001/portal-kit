@@ -25,7 +25,7 @@ export default async function PortalLayout({
     .from('clients')
     .select(`
       id, name, portal_slug,
-      profiles:freelancer_id ( full_name, business_name, avatar_url, tagline, plan )
+      profiles:freelancer_id ( full_name, business_name, avatar_url, tagline, plan, hide_branding )
     `)
     .eq('portal_slug', slug)
     .eq('id', clientId)
@@ -36,7 +36,8 @@ export default async function PortalLayout({
 
   const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles
   const businessName = profile?.business_name || profile?.full_name || 'Your Portal'
-  const isPro = profile?.plan !== 'free'
+  const isPro        = profile?.plan !== 'free'
+  const hideBranding = isPro && (profile?.hide_branding ?? false)
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#f0f2f7' }}>
@@ -69,7 +70,7 @@ export default async function PortalLayout({
                 <p className="text-xs font-semibold text-white/90 leading-tight">{client.name}</p>
                 <p className="text-[11px] text-white/50">Client portal</p>
               </div>
-              {!isPro && (
+              {!isPro && !hideBranding && (
                 <Link
                   href="https://portalkit.app"
                   target="_blank"

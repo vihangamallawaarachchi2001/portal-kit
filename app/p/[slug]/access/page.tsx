@@ -9,6 +9,7 @@ interface Branding {
   businessName: string
   tagline: string | null
   avatarUrl: string | null
+  hideBranding: boolean
 }
 
 export default function PortalAccessPage() {
@@ -231,9 +232,11 @@ export default function PortalAccessPage() {
             </div>
           </div>
 
-          <p className="text-center text-[11px] text-on-surface-variant mt-5">
-            Secured by PortalKit · Links expire after 24 hours
-          </p>
+          {!branding?.hideBranding && (
+            <p className="text-center text-[11px] text-on-surface-variant mt-5">
+              Secured by PortalKit · Links expire after 24 hours
+            </p>
+          )}
         </div>
       </main>
     </div>

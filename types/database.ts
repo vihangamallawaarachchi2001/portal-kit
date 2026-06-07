@@ -48,6 +48,7 @@ export interface Profile {
   notification_preferences: NotificationPreferences
   custom_domain: string | null
   custom_domain_verified: boolean
+  hide_branding: boolean
   onboarding_completed: boolean
   created_at: string
   updated_at: string
