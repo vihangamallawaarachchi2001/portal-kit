@@ -19,7 +19,7 @@ async function getPortalContext(projectId: string) {
     .single()
 
   if (!project) return null
-  const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
+  const client = Array.isArray(project.clients) ? (project.clients[0] ?? null) : project.clients
   return { clientId, project, client }
 }
 
@@ -81,8 +81,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       body:  preview,
       tag:   `message-${ctx.project.id}`,
       data:  { url: `${appUrl}/dashboard/chats` },
-    }).catch(() => {})
-  }).catch(() => {})
+    }).catch((err) => console.error("[push]", err))
+  }).catch((err) => console.error("[push]", err))
 
   return created(data)
 }

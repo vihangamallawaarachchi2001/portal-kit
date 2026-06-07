@@ -32,7 +32,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (!file) return notFound('File not found')
 
-  const project = Array.isArray(file.projects) ? file.projects[0] : file.projects
+  const project = Array.isArray(file.projects) ? (file.projects[0] ?? null) : file.projects
   if (project?.client_id !== clientId) return unauthorized('Access denied')
 
   const { data, error } = await service
@@ -56,7 +56,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .single()
 
   const { data: authUser } = await service.auth.admin.getUserById(file.freelancer_id)
-  const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
+  const client = Array.isArray(project.clients) ? (project.clients[0] ?? null) : project.clients
 
   const allowed = await getNotificationPref(file.freelancer_id, 'file_review').catch(() => true)
 
@@ -82,7 +82,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       body: `${client?.name ?? 'A client'} ${label} "${file.filename}"`,
       tag: `file-review-${id}`,
       data: { url: '/dashboard' },
-    }).catch(() => {})
+    }).catch((err) => console.error("[push]", err))
   }
 
   return ok(data)

@@ -32,7 +32,7 @@ async function getCallerContext(projectId: string) {
   }
 
   // Portal client second — only if no authenticated freelancer session
-  const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
+  const client = Array.isArray(project.clients) ? (project.clients[0] ?? null) : project.clients
   if (clientId && client?.id === clientId) {
     return { type: 'client' as const, clientId, project }
   }
@@ -92,7 +92,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   // Push notification to the OTHER party
   const project = ctx.project
-  const client  = Array.isArray(project.clients) ? project.clients[0] : project.clients
+  const client  = Array.isArray(project.clients) ? (project.clients[0] ?? null) : project.clients
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const preview = input.content.length > 120 ? input.content.slice(0, 117) + '…' : input.content
 
@@ -104,7 +104,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         body:  preview,
         tag:   `message-${project.id}`,
         data:  { url: `${appUrl}/p/${client.portal_slug}/messages` },
-      }).catch(() => {})
+      }).catch((err) => console.error("[push]", err))
     }
   } else {
     // Notify freelancer — respect their messages preference
@@ -115,8 +115,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         body:  preview,
         tag:   `message-${project.id}`,
         data:  { url: `${appUrl}/dashboard/chats` },
-      }).catch(() => {})
-    }).catch(() => {})
+      }).catch((err) => console.error("[push]", err))
+    }).catch((err) => console.error("[push]", err))
   }
 
   return created(data)

@@ -30,7 +30,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (error) return internalError(error.message)
 
   // Notify client
-  const client = Array.isArray(invoice.clients) ? invoice.clients[0] : invoice.clients
+  const client = Array.isArray(invoice.clients) ? (invoice.clients[0] ?? null) : invoice.clients
   if (client?.email) {
     const { data: profile } = await supabase
       .from('profiles')

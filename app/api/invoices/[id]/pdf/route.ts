@@ -39,8 +39,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (user && invoice.freelancer_id !== user.id) return unauthorized()
   if (!user && portalClientId && invoice.client_id !== portalClientId) return unauthorized()
 
-  const client  = Array.isArray(invoice.clients)  ? invoice.clients[0]  : invoice.clients
-  const profile = Array.isArray(invoice.profiles) ? invoice.profiles[0] : invoice.profiles
+  const client  = Array.isArray(invoice.clients)  ? (invoice.clients[0] ?? null)  : invoice.clients
+  const profile = Array.isArray(invoice.profiles) ? (invoice.profiles[0] ?? null) : invoice.profiles
 
   // ── Render PDF ────────────────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

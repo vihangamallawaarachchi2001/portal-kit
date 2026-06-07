@@ -31,7 +31,7 @@ export default async function PortalMessagesPage({ params }: { params: Promise<{
 
   if (!client) redirect(`/p/${slug}/access`)
 
-  const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles
+  const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
   const freelancerName = profile?.business_name || profile?.full_name || 'Your Team'
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

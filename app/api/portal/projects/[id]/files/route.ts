@@ -80,7 +80,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     body: `New file "${filename}" is ready for your review`,
     tag: `client-upload-${id}`,
     data: { url: '/dashboard/files' },
-  }).catch(() => {})
+  }).catch((err) => console.error("[push]", err))
 
   return created(data)
 }

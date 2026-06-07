@@ -63,7 +63,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // Send email if status changed
   if (input.status && input.status !== existing.status) {
-    const client = Array.isArray(existing.clients) ? existing.clients[0] : existing.clients
+    const client = Array.isArray(existing.clients) ? (existing.clients[0] ?? null) : existing.clients
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name, business_name')

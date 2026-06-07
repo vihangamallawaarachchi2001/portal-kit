@@ -25,7 +25,7 @@ type NotifFile = {
 function getClient(projects: NotifMessage['projects'] | NotifFile['projects']) {
   if (!projects) return null
   const c = projects.clients
-  return Array.isArray(c) ? c[0] : c
+  return Array.isArray(c) ? (c[0] ?? null) : c
 }
 
 function parsePreview(content: string): string {

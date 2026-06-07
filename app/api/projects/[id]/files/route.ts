@@ -65,7 +65,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (error) return internalError(error.message)
 
   // Notify client
-  const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
+  const client = Array.isArray(project.clients) ? (project.clients[0] ?? null) : project.clients
   if (client?.email) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -91,7 +91,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         body: `"${input.filename}" was uploaded in "${project.title}"`,
         tag: `file-upload-${data.id}`,
         data: { url: '/dashboard' },
-      }).catch(() => {})
+      }).catch((err) => console.error("[push]", err))
     }
   }
 

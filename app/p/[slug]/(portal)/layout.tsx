@@ -34,7 +34,7 @@ export default async function PortalLayout({
 
   if (!client) redirect(`/p/${slug}/access`)
 
-  const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles
+  const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
   const businessName = profile?.business_name || profile?.full_name || 'Your Portal'
   const isPro        = profile?.plan !== 'free'
   const hideBranding = isPro && (profile?.hide_branding ?? false)

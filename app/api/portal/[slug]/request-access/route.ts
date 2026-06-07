@@ -38,7 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     .gte('created_at', oneHourAgo)
   if ((count ?? 0) >= 3) return ok({ sent: true })
 
-  const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles
+  const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
 
   const rawToken = randomBytes(32).toString('hex')
   const tokenHash = createHash('sha256').update(rawToken).digest('hex')

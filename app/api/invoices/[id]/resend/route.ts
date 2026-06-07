@@ -22,7 +22,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (invoice.status === 'draft') return badRequest('Send the invoice first before resending')
 
   // Send email notification
-  const client = Array.isArray(invoice.clients) ? invoice.clients[0] : invoice.clients
+  const client = Array.isArray(invoice.clients) ? (invoice.clients[0] ?? null) : invoice.clients
   if (client?.email) {
     const { data: profile } = await supabase
       .from('profiles')

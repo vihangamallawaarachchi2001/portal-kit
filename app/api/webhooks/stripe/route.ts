@@ -47,8 +47,8 @@ export async function POST(req: Request) {
         service.auth.admin.getUserById(invoice.freelancer_id),
       ])
 
-      const profile = Array.isArray(invoice.profiles) ? invoice.profiles[0] : invoice.profiles
-      const client  = Array.isArray(invoice.clients)  ? invoice.clients[0]  : invoice.clients
+      const profile = Array.isArray(invoice.profiles) ? (invoice.profiles[0] ?? null) : invoice.profiles
+      const client  = Array.isArray(invoice.clients)  ? (invoice.clients[0] ?? null)  : invoice.clients
       const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
       // Notification preference embedded in initial fetch — no extra round-trip
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
           body: `${client?.name ?? 'A client'} paid invoice ${invoice.invoice_number}`,
           tag: `invoice-paid-${invoiceId}`,
           data: { url: '/dashboard/invoices' },
-        }).catch(() => {})
+        }).catch((err) => console.error("[push]", err))
       }
 
       // Send receipt to client

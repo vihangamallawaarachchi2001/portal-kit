@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
 
   if (!client) return notFound('Portal not found')
 
-  const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles
+  const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
 
   const isPro        = profile?.plan !== 'free'
   const hideBranding = isPro && (profile?.hide_branding ?? false)

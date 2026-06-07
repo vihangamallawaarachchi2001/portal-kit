@@ -36,8 +36,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (invoice.status === 'paid') return badRequest('Invoice already paid')
   if (invoice.status === 'draft') return badRequest('Invoice has not been sent yet')
 
-  const client  = Array.isArray(invoice.clients)  ? invoice.clients[0]  : invoice.clients
-  const profile = Array.isArray(invoice.profiles) ? invoice.profiles[0] : invoice.profiles
+  const client  = Array.isArray(invoice.clients)  ? (invoice.clients[0] ?? null)  : invoice.clients
+  const profile = Array.isArray(invoice.profiles) ? (invoice.profiles[0] ?? null) : invoice.profiles
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const successUrl = `${appUrl}/p/${client?.portal_slug}/invoices?paid=true`
   const cancelUrl  = `${appUrl}/p/${client?.portal_slug}/invoices`
