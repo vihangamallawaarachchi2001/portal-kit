@@ -32,9 +32,10 @@ export default async function AdminPage() {
   if (!user || user.email !== process.env.ADMIN_EMAIL) redirect('/dashboard')
 
   const service = createServiceClient()
-  const sevenDaysAgo  = new Date(Date.now() -  7 * 86400000).toISOString()
-  const eightWeeksAgo = new Date(Date.now() - 56 * 86400000).toISOString()
-  const sixMonthsAgo  = new Date(Date.now() - 180 * 86400000).toISOString()
+  const sevenDaysAgo   = new Date(Date.now() -  7 * 86400000).toISOString()
+  const thirtyDaysAgo  = new Date(Date.now() - 30 * 86400000).toISOString()
+  const eightWeeksAgo  = new Date(Date.now() - 56 * 86400000).toISOString()
+  const sixMonthsAgo   = new Date(Date.now() - 180 * 86400000).toISOString()
   const now = new Date().toISOString()
 
   const [
@@ -53,9 +54,17 @@ export default async function AdminPage() {
     { count: cRecentMessages },
     { count: cRecentFiles },
     { count: cRecentSessions },
+    // Recent users: no grant columns — works without migration 015
     { data: recentSignupsRows },
+    // Active grants: may return null if migration 015 not run — handled below
     { data: grantsRows },
     authResult,
+    // Resource queries
+    { data: dbSizeRaw },
+    { data: storageStatsRaw },
+    // Email estimates: portal sessions (magic links) + invoice sends in last 30 days
+    { count: cEmailMagicLinks },
+    { count: cEmailInvoices },
   ] = await Promise.all([
     service.from('profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     service.from('clients').select('id', { count: 'exact', head: true }).is('deleted_at', null),
@@ -72,9 +81,18 @@ export default async function AdminPage() {
     service.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo),
     service.from('files').select('id', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo).is('deleted_at', null),
     service.from('portal_sessions').select('id', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo),
-    service.from('profiles').select('id, full_name, plan, plan_grant_expires_at, created_at').order('created_at', { ascending: false }).limit(10),
+    // Basic profile fields only — no grant columns, so this works without migration 015
+    service.from('profiles').select('id, full_name, plan, created_at').order('created_at', { ascending: false }).limit(10),
+    // Grant query — may fail silently if migration 015 not run; grantsRows will be null
     service.from('profiles').select('id, full_name, plan, plan_grant_expires_at, plan_grant_note').not('plan_grant_expires_at', 'is', null).gt('plan_grant_expires_at', now).limit(100),
     service.auth.admin.listUsers({ perPage: 1000 }),
+    // Resource RPCs — return null if migration 016 not run
+    service.rpc('admin_db_size'),
+    service.rpc('admin_storage_stats'),
+    // Magic link emails sent in last 30 days
+    service.from('portal_sessions').select('id', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo),
+    // Invoice emails: non-draft invoices created in last 30 days (each required an email send)
+    service.from('invoices').select('id', { count: 'exact', head: true }).neq('status', 'draft').gte('created_at', thirtyDaysAgo).is('deleted_at', null),
   ])
 
   const emailMap = new Map<string, string>()
@@ -138,6 +156,7 @@ export default async function AdminPage() {
     status, count, total: Math.round(total * 100) / 100,
   }))
 
+  // Recent users — grant expiry will always be null until migration 015 is run
   const recentUsers = (recentSignupsRows ?? []).map(p => {
     const row = p as Record<string, unknown>
     return {
@@ -146,10 +165,11 @@ export default async function AdminPage() {
       name: (row.full_name as string | null) ?? null,
       plan: (row.plan as string) ?? 'free',
       joinedAt: row.created_at as string,
-      grantExpiresAt: (row.plan_grant_expires_at as string | null) ?? null,
+      grantExpiresAt: null as string | null,
     }
   })
 
+  // Active grants — null if migration 015 not run, which is fine (no grants exist yet)
   const activeGrants = (grantsRows ?? []).map(p => {
     const row = p as Record<string, unknown>
     return {
@@ -161,6 +181,10 @@ export default async function AdminPage() {
       note: (row.plan_grant_note as string | null) ?? null,
     }
   })
+
+  // Resource metrics
+  const storageRow = Array.isArray(storageStatsRaw) ? storageStatsRaw[0] : null
+  const emailEstimateMonth = (cEmailMagicLinks ?? 0) + (cEmailInvoices ?? 0)
 
   const data = {
     kpis: {
@@ -195,6 +219,15 @@ export default async function AdminPage() {
     ],
     recentUsers,
     activeGrants,
+    resources: {
+      authUsers: authResult.data?.users?.length ?? 0,
+      dbSizeBytes:      typeof dbSizeRaw === 'number' ? dbSizeRaw : null,
+      storageSizeBytes: storageRow ? Number((storageRow as Record<string, unknown>).total_bytes) : null,
+      storageFileCount: storageRow ? Number((storageRow as Record<string, unknown>).file_count)  : null,
+      emailMagicLinksMonth: cEmailMagicLinks ?? 0,
+      emailInvoicesMonth:   cEmailInvoices ?? 0,
+      emailEstimateMonth,
+    },
   }
 
   return <AdminDashboard data={data} adminEmail={user.email!} />

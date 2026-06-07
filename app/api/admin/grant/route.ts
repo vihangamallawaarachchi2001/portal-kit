@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { ok, unauthorized, badRequest, notFound, internalError } from '@/lib/api'
 
-// POST — grant a free Pro/Business plan to a user
+// POST — grant a free Pro/Business plan to a user for N months
 export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,31 +21,32 @@ export async function POST(req: Request) {
 
   const service = createServiceClient()
 
-  // Confirm user exists
-  const { data: profile } = await service
-    .from('profiles')
-    .select('id')
-    .eq('id', userId)
-    .single()
+  const { data: profile } = await service.from('profiles').select('id').eq('id', userId).single()
   if (!profile) return notFound('User not found')
 
   const expiresAt = new Date(Date.now() + months * 30 * 86400000).toISOString()
 
-  const { error } = await service
+  // Step 1: Update plan — these columns always exist
+  const { error: planErr } = await service
     .from('profiles')
-    .update({
-      plan,
-      subscription_status: 'active',
-      plan_grant_expires_at: expiresAt,
-      plan_grant_note: note ?? null,
-    })
+    .update({ plan, subscription_status: 'active' })
     .eq('id', userId)
+  if (planErr) return internalError(planErr.message)
 
-  if (error) return internalError(error.message)
-  return ok({ granted: true, plan, expiresAt })
+  // Step 2: Update grant-tracking columns — requires migration 015.
+  // Silently skips if the columns don't exist yet so the grant still works.
+  const { error: grantErr } = await service
+    .from('profiles')
+    .update({ plan_grant_expires_at: expiresAt, plan_grant_note: note ?? null })
+    .eq('id', userId)
+  if (grantErr) {
+    console.warn('[admin/grant] grant tracking unavailable (run migration 015):', grantErr.message)
+  }
+
+  return ok({ granted: true, plan, expiresAt, trackingEnabled: !grantErr })
 }
 
-// DELETE — revoke a grant, reverting user to free
+// DELETE — revoke a grant, returning the user to free
 export async function DELETE(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -59,16 +60,18 @@ export async function DELETE(req: Request) {
 
   const service = createServiceClient()
 
-  const { error } = await service
+  // Step 1: Revert plan — always works
+  const { error: planErr } = await service
     .from('profiles')
-    .update({
-      plan: 'free',
-      subscription_status: 'inactive',
-      plan_grant_expires_at: null,
-      plan_grant_note: null,
-    })
+    .update({ plan: 'free', subscription_status: 'inactive' })
+    .eq('id', userId)
+  if (planErr) return internalError(planErr.message)
+
+  // Step 2: Clear grant-tracking columns — silently skip if not available
+  await service
+    .from('profiles')
+    .update({ plan_grant_expires_at: null, plan_grant_note: null })
     .eq('id', userId)
 
-  if (error) return internalError(error.message)
   return ok({ revoked: true })
 }

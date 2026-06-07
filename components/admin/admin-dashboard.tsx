@@ -35,6 +35,15 @@ interface Grant {
   id: string; email: string; name: string | null
   plan: string; expiresAt: string; note: string | null
 }
+interface ResourceMetrics {
+  authUsers: number
+  dbSizeBytes: number | null        // null = migration 016 not run yet
+  storageSizeBytes: number | null
+  storageFileCount: number | null
+  emailMagicLinksMonth: number
+  emailInvoicesMonth: number
+  emailEstimateMonth: number
+}
 interface AdminData {
   kpis: KPIs
   planBreakdown: PlanSlice[]
@@ -45,6 +54,7 @@ interface AdminData {
   tableCounts: TableCount[]
   recentUsers: RecentUser[]
   activeGrants: Grant[]
+  resources: ResourceMetrics
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -294,37 +304,182 @@ function RevenueTab({ data }: { data: AdminData }) {
 
 // ── Resources Tab ─────────────────────────────────────────────────────────────
 
+// Supabase free tier limits (as of 2025)
+const SUPABASE_LIMITS = {
+  authUsers:  50_000,
+  dbMB:       500,
+  storageMB:  1_024,
+}
+// Resend free tier limits
+const RESEND_LIMITS = {
+  emailsPerMonth: 3_000,
+  emailsPerDay:   100,
+}
+
+function fmtBytes(bytes: number): string {
+  if (bytes < 1024)         return `${bytes} B`
+  if (bytes < 1024 * 1024)  return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function UsageBar({ label, used, limit, unit, note, unavailable }: {
+  label: string; used: number; limit: number; unit: string
+  note?: string; unavailable?: boolean
+}) {
+  const pct = unavailable ? 0 : Math.min(100, (used / limit) * 100)
+  const barColor = pct > 80 ? 'bg-red-500' : pct > 60 ? 'bg-amber-400' : 'bg-emerald-500'
+  const pctColor = pct > 80 ? 'text-red-600' : pct > 60 ? 'text-amber-600' : 'text-emerald-600'
+
+  return (
+    <div className="py-4 border-b border-outline-variant/10 last:border-0">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <p className="text-sm font-semibold text-on-surface">{label}</p>
+          {note && <p className="text-xs text-on-surface-variant mt-0.5">{note}</p>}
+        </div>
+        <div className="text-right shrink-0 ml-4">
+          {unavailable ? (
+            <span className="text-xs text-on-surface-variant/50 italic">run migration 016</span>
+          ) : (
+            <>
+              <span className={cn('text-sm font-bold', pctColor)}>{pct.toFixed(1)}%</span>
+              <p className="text-xs text-on-surface-variant mt-0.5">
+                {used.toLocaleString()} / {limit.toLocaleString()} {unit}
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="h-2 bg-surface-container rounded-full overflow-hidden">
+        <div
+          className={cn('h-full rounded-full transition-all', unavailable ? 'bg-outline-variant/20' : barColor)}
+          style={{ width: unavailable ? '100%' : `${Math.max(pct < 0.5 && used > 0 ? 1 : 0, pct)}%` }}
+        />
+      </div>
+      {pct > 80 && !unavailable && (
+        <p className="text-xs text-red-600 font-medium mt-1.5">
+          ⚠ Above 80% — consider upgrading soon
+        </p>
+      )}
+      {pct > 60 && pct <= 80 && !unavailable && (
+        <p className="text-xs text-amber-600 font-medium mt-1.5">
+          Getting close — monitor this
+        </p>
+      )}
+    </div>
+  )
+}
+
 function ResourcesTab({ data }: { data: AdminData }) {
-  const { tableCounts } = data
+  const { tableCounts, resources } = data
   const maxRows = Math.max(...tableCounts.map(t => t.rows), 1)
+
+  const dbMB      = resources.dbSizeBytes      != null ? resources.dbSizeBytes / (1024 * 1024)      : null
+  const storageMB = resources.storageSizeBytes != null ? resources.storageSizeBytes / (1024 * 1024) : null
 
   return (
     <div className="space-y-7">
+      {/* ── Supabase free tier limits ─────────────────────── */}
       <div>
-        <SectionTitle>Database Row Counts</SectionTitle>
-        <div className="bg-white rounded-xl border border-outline-variant/20 shadow-sm p-5">
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={tableCounts} layout="vertical" margin={{ top: 0, right: 16, bottom: 0, left: 56 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5eeff" horizontal={false} />
-              <XAxis type="number" tick={{ fill: '#45464d', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <YAxis type="category" dataKey="table" tick={{ fill: '#45464d', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(0,81,213,0.04)' }} />
-              <Bar dataKey="rows" radius={[0, 3, 3, 0]}>
-                {tableCounts.map((_, i) => {
-                  const hue = 220 + i * 18
-                  return <Cell key={i} fill={`hsl(${hue},65%,55%)`} />
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <SectionTitle>Supabase Free Tier Usage</SectionTitle>
+        <div className="bg-white rounded-xl border border-outline-variant/20 shadow-sm px-5 py-1">
+          <UsageBar
+            label="Auth Users"
+            used={resources.authUsers}
+            limit={SUPABASE_LIMITS.authUsers}
+            unit="users"
+            note="Registered accounts in Supabase Auth"
+          />
+          <UsageBar
+            label="Database Size"
+            used={dbMB ?? 0}
+            limit={SUPABASE_LIMITS.dbMB}
+            unit="MB"
+            note={
+              resources.dbSizeBytes != null
+                ? `${fmtBytes(resources.dbSizeBytes)} used — includes all tables, indexes, WAL`
+                : 'Actual database size (rows + indexes + overhead)'
+            }
+            unavailable={dbMB == null}
+          />
+          <UsageBar
+            label="File Storage"
+            used={storageMB ?? 0}
+            limit={SUPABASE_LIMITS.storageMB}
+            unit="MB"
+            note={
+              resources.storageSizeBytes != null
+                ? `${fmtBytes(resources.storageSizeBytes)} across ${resources.storageFileCount?.toLocaleString()} files`
+                : 'Storage bucket usage (avatars, client files)'
+            }
+            unavailable={storageMB == null}
+          />
         </div>
+        {(dbMB == null || storageMB == null) && (
+          <p className="mt-2 text-xs text-on-surface-variant/60 flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-amber-400 shrink-0" />
+            Run migration 016 in Supabase SQL editor to unlock DB size and storage metrics.
+          </p>
+        )}
       </div>
 
+      {/* ── Resend email estimates ────────────────────────── */}
       <div>
-        <SectionTitle>Table Overview</SectionTitle>
+        <SectionTitle>Email Usage — Resend Free Tier</SectionTitle>
+        <div className="bg-white rounded-xl border border-outline-variant/20 shadow-sm px-5 py-1">
+          <UsageBar
+            label="Estimated Emails This Month"
+            used={resources.emailEstimateMonth}
+            limit={RESEND_LIMITS.emailsPerMonth}
+            unit="emails"
+            note={`~${resources.emailMagicLinksMonth} magic links · ~${resources.emailInvoicesMonth} invoice emails (estimate from DB activity)`}
+          />
+        </div>
+        <p className="mt-2 text-xs text-on-surface-variant/60">
+          Resend free tier: {RESEND_LIMITS.emailsPerDay}/day · {RESEND_LIMITS.emailsPerMonth}/month.
+          For exact delivery stats and bounces check{' '}
+          <a href="https://resend.com/emails" target="_blank" rel="noopener noreferrer"
+            className="text-ds-secondary hover:underline">resend.com/emails</a>.
+        </p>
+      </div>
+
+      {/* ── Metrics that need the Supabase dashboard ─────── */}
+      <div>
+        <SectionTitle>Metrics Available Only in Supabase Dashboard</SectionTitle>
+        <div className="bg-white rounded-xl border border-outline-variant/20 shadow-sm overflow-hidden">
+          {[
+            { metric: 'Bandwidth',                  limit: '5 GB / month',        path: 'Reports → Bandwidth'         },
+            { metric: 'Edge Function Invocations',  limit: '500,000 / month',     path: 'Functions → Invocations'     },
+            { metric: 'Realtime Messages',          limit: '2,000,000 / month',   path: 'Reports → Realtime'          },
+            { metric: 'Auth Rate Limit (emails)',   limit: '4 per hour',          path: 'Auth → Rate Limits'          },
+          ].map(row => (
+            <div key={row.metric} className="flex items-center justify-between px-5 py-3 border-b border-outline-variant/10 last:border-0 hover:bg-surface-container/20 transition-colors">
+              <div>
+                <p className="text-sm font-medium text-on-surface">{row.metric}</p>
+                <p className="text-xs text-on-surface-variant mt-0.5">{row.path}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-semibold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
+                  Limit: {row.limit}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-on-surface-variant/60">
+          Go to{' '}
+          <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer"
+            className="text-ds-secondary hover:underline">supabase.com/dashboard</a>
+          {' '}→ your project → Reports to see these live.
+        </p>
+      </div>
+
+      {/* ── DB table row counts ───────────────────────────── */}
+      <div>
+        <SectionTitle>Database Table Counts</SectionTitle>
         <div className="rounded-xl border border-outline-variant/20 bg-white shadow-sm overflow-hidden">
           <div className="grid grid-cols-[1fr_100px_1fr] px-5 py-2.5 bg-surface-container/50 border-b border-outline-variant/15">
-            {['Table', 'Rows', 'Fill'].map(h => (
+            {['Table', 'Rows', 'Relative size'].map(h => (
               <p key={h} className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{h}</p>
             ))}
           </div>
@@ -332,8 +487,7 @@ function ResourcesTab({ data }: { data: AdminData }) {
             {tableCounts.map(t => (
               <div key={t.table} className="grid grid-cols-[1fr_100px_1fr] px-5 py-3 hover:bg-surface-container/20 transition-colors items-center">
                 <span className="flex items-center gap-2 text-sm font-medium text-on-surface">
-                  <Database className="size-3.5 text-on-surface-variant/40 shrink-0" />
-                  {t.table}
+                  <Database className="size-3.5 text-on-surface-variant/40 shrink-0" />{t.table}
                 </span>
                 <span className="text-sm font-mono text-on-surface-variant">{t.rows.toLocaleString()}</span>
                 <div className="h-1.5 bg-surface-container rounded-full overflow-hidden max-w-40">
