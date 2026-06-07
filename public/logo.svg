@@ -1,0 +1,25 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="100" height="100" rx="22" fill="url(#bg)"/>
+  <!-- Floor bar -->
+  <rect x="16" y="73" width="68" height="5" rx="2.5" fill="white" opacity="0.85"/>
+  <!-- Outer portal arch: pillars at x=22 and x=78, semicircular arch r=28 going up -->
+  <path d="M22 78 L22 50 A28 28 0 0 0 78 50 L78 78"
+        stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Inner portal arch: pillars at x=34 and x=66, r=16 -->
+  <path d="M34 78 L34 57 A16 16 0 0 0 66 57 L66 78"
+        fill="rgba(255,255,255,0.12)" stroke="white" stroke-width="3.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Center glow dot in the portal opening -->
+  <circle cx="50" cy="57" r="5.5" fill="white" filter="url(#glow)"/>
+</svg>

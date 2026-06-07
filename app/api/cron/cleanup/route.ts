@@ -32,6 +32,17 @@ export async function GET(req: Request) {
     if (storageErr) console.error('[cron/cleanup] storage remove failed', storageErr)
   }
 
+  // Revert expired admin plan grants back to free (only if not on a real Stripe subscription).
+  // Grants have plan_grant_expires_at set; Stripe-paying users have stripe_subscription_id set.
+  const { data: expiredGrants, error: e0 } = await service
+    .from('profiles')
+    .update({ plan: 'free', subscription_status: 'inactive', plan_grant_expires_at: null, plan_grant_note: null })
+    .not('plan_grant_expires_at', 'is', null)
+    .lt('plan_grant_expires_at', new Date().toISOString())
+    .is('stripe_subscription_id', null)
+    .select('id')
+  if (e0) console.error('[cron/cleanup] grant revert failed', e0)
+
   const [{ data: hardDeleted, error: e1 }, { data: sessionsPurged, error: e2 }] = await Promise.all([
     service.rpc('hard_delete_old_soft_deleted'),
     service.rpc('purge_expired_portal_sessions'),
@@ -43,6 +54,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: true,
     storagePathsRemoved: storagePaths.length,
+    expiredGrantsReverted: expiredGrants?.length ?? 0,
     hardDeleted: hardDeleted ?? null,
     sessionsPurged: sessionsPurged ?? 0,
   })
