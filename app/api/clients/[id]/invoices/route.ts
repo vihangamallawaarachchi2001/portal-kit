@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ok, created, unauthorized, notFound, badRequest, internalError, fromZodError } from '@/lib/api'
+import { ok, created, unauthorized, notFound, badRequest, internalError, paymentRequired, fromZodError } from '@/lib/api'
 import { createInvoiceSchema } from '@/lib/validations'
 import { ZodError } from 'zod'
 
@@ -46,6 +46,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .single()
 
   if (!client) return notFound('Client not found')
+
+  // Invoices are a Pro+ feature
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.plan === 'free') {
+    return paymentRequired(
+      'Invoicing is available on Pro and Business plans. Upgrade to start sending invoices.',
+      { code: 'invoice_gating' },
+    )
+  }
 
   let body: Record<string, unknown>
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }
