@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import {
   Upload, Paperclip, Trash2, CheckCircle, Clock, XCircle,
   FileText, ImageIcon, Video, Archive, Loader2, AlertCircle,
-  FolderOpen,
+  FolderOpen, Download,
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
@@ -56,15 +56,31 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id ?? '')
   const [uploading, setUploading]                 = useState(false)
   const [uploadProgress, setUploadProgress]       = useState(0)
+  const [downloadingId, setDownloadingId]         = useState<string | null>(null)
+  const [expandedComments, setExpandedComments]   = useState<Set<string>>(new Set())
   const [, startTransition]                       = useTransition()
   const fileInputRef                              = useRef<HTMLInputElement>(null)
 
   const FREE_LIMIT      = 3
   const atLimit         = plan === 'free' && totalFileCount >= FREE_LIMIT
   const selectedProject = projects.find(p => p.id === selectedProjectId)
-  const files           = (selectedProject?.files ?? [])
+
+  const allProjectFiles = (selectedProject?.files ?? [])
     .filter((f: FileType) => !f.deleted_at)
     .sort((a: FileType, b: FileType) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  // Root files only (not review attachments)
+  const files = allProjectFiles.filter((f: FileType) => !f.parent_file_id)
+
+  // Build attachment map for this project
+  const attachmentMap = new Map<string, FileType[]>()
+  for (const f of allProjectFiles) {
+    if (f.parent_file_id) {
+      const arr = attachmentMap.get(f.parent_file_id) ?? []
+      arr.push(f)
+      attachmentMap.set(f.parent_file_id, arr)
+    }
+  }
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -134,6 +150,24 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
     }
   }, [selectedProjectId, atLimit, router])
 
+  async function handleDownload(fileId: string, filename: string) {
+    setDownloadingId(fileId)
+    try {
+      const res = await fetch(`/api/files/${fileId}`)
+      if (!res.ok) throw new Error('Failed to get download link')
+      const { download_url } = await res.json()
+      const a = document.createElement('a')
+      a.href = download_url
+      a.download = filename
+      a.target = '_blank'
+      a.click()
+    } catch {
+      toast.error('Could not download file')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
   function handleDelete(fileId: string, filename: string) {
     startTransition(async () => {
       const res = await fetch(`/api/files/${fileId}`, { method: 'DELETE' })
@@ -149,8 +183,8 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
   /* ── No projects ─────────────────────────────── */
   if (projects.length === 0) {
     return (
-      <div className="max-w-4xl flex flex-col items-center justify-center min-h-[40vh] text-center gap-4 py-16">
-        <div className="size-16 rounded-md bg-surface-container flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center min-h-[40vh] text-center gap-4 py-16">
+        <div className="size-16 rounded-lg bg-surface-container flex items-center justify-center">
           <FolderOpen className="size-8 text-on-surface-variant" strokeWidth={1.5} />
         </div>
         <div>
@@ -164,10 +198,10 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
   }
 
   return (
-    <div className="max-w-4xl flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
 
       {/* ── Control bar ──────────────────────────── */}
-      <div className="bg-white rounded-md shadow-sm px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+      <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
         {/* Project selector */}
         <div className="flex items-center gap-3">
           <p className="text-xs font-semibold text-on-surface-variant shrink-0">Project</p>
@@ -254,7 +288,7 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
 
       {/* ── File list ────────────────────────────── */}
       {files.length === 0 ? (
-        <div className="bg-white rounded-md shadow-sm flex flex-col items-center justify-center py-16 px-6 text-center gap-5">
+        <div className="bg-white rounded-lg shadow-sm flex flex-col items-center justify-center py-16 px-6 text-center gap-5">
           <div className="relative">
             <div className="size-20 rounded-2xl bg-ds-secondary/8 flex items-center justify-center">
               <Paperclip className="size-10 text-ds-secondary/50" strokeWidth={1.5} />
@@ -273,7 +307,7 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-1.5 h-10 px-5 rounded-md bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors shadow-sm shadow-ds-secondary/20"
+              className="inline-flex items-center gap-1.5 h-10 px-5 rounded-lg bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors shadow-sm shadow-ds-secondary/20"
             >
               <Upload className="size-4" />
               Upload first file
@@ -281,23 +315,25 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-md shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {/* Table header */}
           <div className="flex items-center gap-4 px-5 py-3 bg-surface-container/50 border-b border-outline-variant/30">
             <span className="flex-1 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">File</span>
             <span className="w-16 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider hidden sm:block">Size</span>
             <span className="w-32 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Status</span>
-            <span className="w-7" />
+            <span className="w-16" />
           </div>
 
           <div className="divide-y divide-outline-variant/20">
             {files.map((file: FileType) => {
               const { Icon, bg, color } = fileIconCfg(file.mime_type)
               const statusCfg = STATUS_CONFIG[file.status]
+              const childFiles = attachmentMap.get(file.id) ?? []
+              const commentExpanded = expandedComments.has(file.id)
 
               return (
+                <div key={file.id}>
                 <div
-                  key={file.id}
                   className="group/file flex items-center gap-4 px-5 py-4 hover:bg-surface-container/30 transition-colors"
                 >
                   {/* File type icon */}
@@ -334,14 +370,81 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
                     {statusCfg.label}
                   </span>
 
-                  {/* Delete — hover only */}
-                  <button
-                    onClick={() => handleDelete(file.id, file.filename)}
-                    className="size-7 rounded-md flex items-center justify-center text-on-surface-variant opacity-0 group-hover/file:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"
-                    title="Delete file"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
+                  {/* Actions — hover only */}
+                  <div className="flex items-center gap-1 w-20 justify-end opacity-0 group-hover/file:opacity-100 transition-all shrink-0">
+                    {(file.client_comment || childFiles.length > 0) && (
+                      <button
+                        onClick={() => setExpandedComments(prev => {
+                          const next = new Set(prev)
+                          next.has(file.id) ? next.delete(file.id) : next.add(file.id)
+                          return next
+                        })}
+                        className={cn(
+                          'size-7 rounded-md flex items-center justify-center transition-colors',
+                          commentExpanded ? 'bg-amber-50 text-amber-600' : 'text-on-surface-variant hover:bg-amber-50',
+                        )}
+                        title="View feedback"
+                      >
+                        <span className="text-[10px]">💬</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDownload(file.id, file.filename)}
+                      disabled={downloadingId === file.id}
+                      className="size-7 rounded-md flex items-center justify-center text-on-surface-variant hover:text-ds-secondary hover:bg-ds-secondary/8 transition-colors disabled:opacity-50"
+                      title="Download"
+                    >
+                      {downloadingId === file.id
+                        ? <Loader2 className="size-3.5 animate-spin" />
+                        : <Download className="size-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(file.id, file.filename)}
+                      className="size-7 rounded-md flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Delete file"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+                {/* Expanded comment + attachments */}
+                {commentExpanded && (
+                  <div className="px-5 pb-3 flex flex-col gap-2">
+                    {file.client_comment && (
+                      <div className="px-4 py-2.5 rounded-xl bg-orange-50 border border-orange-100">
+                        <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider mb-1">Client feedback</p>
+                        <p className="text-xs text-orange-900 whitespace-pre-wrap leading-relaxed">{file.client_comment}</p>
+                      </div>
+                    )}
+                    {childFiles.length > 0 && (
+                      <div className="flex flex-col gap-1.5 pl-2">
+                        <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-wider">Reference files from client</p>
+                        {childFiles.map(att => {
+                          const { Icon: AttIcon, bg: attBg, color: attColor } = fileIconCfg(att.mime_type)
+                          return (
+                            <div key={att.id} className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50">
+                              <div className={cn('size-7 rounded-md flex items-center justify-center shrink-0', attBg)}>
+                                <AttIcon className={cn('size-3.5', attColor)} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-on-surface truncate">{att.filename}</p>
+                                <p className="text-[10px] text-on-surface-variant">{formatFileSize(att.file_size)}</p>
+                              </div>
+                              <button
+                                onClick={() => handleDownload(att.id, att.filename)}
+                                disabled={downloadingId === att.id}
+                                className="size-7 rounded-md flex items-center justify-center text-on-surface-variant hover:text-ds-secondary hover:bg-ds-secondary/8 transition-colors disabled:opacity-50"
+                                title="Download"
+                              >
+                                {downloadingId === att.id ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
                 </div>
               )
             })}

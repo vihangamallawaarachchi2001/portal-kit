@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
+import { useState, useMemo, useTransition, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatRelativeTime, getInitials } from '@/lib/format'
 import {
   Users, DollarSign, Clock, MessageSquare,
   Search, LayoutGrid, List, ArrowRight,
   Copy, Send, Archive, MoreHorizontal, FolderOpen, Plus, Sparkles,
+  SlidersHorizontal, Check,
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -17,10 +18,6 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
-} from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Client, Project } from '@/types/database'
 
@@ -104,14 +101,9 @@ export function ClientsView({ clients }: ClientsViewProps) {
       <div className="border-b border-outline-variant/20">
 
         {/* Title + CTA */}
-        <div className="px-8 pt-8 pb-5 flex items-start justify-between gap-4">
+        <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-5 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-[22px] font-bold text-on-surface tracking-tight">Clients</h1>
-            <p className="text-sm text-on-surface-variant mt-0.5">
-              {clients.length > 0
-                ? `${clients.length} active portal${clients.length !== 1 ? 's' : ''}`
-                : 'Add clients to create their portals'}
-            </p>
           </div>
           <button
             onClick={() => setAddOpen(true)}
@@ -124,34 +116,30 @@ export function ClientsView({ clients }: ClientsViewProps) {
 
         {/* KPI cards */}
         {clients.length > 0 && (
-          <div className="px-8 pb-7 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <KpiCard value={clients.length} label="Total Clients" icon={Users}
-              bg="bg-slate-50" border="border-slate-200/70" color="text-slate-600" />
-            <KpiCard value={formatCurrency(totalOutstanding)} label="Outstanding" icon={DollarSign}
-              bg="bg-blue-50/60" border="border-blue-200/60" color="text-ds-secondary"
+          <div className="px-4 sm:px-8 pb-5 sm:pb-7 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <KpiCard value={clients.length}               label="Total Clients"    icon={Users}         color="text-slate-400"   accent="#94a3b8" />
+            <KpiCard value={formatCurrency(totalOutstanding)} label="Outstanding"  icon={DollarSign}    color="text-blue-500"    accent="#3b82f6"
               badge={outstandingCount > 0 ? `${outstandingCount} client${outstandingCount !== 1 ? 's' : ''}` : undefined}
-              badgeCls="bg-blue-100 text-ds-secondary" />
-            <KpiCard value={totalPending} label="Pending Files" icon={Clock}
-              bg="bg-amber-50" border="border-amber-200/70" color="text-amber-600" />
-            <KpiCard value={totalUnread} label="Unread Messages" icon={MessageSquare}
-              bg="bg-violet-50" border="border-violet-200/60" color="text-violet-600" />
+              badgeCls="bg-blue-50 text-ds-secondary" />
+            <KpiCard value={totalPending}                 label="Pending Files"    icon={Clock}         color="text-amber-500"   accent="#f59e0b" />
+            <KpiCard value={totalUnread}                  label="Unread Messages"  icon={MessageSquare} color="text-violet-500"  accent="#8b5cf6" />
           </div>
         )}
       </div>
 
       {/* ══ CONTROLS BAR ════════════════════════════════ */}
       {clients.length > 0 && (
-        <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-sm border-b border-outline-variant/15 px-8 py-2.5 flex items-center gap-3">
+        <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-sm border-b border-outline-variant/15 px-4 sm:px-8 py-2.5 flex items-center gap-2">
 
-          {/* Search */}
-          <div className="relative">
+          {/* Search — full width */}
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-on-surface-variant/40 pointer-events-none" />
             <input
               type="text"
               placeholder="Search clients…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="h-8 w-52 pl-9 pr-3 rounded-md border border-outline-variant/60 text-sm bg-surface-container/20 hover:bg-white focus:bg-white focus:border-ds-secondary focus:ring-2 focus:ring-ds-secondary/20 focus:outline-none transition-all placeholder:text-on-surface-variant/40"
+              className="h-8 w-full pl-9 pr-3 rounded-md border border-outline-variant/60 text-sm bg-white focus:border-ds-secondary focus:ring-2 focus:ring-ds-secondary/20 focus:outline-none transition-all placeholder:text-on-surface-variant/40"
             />
             {search && (
               <button
@@ -164,35 +152,25 @@ export function ClientsView({ clients }: ClientsViewProps) {
             )}
           </div>
 
-          {/* Filter */}
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="h-8 w-44 text-sm">
-              <SelectValue placeholder="All clients" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All clients</SelectItem>
-              <SelectItem value="outstanding">Outstanding balance</SelectItem>
-              <SelectItem value="unread">Unread messages</SelectItem>
-              <SelectItem value="no-projects">No active projects</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Filter icon button */}
+          <ClientFilterButton filter={filter} onFilterChange={setFilter} />
 
           {isFiltering && (
-            <span className="text-[12px] text-on-surface-variant/60">
+            <span className="hidden sm:inline text-[12px] text-on-surface-variant/60">
               {filtered.length} result{filtered.length !== 1 ? 's' : ''}
             </span>
           )}
           {isFiltering && (
             <button
               onClick={() => { setSearch(''); setFilter('all') }}
-              className="text-[12px] font-medium text-ds-secondary hover:underline"
+              className="text-[12px] font-medium text-ds-secondary hover:underline whitespace-nowrap"
             >
               Clear
             </button>
           )}
 
           {/* View toggle */}
-          <div className="ml-auto flex items-center gap-0.5 bg-surface-container/60 p-0.5 rounded-md border border-outline-variant/25">
+          <div className="flex items-center gap-0.5 bg-surface-container/60 p-0.5 rounded-md border border-outline-variant/25 shrink-0">
             {([['table', List, 'Table view'], ['cards', LayoutGrid, 'Card view']] as const).map(([v, Icon, title]) => (
               <button
                 key={v}
@@ -213,7 +191,7 @@ export function ClientsView({ clients }: ClientsViewProps) {
       )}
 
       {/* ══ CONTENT ═════════════════════════════════════ */}
-      <div className="px-8 py-7 pb-16">
+      <div className="px-4 sm:px-8 py-5 sm:py-7 pb-16">
         {clients.length === 0 ? (
           <EmptyClients onAdd={() => setAddOpen(true)} />
         ) : filtered.length === 0 ? (
@@ -242,30 +220,105 @@ export function ClientsView({ clients }: ClientsViewProps) {
 
 /* ══ KPI CARD ════════════════════════════════════════════ */
 function KpiCard({
-  value, label, icon: Icon, bg, border, color, badge, badgeCls,
+  value, label, icon: Icon, color, accent, badge, badgeCls,
 }: {
   value: string | number; label: string; icon: React.ElementType
-  bg: string; border: string; color: string
+  color: string; accent: string
   badge?: string; badgeCls?: string
 }) {
   const isString = typeof value === 'string'
   return (
-    <div className={cn('flex items-start justify-between px-4 py-4 rounded-xl border', bg, border)}>
+    <div className="relative flex items-start justify-between px-5 py-4 rounded-lg border border-outline-variant/20 bg-white shadow-sm overflow-hidden">
+      <div className="absolute left-0 top-0 bottom-0 w-0.75" style={{ background: accent }} />
       <div className="flex flex-col">
         <span className={cn(
           'font-extrabold text-on-surface tracking-tight leading-none',
-          isString ? 'text-[20px]' : 'text-[30px]',
+          isString ? 'text-[20px]' : 'text-[28px]',
         )}>
           {value}
         </span>
-        <span className={cn('text-[12px] font-semibold mt-2', color)}>{label}</span>
+        <span className="text-[12px] font-medium text-on-surface-variant mt-2">{label}</span>
         {badge && (
           <span className={cn('inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-1.5 w-fit', badgeCls)}>
             {badge}
           </span>
         )}
       </div>
-      <Icon className={cn('size-5 mt-0.5 shrink-0 opacity-30', color)} />
+      <Icon className={cn('size-4.5 mt-0.5 shrink-0 opacity-40', color)} />
+    </div>
+  )
+}
+
+/* ══ FILTER BUTTON ═══════════════════════════════════════ */
+function ClientFilterButton({ filter, onFilterChange }: {
+  filter: string
+  onFilterChange: (s: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const isFiltered = filter !== 'all'
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [])
+
+  const OPTIONS = [
+    { value: 'all',          label: 'All clients',          icon: Users         },
+    { value: 'outstanding',  label: 'Outstanding balance',  icon: DollarSign    },
+    { value: 'unread',       label: 'Unread messages',      icon: MessageSquare },
+    { value: 'no-projects',  label: 'No active projects',   icon: FolderOpen    },
+  ]
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        onClick={() => setOpen(p => !p)}
+        aria-label="Filter clients"
+        className={cn(
+          'h-8 px-2.5 rounded-md border transition-all flex items-center gap-1.5',
+          isFiltered || open
+            ? 'border-ds-secondary bg-ds-secondary/8 text-ds-secondary'
+            : 'border-outline-variant/60 bg-white text-on-surface-variant hover:border-outline-variant hover:text-on-surface',
+        )}
+      >
+        <SlidersHorizontal className="size-3.5" />
+        {isFiltered && <span className="size-1.5 rounded-full bg-ds-secondary" />}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-outline-variant/20 shadow-xl z-50 overflow-hidden">
+          <div className="px-4 pt-3.5 pb-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+              Filter clients
+            </p>
+          </div>
+          <div className="p-2 pt-0">
+            {OPTIONS.map(opt => {
+              const Icon = opt.icon
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => { onFilterChange(opt.value); setOpen(false) }}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition-colors',
+                    filter === opt.value
+                      ? 'bg-ds-secondary text-white font-semibold'
+                      : 'text-on-surface hover:bg-surface-container/60',
+                  )}
+                >
+                  <Icon className={cn('size-3.5 shrink-0', filter === opt.value ? 'text-white' : 'text-on-surface-variant/50')} />
+                  <span className="flex-1">{opt.label}</span>
+                  {filter === opt.value && <Check className="size-3.5 shrink-0" />}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -280,7 +333,8 @@ function ClientTable({
   onArchive: (id: string) => void
 }) {
   return (
-    <div className="rounded-xl border border-outline-variant/30 overflow-hidden bg-white shadow-sm">
+    <div className="overflow-x-auto">
+    <div className="min-w-150 rounded-xl border border-outline-variant/30 overflow-hidden bg-white shadow-sm">
       {/* Header row */}
       <div className={cn('grid gap-0 px-5 py-2.5 bg-surface-container/50 border-b border-outline-variant/20', COL)}>
         {['Client', 'Active Project', 'Outstanding', 'Activity', ''].map((h, i) => (
@@ -302,6 +356,7 @@ function ClientTable({
           />
         ))}
       </div>
+    </div>
     </div>
   )
 }
@@ -337,7 +392,7 @@ function ClientTableRow({
       onClick={() => router.push(`/dashboard/clients/${c.id}`)}
     >
       {/* Left accent strip */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
+      <div className="absolute left-0 top-0 bottom-0 w-0.75" style={{ background: accent }} />
 
       {/* Client col */}
       <div className="flex items-center gap-3 min-w-0 pr-4">
