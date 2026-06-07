@@ -159,75 +159,52 @@ export function ChatsView({ rawClients, initialClientId }: ChatsViewProps) {
   const [sending, setSending]             = useState(false)
   const [search, setSearch]               = useState('')
 
-  // Refs to avoid stale closures inside the poller
+  // Refs to keep stable references inside Realtime callbacks
   const activeIdRef      = useRef<string | null>(activeId)
   const conversationsRef = useRef<Conversation[]>(conversations)
-  const lastTsRef        = useRef<string | null>(null)
 
   useEffect(() => { activeIdRef.current = activeId }, [activeId])
   useEffect(() => { conversationsRef.current = conversations }, [conversations])
 
-  // Reset last-timestamp when switching active conversation
+  // Stable Supabase client for Realtime (one instance per component mount)
+  const supabase = useMemo(() => createClient(), [])
+
+  // Realtime: subscribe to new messages in the active conversation's project
   useEffect(() => {
-    const conv = conversations.find(c => c.client.id === activeId)
-    const last = conv?.messages.filter(m => !m.id.startsWith('temp-')).at(-1)
-    lastTsRef.current = last?.created_at ?? null
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId])
+    if (!activeId) return
+    const conv = conversationsRef.current.find(c => c.client.id === activeId)
+    const projectId = conv?.latestProjectId
+    if (!projectId) return
 
-  // Keep last-timestamp up to date as new messages arrive
-  useEffect(() => {
-    const conv = conversations.find(c => c.client.id === activeId)
-    const last = conv?.messages.filter(m => !m.id.startsWith('temp-')).at(-1)
-    if (last?.created_at && (!lastTsRef.current || last.created_at > lastTsRef.current)) {
-      lastTsRef.current = last.created_at
-    }
-  }, [conversations, activeId])
+    const channel = supabase
+      .channel(`chats:project:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `project_id=eq.${projectId}` },
+        (payload) => {
+          const m = payload.new as MessageRow & { project_id: string }
+          setConversations(prev =>
+            prev.map(c => {
+              if (c.client.id !== activeIdRef.current) return c
+              // Dedup: ignore if real ID already present, or replace matching temp message
+              if (c.messages.some(msg => msg.id === m.id)) return c
+              const tempIdx = c.messages.findIndex(
+                msg => msg.id.startsWith('temp-') && msg.sender_type === m.sender_type && msg.content === m.content
+              )
+              if (tempIdx >= 0) {
+                const updated = [...c.messages]
+                updated[tempIdx] = { ...m }
+                return { ...c, messages: updated }
+              }
+              return { ...c, messages: [...c.messages, { ...m }] }
+            })
+          )
+        }
+      )
+      .subscribe()
 
-  // Poll for new messages every 3 seconds on the active conversation
-  useEffect(() => {
-    const timer = setInterval(async () => {
-      const id = activeIdRef.current
-      if (!id) return
-      const conv = conversationsRef.current.find(c => c.client.id === id)
-      const projectId = conv?.latestProjectId
-      if (!projectId) return
-
-      const since = lastTsRef.current
-      const url = since
-        ? `/api/projects/${projectId}/messages?since=${encodeURIComponent(since)}`
-        : `/api/projects/${projectId}/messages`
-
-      try {
-        const res = await fetch(url)
-        if (!res.ok) return
-        const data: (MessageRow & { profiles?: unknown })[] = await res.json()
-        if (!Array.isArray(data) || !data.length) return
-
-        setConversations(prev =>
-          prev.map(c => {
-            if (c.client.id !== id) return c
-            const existingIds = new Set(c.messages.map(m => m.id))
-            const fresh = data.filter(m => !existingIds.has(m.id) && !m.id.startsWith('temp-'))
-            if (!fresh.length) return c
-            const now = new Date().toISOString()
-            return {
-              ...c,
-              messages: [
-                ...c.messages,
-                ...fresh.map(m => ({
-                  id: m.id, content: m.content, sender_type: m.sender_type,
-                  read_at: m.sender_type === 'client' ? now : m.read_at,
-                  created_at: m.created_at, project_id: m.project_id,
-                })),
-              ],
-            }
-          })
-        )
-      } catch {}
-    }, 3000)
-    return () => clearInterval(timer)
-  }, []) // empty — poller uses refs only
+    return () => { supabase.removeChannel(channel) }
+  }, [activeId, supabase])
 
   // Mark initial conversation as read on mount
   useEffect(() => {

@@ -153,17 +153,21 @@ export function PortalMessages({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showEmoji, showFilePicker])
 
-  // Poll for new messages every 5 seconds
+  // Poll for new messages — 10s interval, pauses when tab is hidden, backs off on errors
   useEffect(() => {
     if (!selectedProjectId) return
+    let errorCount = 0
+
     const poll = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       const since = lastTimestampRef.current
       const url = since
         ? `/api/portal/projects/${selectedProjectId}/messages?since=${encodeURIComponent(since)}`
         : `/api/portal/projects/${selectedProjectId}/messages`
       try {
         const res = await fetch(url)
-        if (!res.ok) return
+        if (!res.ok) { errorCount = Math.min(errorCount + 1, 10); return }
+        errorCount = 0
         const fresh: MessageRecord[] = await res.json()
         if (fresh.length > 0) {
           setMessages(prev => {
@@ -172,13 +176,18 @@ export function PortalMessages({
             if (!newOnes.length) return prev
             return [...prev, ...newOnes]
           })
-          // Mark newly received freelancer messages as read
           fetch(`/api/portal/projects/${selectedProjectId}/messages`, { method: 'PATCH' }).catch(() => {})
         }
-      } catch {}
+      } catch { errorCount = Math.min(errorCount + 1, 10) }
     }
-    const timer = setInterval(poll, 5000)
-    return () => clearInterval(timer)
+
+    // Base 10s; double interval after 3 consecutive errors (max 80s backoff)
+    const getDelay = () => 10_000 * Math.pow(2, Math.min(errorCount, 3))
+    let timer = setTimeout(function tick() {
+      poll().finally(() => { timer = setTimeout(tick, getDelay()) })
+    }, getDelay())
+
+    return () => clearTimeout(timer)
   }, [selectedProjectId])
 
   function insertEmoji(emoji: string) {
