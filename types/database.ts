@@ -6,6 +6,31 @@ export type FileStatus = 'pending' | 'approved' | 'changes_requested'
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue'
 export type SenderType = 'freelancer' | 'client'
 
+export interface BankDetails {
+  bank_name: string
+  account_holder: string
+  account_number: string
+  routing_number: string
+  country: string
+  currency: string
+}
+
+export interface NotificationPreferences {
+  messages: boolean
+  file_review: boolean
+  invoice_paid: boolean
+  status_change: boolean
+  weekly_digest?: boolean
+}
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  messages: true,
+  file_review: true,
+  invoice_paid: true,
+  status_change: false,
+  weekly_digest: false,
+}
+
 export interface Profile {
   id: string
   full_name: string | null
@@ -13,9 +38,14 @@ export interface Profile {
   avatar_url: string | null
   tagline: string | null
   plan: Plan
+  base_currency: string
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
   subscription_status: SubscriptionStatus | null
+  stripe_connect_account_id: string | null
+  stripe_connect_onboarded: boolean
+  bank_details: BankDetails | null
+  notification_preferences: NotificationPreferences
   onboarding_completed: boolean
   created_at: string
   updated_at: string
@@ -59,6 +89,7 @@ export interface File {
   status: FileStatus
   client_comment: string | null
   reviewed_at: string | null
+  parent_file_id: string | null
   deleted_at: string | null
   created_at: string
 }
