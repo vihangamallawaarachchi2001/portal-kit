@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Users, FileText, Settings,
   LogOut, Layers, FolderOpen, BookOpen, LifeBuoy, Zap,
-  ChevronLeft, ChevronRight, MessageSquare, Paperclip,
+  ChevronLeft, ChevronRight, MessageSquare, Paperclip, BarChart2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -21,7 +21,8 @@ const NAV = [
   { href: '/dashboard/clients',  label: 'Clients',   icon: Users,           exact: false, badge: false },
   { href: '/dashboard/chats',    label: 'Messages',  icon: MessageSquare,   exact: false, badge: true  },
   { href: '/dashboard/invoices', label: 'Invoices',  icon: FileText,        exact: false, badge: false },
-  { href: '/dashboard/files',    label: 'Files',     icon: Paperclip,       exact: false, badge: false },
+  { href: '/dashboard/files',     label: 'Files',     icon: Paperclip,  exact: false, badge: false },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart2,  exact: false, badge: false },
 ]
 
 interface SidebarProps {
