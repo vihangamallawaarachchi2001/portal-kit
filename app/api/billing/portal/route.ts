@@ -15,12 +15,21 @@ export async function POST() {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.stripe_customer_id) return badRequest('No billing account found')
-
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  let customerId = profile?.stripe_customer_id
+
+  // Auto-create customer if missing so any user can access billing portal
+  if (!customerId) {
+    const customer = await getStripe().customers.create({
+      email: user.email,
+      metadata: { supabase_user_id: user.id },
+    })
+    customerId = customer.id
+    await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id)
+  }
 
   const session = await getStripe().billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
+    customer: customerId,
     return_url: `${appUrl}/dashboard/settings/billing`,
   })
 

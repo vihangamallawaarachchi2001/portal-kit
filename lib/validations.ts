@@ -96,6 +96,7 @@ export const updateProfileSchema = z.object({
   business_name: z.string().max(100).optional().nullable(),
   tagline: z.string().max(200).optional().nullable(),
   avatar_url: z.string().url().optional().nullable(),
+  base_currency: z.string().length(3).optional(),
 })
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>

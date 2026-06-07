@@ -1,7 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { sendInvoicePaidEmail } from '@/lib/email'
+import { sendInvoicePaidEmail, sendPaymentReceiptEmail } from '@/lib/email'
+import { getNotificationPref } from '@/lib/notification-prefs'
 
 function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' }) }
 
@@ -35,26 +36,46 @@ export async function POST(req: Request) {
 
       if (!invoice) break
 
+      const paidAt = new Date().toISOString()
+
       await service
         .from('invoices')
-        .update({ status: 'paid', paid_at: new Date().toISOString(), stripe_payment_intent_id: pi.id })
+        .update({ status: 'paid', paid_at: paidAt, stripe_payment_intent_id: pi.id })
         .eq('id', invoiceId)
 
-      // Notify freelancer
       const { data: authUser } = await service.auth.admin.getUserById(invoice.freelancer_id)
       const profile = Array.isArray(invoice.profiles) ? invoice.profiles[0] : invoice.profiles
-      const client = Array.isArray(invoice.clients) ? invoice.clients[0] : invoice.clients
+      const client  = Array.isArray(invoice.clients)  ? invoice.clients[0]  : invoice.clients
+      const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
+      // Notify freelancer (respects their invoice_paid preference)
       if (authUser?.user?.email) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-        await sendInvoicePaidEmail({
-          to: authUser.user.email,
-          freelancerName: profile?.full_name ?? '',
-          clientName: client?.name ?? '',
+        const allowed = await getNotificationPref(invoice.freelancer_id, 'invoice_paid').catch(() => true)
+        if (allowed) {
+          await sendInvoicePaidEmail({
+            to: authUser.user.email,
+            freelancerName: profile?.full_name ?? '',
+            clientName: client?.name ?? '',
+            invoiceNumber: invoice.invoice_number,
+            total: invoice.total,
+            currency: invoice.currency,
+            dashboardUrl: `${appUrl}/dashboard`,
+          }).catch(() => {})
+        }
+      }
+
+      // Send receipt to client
+      if (client?.email) {
+        await sendPaymentReceiptEmail({
+          to: client.email,
+          clientName: client.name ?? '',
+          businessName: profile?.full_name ?? 'Your freelancer',
           invoiceNumber: invoice.invoice_number,
           total: invoice.total,
           currency: invoice.currency,
-          dashboardUrl: `${appUrl}/dashboard`,
+          paidAt,
+          lineItems: invoice.line_items ?? [],
+          portalUrl: `${appUrl}/p/${client.portal_slug}`,
         }).catch(() => {})
       }
       break
@@ -79,6 +100,18 @@ export async function POST(req: Request) {
           stripe_subscription_id: event.type === 'customer.subscription.deleted' ? null : sub.id,
         })
         .eq('stripe_customer_id', customerId)
+      break
+    }
+
+    case 'account.updated': {
+      // Keep stripe_connect_onboarded in sync when Stripe finishes KYC
+      const account = event.data.object as Stripe.Account
+      if (account.charges_enabled && account.details_submitted) {
+        await service
+          .from('profiles')
+          .update({ stripe_connect_onboarded: true })
+          .eq('stripe_connect_account_id', account.id)
+      }
       break
     }
 

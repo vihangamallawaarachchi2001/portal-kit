@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { ok, unauthorized, notFound, badRequest, internalError, fromZodError } from '@/lib/api'
 import { reviewFileSchema } from '@/lib/validations'
 import { sendFileReviewedEmail } from '@/lib/email'
+import { getNotificationPref } from '@/lib/notification-prefs'
 import { cookies } from 'next/headers'
 import { ZodError } from 'zod'
 
@@ -57,17 +58,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
 
   if (authUser?.user?.email) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-    await sendFileReviewedEmail({
-      to: authUser.user.email,
-      freelancerName: freelancerProfile?.full_name ?? '',
-      clientName: client?.name ?? 'Your client',
-      projectTitle: project.title,
-      filename: file.filename,
-      status: input.status as 'approved' | 'changes_requested',
-      comment: input.client_comment ?? null,
-      dashboardUrl: `${appUrl}/dashboard`,
-    }).catch(() => {})
+    const allowed = await getNotificationPref(file.freelancer_id, 'file_review').catch(() => true)
+    if (allowed) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+      await sendFileReviewedEmail({
+        to: authUser.user.email,
+        freelancerName: freelancerProfile?.full_name ?? '',
+        clientName: client?.name ?? 'Your client',
+        projectTitle: project.title,
+        filename: file.filename,
+        status: input.status as 'approved' | 'changes_requested',
+        comment: input.client_comment ?? null,
+        dashboardUrl: `${appUrl}/dashboard`,
+      }).catch(() => {})
+    }
   }
 
   return ok(data)
