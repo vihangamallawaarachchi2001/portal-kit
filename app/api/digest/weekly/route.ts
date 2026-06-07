@@ -31,73 +31,88 @@ async function runDigest() {
     return prefs?.weekly_digest === true
   })
 
-  let sent = 0
-
-  for (const profile of eligible) {
-    const userId = profile.id
-
-    // Get auth user email
-    const { data: authUser } = await service.auth.admin.getUserById(userId)
-    const email = authUser?.user?.email
-    if (!email) continue
-
-    // Compute weekly stats
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-
-    const [
-      { count: pendingApprovals },
-      { data: outstandingInvoices },
-      { count: unreadMessages },
-    ] = await Promise.all([
-      service
-        .from('files')
-        .select('id', { count: 'exact', head: true })
-        .eq('freelancer_id', userId)
-        .eq('status', 'pending')
-        .is('deleted_at', null),
-
-      service
-        .from('invoices')
-        .select('total, currency')
-        .eq('freelancer_id', userId)
-        .in('status', ['sent', 'overdue'])
-        .is('deleted_at', null),
-
-      service
-        .from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('sender_type', 'client')
-        .is('read_at', null)
-        .gte('created_at', weekAgo)
-        // messages belong to projects → filter by freelancer via join would require RPC;
-        // for simplicity we join via projects
-        .in(
-          'project_id',
-          (await service
-            .from('projects')
-            .select('id')
-            .eq('freelancer_id', userId)
-            .is('deleted_at', null)
-          ).data?.map(p => p.id) ?? [],
-        ),
-    ])
-
-    const outstandingAmount = (outstandingInvoices ?? []).reduce(
-      (sum, inv) => sum + Number(inv.total), 0,
-    )
-
-    await sendWeeklyDigest({
-      to: email,
-      freelancerName:    profile.full_name ?? 'there',
-      pendingApprovals:  pendingApprovals ?? 0,
-      outstandingAmount,
-      currency:          profile.base_currency ?? 'USD',
-      unreadMessages:    unreadMessages ?? 0,
-      dashboardUrl:      `${appUrl}/dashboard`,
-    }).catch((err) => console.error('[email] weekly-digest send failed', err))
-
-    sent++
+  if (eligible.length === 0) {
+    return NextResponse.json({ ok: true, sent: 0, eligible: 0 })
   }
+
+  const userIds  = eligible.map(p => p.id)
+  const weekAgo  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  // Batch all three queries across all eligible users in parallel (not per-user loops)
+  const [
+    { data: pendingFiles },
+    { data: outstandingInvoices },
+    { data: recentMessages },
+    { data: authUsers },
+  ] = await Promise.all([
+    // Pending files per freelancer — COUNT grouped by freelancer_id
+    service
+      .from('files')
+      .select('freelancer_id')
+      .in('freelancer_id', userIds)
+      .eq('status', 'pending')
+      .is('deleted_at', null),
+
+    // Outstanding invoices per freelancer
+    service
+      .from('invoices')
+      .select('freelancer_id, total, currency')
+      .in('freelancer_id', userIds)
+      .in('status', ['sent', 'overdue'])
+      .is('deleted_at', null),
+
+    // Unread client messages in the last 7 days, via project join
+    service
+      .from('messages')
+      .select('project_id, projects!inner(freelancer_id)')
+      .in('projects.freelancer_id', userIds)
+      .eq('sender_type', 'client')
+      .is('read_at', null)
+      .gte('created_at', weekAgo),
+
+    // Auth emails — no batch API; fetch all in parallel
+    (async () => ({ data: await Promise.all(userIds.map(id => service.auth.admin.getUserById(id))) }))(),
+  ])
+
+  // Build lookup maps
+  const pendingMap  = new Map<string, number>()
+  for (const f of pendingFiles ?? []) pendingMap.set(f.freelancer_id, (pendingMap.get(f.freelancer_id) ?? 0) + 1)
+
+  const outstandingMap = new Map<string, number>()
+  for (const inv of outstandingInvoices ?? []) outstandingMap.set(inv.freelancer_id, (outstandingMap.get(inv.freelancer_id) ?? 0) + Number(inv.total))
+
+  const unreadMap = new Map<string, number>()
+  for (const msg of recentMessages ?? []) {
+    const project = Array.isArray(msg.projects) ? msg.projects[0] : msg.projects
+    const fid = (project as { freelancer_id: string } | null)?.freelancer_id
+    if (fid) unreadMap.set(fid, (unreadMap.get(fid) ?? 0) + 1)
+  }
+
+  const emailMap = new Map<string, string>()
+  for (const res of (authUsers as { data: { user: { id: string; email?: string } | null } }[]) ?? []) {
+    const u = res.data?.user
+    if (u?.id && u.email) emailMap.set(u.id, u.email)
+  }
+
+  let sent = 0
+  await Promise.all(
+    eligible.map(async profile => {
+      const email = emailMap.get(profile.id)
+      if (!email) return
+
+      await sendWeeklyDigest({
+        to:               email,
+        freelancerName:   profile.full_name ?? 'there',
+        pendingApprovals: pendingMap.get(profile.id) ?? 0,
+        outstandingAmount:outstandingMap.get(profile.id) ?? 0,
+        currency:         profile.base_currency ?? 'USD',
+        unreadMessages:   unreadMap.get(profile.id) ?? 0,
+        dashboardUrl:     `${appUrl}/dashboard`,
+      }).catch((err) => console.error('[email] weekly-digest send failed', err))
+
+      sent++
+    })
+  )
 
   return NextResponse.json({ ok: true, sent, eligible: eligible.length })
 }

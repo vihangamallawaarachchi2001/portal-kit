@@ -2,7 +2,6 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { sendInvoicePaidEmail, sendPaymentReceiptEmail } from '@/lib/email'
-import { getNotificationPref } from '@/lib/notification-prefs'
 import { sendPushToSubscriber } from '@/lib/web-push'
 
 function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' }) }
@@ -31,7 +30,7 @@ export async function POST(req: Request) {
 
       const { data: invoice } = await service
         .from('invoices')
-        .select('*, clients(name, email, portal_slug), profiles:freelancer_id(full_name)')
+        .select('*, clients(name, email, portal_slug), profiles:freelancer_id(full_name, notification_preferences)')
         .eq('id', invoiceId)
         .single()
 
@@ -39,18 +38,22 @@ export async function POST(req: Request) {
 
       const paidAt = new Date().toISOString()
 
-      await service
-        .from('invoices')
-        .update({ status: 'paid', paid_at: paidAt, stripe_payment_intent_id: pi.id })
-        .eq('id', invoiceId)
+      // Update invoice and fetch auth user in parallel
+      const [, { data: authUser }] = await Promise.all([
+        service
+          .from('invoices')
+          .update({ status: 'paid', paid_at: paidAt, stripe_payment_intent_id: pi.id })
+          .eq('id', invoiceId),
+        service.auth.admin.getUserById(invoice.freelancer_id),
+      ])
 
-      const { data: authUser } = await service.auth.admin.getUserById(invoice.freelancer_id)
       const profile = Array.isArray(invoice.profiles) ? invoice.profiles[0] : invoice.profiles
       const client  = Array.isArray(invoice.clients)  ? invoice.clients[0]  : invoice.clients
       const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
-      // Notify freelancer (respects their invoice_paid preference)
-      const allowed = await getNotificationPref(invoice.freelancer_id, 'invoice_paid').catch(() => true)
+      // Notification preference embedded in initial fetch — no extra round-trip
+      const prefs   = (profile as { notification_preferences?: Record<string, boolean> } | null)?.notification_preferences
+      const allowed = prefs?.invoice_paid !== false // default: allowed unless explicitly disabled
 
       if (authUser?.user?.email && allowed) {
         await sendInvoicePaidEmail({
