@@ -5,6 +5,9 @@ import { cookies } from 'next/headers'
 
 function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' }) }
 
+// Platform fee: 2% when payment routes through PortalKit Connect
+const PLATFORM_FEE_RATE = 0.02
+
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const cookieStore = await cookies()
@@ -16,7 +19,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const { data: invoice } = await service
     .from('invoices')
-    .select('*, clients(id, name, email, portal_slug), profiles:freelancer_id(stripe_customer_id, full_name, business_name)')
+    .select(`
+      *,
+      clients ( id, name, email, portal_slug ),
+      profiles:freelancer_id (
+        full_name, business_name,
+        stripe_connect_account_id, stripe_connect_onboarded
+      )
+    `)
     .eq('id', id)
     .is('deleted_at', null)
     .single()
@@ -26,12 +36,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (invoice.status === 'paid') return badRequest('Invoice already paid')
   if (invoice.status === 'draft') return badRequest('Invoice has not been sent yet')
 
-  const client = Array.isArray(invoice.clients) ? invoice.clients[0] : invoice.clients
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const client  = Array.isArray(invoice.clients)  ? invoice.clients[0]  : invoice.clients
+  const profile = Array.isArray(invoice.profiles) ? invoice.profiles[0] : invoice.profiles
+  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const successUrl = `${appUrl}/p/${client?.portal_slug}/invoices?paid=true`
-  const cancelUrl = `${appUrl}/p/${client?.portal_slug}/invoices`
+  const cancelUrl  = `${appUrl}/p/${client?.portal_slug}/invoices`
 
-  // Build line items for Stripe
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = (invoice.line_items ?? []).map(
     (item: { description: string; quantity: number; unit_price: number }) => ({
       price_data: {
@@ -43,20 +53,45 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     })
   )
 
-  // Add tax if applicable
-  const session = await getStripe().checkout.sessions.create({
-    mode: 'payment',
-    line_items: lineItems,
-    customer_email: client?.email,
-    metadata: { invoice_id: id, client_id: clientId },
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    payment_intent_data: {
-      metadata: { invoice_id: id },
-    },
-  })
+  // Determine routing: if freelancer has a fully-onboarded Connect account, money goes
+  // directly to them (PortalKit takes a 2% platform fee). Otherwise money stays in
+  // PortalKit's account and is transferred manually.
+  const connectAccountId  = profile?.stripe_connect_account_id
+  const connectOnboarded  = profile?.stripe_connect_onboarded
+  const useConnect        = !!(connectAccountId && connectOnboarded)
 
-  // Store payment intent ID
+  const totalCents = Math.round(Number(invoice.total) * 100)
+
+  let paymentIntentData: Stripe.Checkout.SessionCreateParams['payment_intent_data']
+
+  if (useConnect) {
+    paymentIntentData = {
+      application_fee_amount: Math.round(totalCents * PLATFORM_FEE_RATE),
+      transfer_data: { destination: connectAccountId! },
+      metadata: { invoice_id: id, routed_via: 'connect' },
+    }
+  } else {
+    paymentIntentData = {
+      metadata: { invoice_id: id, routed_via: 'platform' },
+    }
+  }
+
+  let session: Stripe.Checkout.Session
+  try {
+    session = await getStripe().checkout.sessions.create({
+      mode: 'payment',
+      line_items: lineItems,
+      customer_email: client?.email,
+      metadata: { invoice_id: id, client_id: clientId },
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      payment_intent_data: paymentIntentData,
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Stripe error'
+    return internalError(msg)
+  }
+
   await service
     .from('invoices')
     .update({ stripe_payment_intent_id: session.payment_intent as string })
