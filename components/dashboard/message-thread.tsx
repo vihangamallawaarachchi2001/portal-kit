@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useTransition } from 'react'
+import { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatRelativeTime, getInitials } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -37,7 +37,7 @@ interface MessageThreadProps {
 }
 
 export function MessageThread({ clientId, clientName, projects, currentUser, senderType }: MessageThreadProps) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [selectedProjectId, setSelectedProjectId] = useState(projects[0]?.id ?? '')
   const [messages, setMessages] = useState<MessageRecord[]>(() =>
     (projects[0]?.messages ?? []).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())

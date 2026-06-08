@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Loader2, FolderOpen, Users, CalendarDays, ArrowRight } from 'lucide-react'
+import { Loader2, FolderOpen, Users, CalendarDays, ArrowRight, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getInitials } from '@/lib/format'
 import Link from 'next/link'
@@ -78,6 +78,7 @@ export function CreateProjectModal({
   const [isPending, startTransition] = useTransition()
   const [clients, setClients]         = useState<Client[]>(preloadedClients ?? [])
   const [loading, setLoading]         = useState(false)
+  const [limitHit, setLimitHit]       = useState<{ limit: number; current: number } | null>(null)
   const [form, setForm] = useState({
     clientId:    defaultClientId ?? '',
     title:       '',
@@ -99,7 +100,12 @@ export function CreateProjectModal({
       .catch(() => setLoading(false))
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleClose() { if (!isPending) onOpenChange(false) }
+  function handleClose() {
+    if (!isPending) {
+      setLimitHit(null)
+      onOpenChange(false)
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -117,8 +123,12 @@ export function CreateProjectModal({
         toast.success('Project created')
         onOpenChange(false)
         setForm({ clientId: defaultClientId ?? '', title: '', description: '', status: 'briefing', due_date: '' })
+        setLimitHit(null)
         router.refresh()
         router.push(`/dashboard/clients/${form.clientId}`)
+      } else if (res.status === 402) {
+        const d = await res.json()
+        setLimitHit({ limit: d.limit ?? 2, current: d.current ?? 2 })
       } else {
         const d = await res.json()
         toast.error(d.error ?? 'Failed to create project')
@@ -153,8 +163,38 @@ export function CreateProjectModal({
           </div>
         </div>
 
-        {/* ── No clients state ──────────────────────── */}
-        {noClients ? (
+        {/* ── Plan limit gate ──────────────────────── */}
+        {limitHit ? (
+          <div className="px-6 py-10 flex flex-col items-center text-center gap-4">
+            <div className="size-12 rounded-xl bg-amber-50 flex items-center justify-center">
+              <Zap className="size-6 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-on-surface">Project limit reached</p>
+              <p className="text-xs text-on-surface-variant mt-1.5 max-w-xs leading-relaxed">
+                You&apos;ve used {limitHit.current} of {limitHit.limit} projects on the Free plan.
+                Upgrade to Pro for unlimited projects.
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={handleClose}
+                className="inline-flex items-center h-9 px-4 rounded-md text-sm font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
+              >
+                Cancel
+              </button>
+              <Link
+                href="/dashboard/settings/billing"
+                onClick={() => onOpenChange(false)}
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
+              >
+                <Zap className="size-3.5" />
+                Upgrade to Pro
+              </Link>
+            </div>
+          </div>
+        ) : /* ── No clients state ──────────────────────── */
+        noClients ? (
           <div className="px-6 py-10 flex flex-col items-center text-center gap-4">
             <div className="size-12 rounded-md bg-surface-container flex items-center justify-center">
               <Users className="size-6 text-on-surface-variant" />

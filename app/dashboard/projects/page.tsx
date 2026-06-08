@@ -15,13 +15,15 @@ export default async function ProjectsPage() {
       .select('id, title, status, due_date, description, clients ( id, name )')
       .eq('freelancer_id', user.id)
       .is('deleted_at', null)
-      .order('updated_at', { ascending: false }),
+      .order('updated_at', { ascending: false })
+      .limit(500),
     supabase
       .from('clients')
       .select('id, name')
       .eq('freelancer_id', user.id)
       .eq('status', 'active')
-      .is('deleted_at', null),
+      .is('deleted_at', null)
+      .limit(200),
   ])
 
   return (

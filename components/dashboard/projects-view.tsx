@@ -1,19 +1,15 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { formatDate, getInitials } from '@/lib/format'
 import {
   FolderOpen, Clock, ArrowRight, Layers, Users,
   CheckCircle2, AlertTriangle, Eye,
-  Search, LayoutGrid, List, Zap,
+  Search, LayoutGrid, List, Zap, SlidersHorizontal, Check,
 } from 'lucide-react'
 import Link from 'next/link'
 import { NewProjectButton } from './new-project-button'
-import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
-} from '@/components/ui/select'
 
 /* ── Types + constants ──────────────────────────────────── */
 export type ProjectRow = {
@@ -87,48 +83,38 @@ export function ProjectsView({ projects, clients }: ProjectsViewProps) {
       <div className="border-b border-outline-variant/20">
 
         {/* Title + CTA */}
-        <div className="px-8 pt-8 pb-5 flex items-start justify-between gap-4">
+        <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-5 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-[22px] font-bold text-on-surface tracking-tight">Projects</h1>
-            <p className="text-sm text-on-surface-variant mt-0.5">
-              {projects.length > 0
-                ? `${projects.length} total · ${active.length} active · ${done.length} completed`
-                : 'All your work in one place'}
-            </p>
           </div>
           <NewProjectButton clients={clients} />
         </div>
 
         {/* KPI cards */}
         {projects.length > 0 && (
-          <div className="px-8 pb-7 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <KpiCard value={projects.length} label="Total" icon={Layers}
-              bg="bg-slate-50" border="border-slate-200/70" color="text-slate-600" />
-            <KpiCard value={active.length} label="Active" icon={Zap}
-              bg="bg-blue-50" border="border-blue-200/70" color="text-blue-600"
-              badge={overdue.length > 0 ? `${overdue.length} overdue` : undefined}
-              badgeCls="bg-red-100 text-red-600" />
-            <KpiCard value={inReview.length} label="In Review" icon={Eye}
-              bg="bg-amber-50" border="border-amber-200/70" color="text-amber-600" />
-            <KpiCard value={done.length} label="Completed" icon={CheckCircle2}
-              bg="bg-emerald-50" border="border-emerald-200/70" color="text-emerald-600" />
+          <div className="px-4 sm:px-8 pb-5 sm:pb-7 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <KpiCard value={projects.length} label="Total"      icon={Layers}       color="text-slate-400"   accent="#94a3b8" />
+            <KpiCard value={active.length}   label="Active"     icon={Zap}          color="text-blue-500"    accent="#3b82f6"
+              badge={overdue.length > 0 ? `${overdue.length} overdue` : undefined} badgeCls="bg-red-50 text-red-600" />
+            <KpiCard value={inReview.length} label="In Review"  icon={Eye}          color="text-amber-500"   accent="#f59e0b" />
+            <KpiCard value={done.length}     label="Completed"  icon={CheckCircle2} color="text-emerald-500" accent="#10b981" />
           </div>
         )}
       </div>
 
       {/* ══ CONTROLS BAR ════════════════════════════════ */}
       {projects.length > 0 && (
-        <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-sm border-b border-outline-variant/15 px-8 py-2.5 flex items-center gap-3">
+        <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-sm border-b border-outline-variant/15 px-4 sm:px-8 py-2.5 flex items-center gap-2">
 
-          {/* Search */}
-          <div className="relative">
+          {/* Search — full width */}
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-on-surface-variant/40 pointer-events-none" />
             <input
               type="text"
               placeholder="Search projects…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="h-8 w-52 pl-9 pr-3 rounded-md border border-outline-variant/60 text-sm bg-surface-container/20 hover:bg-white focus:bg-white focus:border-ds-secondary focus:ring-2 focus:ring-ds-secondary/20 focus:outline-none transition-all placeholder:text-on-surface-variant/40"
+              className="h-8 w-full pl-9 pr-3 rounded-md border border-outline-variant/60 text-sm bg-white focus:border-ds-secondary focus:ring-2 focus:ring-ds-secondary/20 focus:outline-none transition-all placeholder:text-on-surface-variant/40"
             />
             {search && (
               <button
@@ -141,37 +127,26 @@ export function ProjectsView({ projects, clients }: ProjectsViewProps) {
             )}
           </div>
 
-          {/* Status filter */}
-          <Select value={statusFilter} onValueChange={setStatus}>
-            <SelectTrigger className="h-8 w-36 text-sm">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="briefing">Briefing</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="review">In Review</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Filter icon button */}
+          <FilterButton statusFilter={statusFilter} onStatusChange={setStatus} />
 
-          {/* Results feedback */}
+          {/* Results feedback — hidden on mobile to save space */}
           {isFiltering && (
-            <span className="text-[12px] text-on-surface-variant/60">
+            <span className="hidden sm:inline text-[12px] text-on-surface-variant/60">
               {filtered.length} result{filtered.length !== 1 ? 's' : ''}
             </span>
           )}
           {isFiltering && (
             <button
               onClick={() => { setSearch(''); setStatus('all') }}
-              className="text-[12px] font-medium text-ds-secondary hover:underline"
+              className="text-[12px] font-medium text-ds-secondary hover:underline whitespace-nowrap"
             >
               Clear
             </button>
           )}
 
           {/* View toggle */}
-          <div className="ml-auto flex items-center gap-0.5 bg-surface-container/60 p-0.5 rounded-md border border-outline-variant/25">
+          <div className="flex items-center gap-0.5 bg-surface-container/60 p-0.5 rounded-md border border-outline-variant/25 shrink-0">
             {([['table', List, 'Table view'], ['cards', LayoutGrid, 'Card view']] as const).map(([v, Icon, title]) => (
               <button
                 key={v}
@@ -192,7 +167,7 @@ export function ProjectsView({ projects, clients }: ProjectsViewProps) {
       )}
 
       {/* ══ CONTENT ═════════════════════════════════════ */}
-      <div className="px-8 py-7 pb-16">
+      <div className="px-4 sm:px-8 py-5 sm:py-7 pb-16">
         {projects.length === 0 ? (
           <EmptyProjects clients={clients} />
         ) : filtered.length === 0 ? (
@@ -209,24 +184,100 @@ export function ProjectsView({ projects, clients }: ProjectsViewProps) {
 
 /* ══ KPI CARD ════════════════════════════════════════════ */
 function KpiCard({
-  value, label, icon: Icon, bg, border, color, badge, badgeCls,
+  value, label, icon: Icon, color, accent, badge, badgeCls,
 }: {
   value: number; label: string; icon: React.ElementType
-  bg: string; border: string; color: string
+  color: string; accent: string
   badge?: string; badgeCls?: string
 }) {
   return (
-    <div className={cn('flex items-start justify-between px-4 py-4 rounded-xl border', bg, border)}>
+    <div className="relative flex items-start justify-between px-5 py-4 rounded-lg border border-outline-variant/20 bg-white shadow-sm overflow-hidden">
+      <div className="absolute left-0 top-0 bottom-0 w-0.75" style={{ background: accent }} />
       <div className="flex flex-col">
-        <span className="text-[30px] font-extrabold text-on-surface tracking-tight leading-none">{value}</span>
-        <span className={cn('text-[12px] font-semibold mt-2', color)}>{label}</span>
+        <span className="text-[28px] font-extrabold text-on-surface tracking-tight leading-none">{value}</span>
+        <span className="text-[12px] font-medium text-on-surface-variant mt-2">{label}</span>
         {badge && (
           <span className={cn('inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-1.5 w-fit', badgeCls)}>
             {badge}
           </span>
         )}
       </div>
-      <Icon className={cn('size-5 mt-0.5 shrink-0 opacity-30', color)} />
+      <Icon className={cn('size-4.5 mt-0.5 shrink-0 opacity-40', color)} />
+    </div>
+  )
+}
+
+/* ══ FILTER BUTTON ═══════════════════════════════════════ */
+function FilterButton({ statusFilter, onStatusChange }: {
+  statusFilter: string
+  onStatusChange: (s: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const isFiltered = statusFilter !== 'all'
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [])
+
+  const OPTIONS = [
+    { value: 'all',         label: 'All statuses', dot: null       },
+    { value: 'briefing',    label: 'Briefing',      dot: '#94a3b8' },
+    { value: 'in_progress', label: 'In Progress',   dot: '#3b82f6' },
+    { value: 'review',      label: 'In Review',     dot: '#f59e0b' },
+    { value: 'done',        label: 'Done',          dot: '#10b981' },
+  ]
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        onClick={() => setOpen(p => !p)}
+        aria-label="Filter by status"
+        className={cn(
+          'h-8 px-2.5 rounded-md border transition-all flex items-center gap-1.5',
+          isFiltered || open
+            ? 'border-ds-secondary bg-ds-secondary/8 text-ds-secondary'
+            : 'border-outline-variant/60 bg-white text-on-surface-variant hover:border-outline-variant hover:text-on-surface',
+        )}
+      >
+        <SlidersHorizontal className="size-3.5" />
+        {isFiltered && <span className="size-1.5 rounded-full bg-ds-secondary" />}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl border border-outline-variant/20 shadow-xl z-50 overflow-hidden">
+          <div className="px-4 pt-3.5 pb-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+              Filter by status
+            </p>
+          </div>
+          <div className="p-2 pt-0">
+            {OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => { onStatusChange(opt.value); setOpen(false) }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition-colors',
+                  statusFilter === opt.value
+                    ? 'bg-ds-secondary text-white font-semibold'
+                    : 'text-on-surface hover:bg-surface-container/60',
+                )}
+              >
+                {opt.dot
+                  ? <span className="size-2 rounded-full shrink-0" style={{ background: opt.dot }} />
+                  : <span className="size-2 rounded-full shrink-0 bg-outline-variant/30" />
+                }
+                <span className="flex-1">{opt.label}</span>
+                {statusFilter === opt.value && <Check className="size-3.5 shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -237,32 +288,23 @@ function TableView({ projects }: { projects: ProjectRow[] }) {
   const done   = projects.filter(p => p.status === 'done')
   return (
     <div className="flex flex-col gap-8">
-      {active.length > 0 && <TableSection label="Active"    count={active.length} rows={active} />}
-      {done.length > 0   && <TableSection label="Completed" count={done.length}   rows={done} faded />}
+      {active.length > 0 && <TableSection rows={active} />}
+      {done.length > 0   && <TableSection rows={done} faded />}
     </div>
   )
 }
 
 const COL = 'grid-cols-[minmax(0,1fr)_160px_144px_120px_88px]'
 
-function TableSection({ label, count, rows, faded }: {
-  label: string; count: number; rows: ProjectRow[]; faded?: boolean
+function TableSection({ rows, faded }: {
+  rows: ProjectRow[]; faded?: boolean
 }) {
   return (
     <section className={cn(faded && 'opacity-60')}>
-      {/* Group header */}
-      <div className="flex items-center gap-3 mb-3">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant whitespace-nowrap">
-          {label}
-        </span>
-        <span className="text-[11px] font-semibold bg-surface-container border border-outline-variant/30 text-on-surface-variant/50 px-2 py-0.5 rounded-full">
-          {count}
-        </span>
-        <div className="flex-1 h-px bg-outline-variant/25" />
-      </div>
-
+      {/* Horizontal scroll on mobile */}
+      <div className="overflow-x-auto">
       {/* Table card */}
-      <div className="rounded-xl border border-outline-variant/30 overflow-hidden bg-white shadow-sm">
+      <div className="min-w-150 rounded-xl border border-outline-variant/30 overflow-hidden bg-white shadow-sm">
         {/* Header row */}
         <div className={cn('grid gap-0 px-5 py-2.5 bg-surface-container/50 border-b border-outline-variant/20', COL)}>
           {['Project', 'Client', 'Status', 'Due Date', ''].map((h, i) => (
@@ -276,6 +318,7 @@ function TableSection({ label, count, rows, faded }: {
         <div className="divide-y divide-outline-variant/10">
           {rows.map(p => <TableRow key={p.id} project={p} />)}
         </div>
+      </div>
       </div>
     </section>
   )

@@ -3,9 +3,9 @@
 import { useState, useTransition } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import {
-  Plus, Bell, Settings, LogOut, User,
+  Plus, Settings, LogOut, User,
   Users, FileText, FolderOpen, ChevronDown,
-  ExternalLink,
+  ExternalLink, Menu,
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -17,6 +17,7 @@ import { getInitials } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
 import { AddClientModal } from './add-client-modal'
 import { CreateProjectModal } from './create-project-modal'
+import { NotificationBell } from './notification-drawer'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +28,8 @@ const SECTION_TITLES: [string, string][] = [
   ['/dashboard/clients',                'Clients'],
   ['/dashboard/projects',               'Projects'],
   ['/dashboard/invoices',               'Invoices'],
+  ['/dashboard/chats',                  'Messages'],
+  ['/dashboard/files',                  'Files'],
   ['/dashboard',                        'Dashboard'],
 ]
 
@@ -61,9 +64,10 @@ interface DashboardHeaderProps {
   profile: Profile | null
   unreadCount?: number
   sidebarWidth?: number
+  onMobileMenuClick?: () => void
 }
 
-export function DashboardHeader({ profile, unreadCount = 0, sidebarWidth = 240 }: DashboardHeaderProps) {
+export function DashboardHeader({ profile, unreadCount = 0, sidebarWidth = 240, onMobileMenuClick }: DashboardHeaderProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [, startTransition] = useTransition()
@@ -95,8 +99,19 @@ export function DashboardHeader({ profile, unreadCount = 0, sidebarWidth = 240 }
           borderBottom: '1px solid rgba(198,198,205,0.45)',
         }}
       >
-        {/* Page title */}
-        <p className="text-sm font-semibold text-on-surface">{pageTitle}</p>
+        {/* Mobile hamburger + page title */}
+        <div className="flex items-center gap-2.5">
+          {onMobileMenuClick && (
+            <button
+              onClick={onMobileMenuClick}
+              className="size-8 rounded-md flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors -ml-1"
+              aria-label="Open menu"
+            >
+              <Menu className="size-4.5" />
+            </button>
+          )}
+          <p className="text-sm font-semibold text-on-surface">{pageTitle}</p>
+        </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1">
@@ -158,13 +173,8 @@ export function DashboardHeader({ profile, unreadCount = 0, sidebarWidth = 240 }
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* ── Bell ────────────────────────────────── */}
-          <button className="relative size-9 rounded-md flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors ml-0.5">
-            <Bell className="size-4.25" />
-            {unreadCount > 0 && (
-              <span className="absolute top-2 right-2 size-2 rounded-full bg-ds-secondary ring-2 ring-white" />
-            )}
-          </button>
+          {/* ── Bell / Notification drawer ───────── */}
+          <NotificationBell unreadCount={unreadCount} />
 
           {/* ── Profile dropdown ────────────────────── */}
           <DropdownMenu>

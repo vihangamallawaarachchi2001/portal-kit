@@ -86,6 +86,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     .from('invoices')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('freelancer_id', user.id)
 
   if (error) return internalError(error.message)
   return noContent()

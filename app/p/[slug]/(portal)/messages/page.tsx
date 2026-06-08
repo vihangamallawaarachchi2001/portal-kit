@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
-import { MessageThread } from '@/components/dashboard/message-thread'
+import { PortalMessages } from '@/components/portal/portal-messages'
 
 export default async function PortalMessagesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -14,13 +14,14 @@ export default async function PortalMessagesPage({ params }: { params: Promise<{
     .from('clients')
     .select(`
       id, name,
-      profiles:freelancer_id ( id, full_name, avatar_url ),
+      profiles:freelancer_id ( id, full_name, business_name, avatar_url ),
       projects (
         id, title,
         messages (
           id, sender_type, sender_id, content, read_at, created_at,
           profiles:sender_id ( id, full_name, avatar_url )
-        )
+        ),
+        files ( id, filename, status )
       )
     `)
     .eq('portal_slug', slug)
@@ -30,17 +31,19 @@ export default async function PortalMessagesPage({ params }: { params: Promise<{
 
   if (!client) redirect(`/p/${slug}/access`)
 
-  const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles
+  const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
+  const freelancerName = profile?.business_name || profile?.full_name || 'Your Team'
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const projects = ((client.projects ?? []) as any[]).filter(p => !p.deleted_at)
 
   return (
-    <MessageThread
+    <PortalMessages
       clientId={clientId}
       clientName={client.name}
       projects={projects}
-      currentUser={{ id: clientId, name: client.name, avatar: null }}
-      senderType="client"
+      freelancerName={freelancerName}
+      freelancerAvatar={profile?.avatar_url ?? null}
     />
   )
 }

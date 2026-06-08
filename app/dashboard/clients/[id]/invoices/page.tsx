@@ -12,9 +12,9 @@ export default async function ClientInvoicesPage({ params }: { params: Promise<{
 
   const [{ data: client }, { data: invoices }, { data: projects }, { data: profile }] = await Promise.all([
     supabase.from('clients').select('id, name, email').eq('id', id).eq('freelancer_id', user.id).is('deleted_at', null).single(),
-    supabase.from('invoices').select('*').eq('client_id', id).eq('freelancer_id', user.id).is('deleted_at', null).order('created_at', { ascending: false }),
+    supabase.from('invoices').select('id, invoice_number, status, subtotal, tax_rate, tax_amount, total, currency, due_date, paid_at, line_items, notes, project_id, client_id, freelancer_id, stripe_payment_intent_id, deleted_at, created_at, updated_at').eq('client_id', id).eq('freelancer_id', user.id).is('deleted_at', null).order('created_at', { ascending: false }),
     supabase.from('projects').select('id, title').eq('client_id', id).eq('freelancer_id', user.id).is('deleted_at', null),
-    supabase.from('profiles').select('full_name, business_name').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name, business_name, base_currency, plan').eq('id', user.id).single(),
   ])
 
   if (!client) notFound()
@@ -28,6 +28,8 @@ export default async function ClientInvoicesPage({ params }: { params: Promise<{
       projects={projects ?? []}
       freelancerName={profile?.full_name ?? ''}
       businessName={profile?.business_name || profile?.full_name || ''}
+      baseCurrency={profile?.base_currency ?? 'USD'}
+      plan={profile?.plan ?? 'free'}
     />
   )
 }

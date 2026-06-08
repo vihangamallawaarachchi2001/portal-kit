@@ -1,3 +1,5 @@
+export const revalidate = 0
+
 import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'

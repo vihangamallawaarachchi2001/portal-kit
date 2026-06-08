@@ -9,21 +9,33 @@ export default async function ClientsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
-  const { data: clients } = await supabase
-    .from('clients')
-    .select(`
-      *,
-      projects (
-        id, title, status, due_date, updated_at,
-        files ( id, status ),
-        messages ( id, sender_type, read_at )
-      ),
-      invoices ( id, total, status, currency )
-    `)
-    .eq('freelancer_id', user.id)
-    .eq('status', 'active')
-    .is('deleted_at', null)
-    .order('updated_at', { ascending: false })
+  const [{ data: clients }, { data: profile }] = await Promise.all([
+    supabase
+      .from('clients')
+      .select(`
+        *,
+        projects (
+          id, title, status, due_date, updated_at,
+          files ( id, status ),
+          messages ( id, sender_type, read_at )
+        ),
+        invoices ( id, total, status, currency )
+      `)
+      .eq('freelancer_id', user.id)
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false })
+      .limit(200)
+      .limit(50, { referencedTable: 'projects' })
+      .limit(200, { referencedTable: 'files' })
+      .limit(200, { referencedTable: 'messages' })
+      .limit(200, { referencedTable: 'invoices' }),
+    supabase
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single(),
+  ])
 
   const enrichedClients: EnrichedClient[] = (clients ?? []).map(c => {
     const projects = (c.projects ?? []).filter((p: { deleted_at: string | null }) => !p.deleted_at)
@@ -48,5 +60,5 @@ export default async function ClientsPage() {
     }
   }) as EnrichedClient[]
 
-  return <ClientsView clients={enrichedClients} />
+  return <ClientsView clients={enrichedClients} plan={profile?.plan ?? 'free'} />
 }

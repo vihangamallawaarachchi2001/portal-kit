@@ -25,13 +25,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const client = await getClientOrForbid(supabase, user.id, id)
   if (!client) return notFound('Client not found')
 
-  // Fetch with projects
+  // Fetch with projects — limit nested collections to prevent runaway row counts
   const { data, error } = await supabase
     .from('clients')
     .select(`*, projects ( *, files ( id, status ), messages ( id, sender_type, read_at ) )`)
     .eq('id', id)
     .eq('freelancer_id', user.id)
     .is('deleted_at', null)
+    .limit(100, { referencedTable: 'projects' })
+    .limit(200, { referencedTable: 'files' })
+    .limit(200, { referencedTable: 'messages' })
     .single()
 
   if (error) return internalError(error.message)

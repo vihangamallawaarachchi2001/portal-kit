@@ -7,14 +7,17 @@ import { Button } from '@/components/ui/button'
 import { slugify } from '@/lib/format'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Loader2, AlertCircle, Users, Globe, AtSign } from 'lucide-react'
+import { Loader2, AlertCircle, Users, Globe, AtSign, Zap } from 'lucide-react'
+import Link from 'next/link'
 
 interface AddClientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  plan?: string
+  clientCount?: number
 }
 
-export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
+export function AddClientModal({ open, onOpenChange, plan = 'free', clientCount = 0 }: AddClientModalProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [name, setName]               = useState('')
@@ -23,6 +26,9 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
   const [slugManual, setSlugManual]   = useState(false)
   const [slugError, setSlugError]     = useState<string | null>(null)
   const [error, setError]             = useState<string | null>(null)
+  const [limitHit, setLimitHit]       = useState(false)
+
+  const atClientLimit = plan === 'free' && clientCount >= 1
 
   function handleNameChange(value: string) {
     setName(value)
@@ -45,7 +51,7 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
 
   function reset() {
     setName(''); setEmail(''); setSlug('')
-    setSlugManual(false); setSlugError(null); setError(null)
+    setSlugManual(false); setSlugError(null); setError(null); setLimitHit(false)
   }
 
   function handleClose() {
@@ -64,6 +70,7 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
           body: JSON.stringify({ name: name.trim(), email: email.trim(), portal_slug: slug }),
         })
         const data = await res.json()
+        if (res.status === 402) { setLimitHit(true); return }
         if (!res.ok) { setError(data.error ?? 'Failed to create client'); return }
         toast.success(`${name} — portal is live!`)
         reset(); onOpenChange(false); router.refresh()
@@ -81,6 +88,37 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
       <DialogContent className="sm:max-w-lg p-0 overflow-hidden gap-0">
         <DialogTitle className="sr-only">Create client portal</DialogTitle>
 
+        {(atClientLimit || limitHit) ? (
+          /* ── Upgrade gate ──────────────────────── */
+          <div className="flex flex-col items-center text-center gap-5 px-8 py-10">
+            <div className="size-14 rounded-2xl bg-amber-50 flex items-center justify-center">
+              <Zap className="size-7 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-base font-bold text-on-surface">Client portal limit reached</p>
+              <p className="text-sm text-on-surface-variant mt-2 leading-relaxed max-w-xs">
+                The Free plan allows 1 active client portal. Upgrade to Pro for unlimited clients.
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <Link
+                href="/dashboard/settings/billing"
+                onClick={handleClose}
+                className="inline-flex items-center gap-1.5 h-9 px-5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
+              >
+                <Zap className="size-3.5" />
+                Upgrade to Pro
+              </Link>
+              <button
+                onClick={handleClose}
+                className="h-9 px-4 rounded-lg border border-outline-variant text-sm font-medium text-on-surface-variant hover:bg-surface-container transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
         {/* ── Header ──────────────────────────────── */}
         <div
           className="px-6 pt-6 pb-5 border-b border-outline-variant/30"
@@ -212,6 +250,8 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
             </Button>
           </div>
         </form>
+        </>
+        )}
 
       </DialogContent>
     </Dialog>

@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 PortalKit_SRS_v1.0.docx
+pre-launch-tasks.md
+q.md
+.claude/settings.json

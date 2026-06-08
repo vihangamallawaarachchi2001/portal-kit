@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { ok, created, unauthorized, notFound, badRequest, internalError, fromZodError } from '@/lib/api'
 import { sendMessageSchema } from '@/lib/validations'
-import { sendNewMessageEmail } from '@/lib/email'
+import { sendPushToSubscriber } from '@/lib/web-push'
+import { getNotificationPref } from '@/lib/notification-prefs'
 import { cookies } from 'next/headers'
 import { ZodError } from 'zod'
 
@@ -25,13 +26,13 @@ async function getCallerContext(projectId: string) {
 
   if (!project) return null
 
-  // Freelancer
+  // Freelancer auth takes priority — always trust Supabase session first
   if (user && project.freelancer_id === user.id) {
     return { type: 'freelancer' as const, userId: user.id, project }
   }
 
-  // Client
-  const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
+  // Portal client second — only if no authenticated freelancer session
+  const client = Array.isArray(project.clients) ? (project.clients[0] ?? null) : project.clients
   if (clientId && client?.id === clientId) {
     return { type: 'client' as const, clientId, project }
   }
@@ -39,18 +40,25 @@ async function getCallerContext(projectId: string) {
   return null
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const ctx = await getCallerContext(id)
   if (!ctx) return unauthorized()
 
+  const { searchParams } = new URL(req.url)
+  const since = searchParams.get('since')
+
   const service = createServiceClient()
-  const { data, error } = await service
+  let query = service
     .from('messages')
     .select('*, profiles:sender_id(id, full_name, avatar_url)')
     .eq('project_id', id)
     .order('created_at', { ascending: true })
 
+  if (since) query = query.gt('created_at', since)
+  query = query.limit(500)
+
+  const { data, error } = await query
   if (error) return internalError(error.message)
   return ok(data)
 }
@@ -82,50 +90,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   if (error) return internalError(error.message)
 
-  // Send notification to the OTHER party (debounced by business logic)
+  // Push notification to the OTHER party
   const project = ctx.project
-  const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const client  = Array.isArray(project.clients) ? (project.clients[0] ?? null) : project.clients
+  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const preview = input.content.length > 120 ? input.content.slice(0, 117) + '…' : input.content
 
   if (ctx.type === 'freelancer') {
-    // Notify the client
-    if (client?.email) {
-      const { data: profile } = await service
-        .from('profiles')
-        .select('full_name, business_name')
-        .eq('id', ctx.userId)
-        .single()
-
-      await sendNewMessageEmail({
-        to: client.email,
-        recipientName: client.name,
-        senderName: profile?.full_name ?? '',
-        senderBusiness: profile?.business_name || profile?.full_name || '',
-        projectTitle: project.title,
-        messagePreview: input.content,
-        portalUrl: `${appUrl}/p/${client.portal_slug}`,
-      }).catch(() => {})
+    // Notify portal client (no preference check — clients manage their own browser permission)
+    if (client?.id) {
+      sendPushToSubscriber('client', client.id, {
+        title: `New message on ${project.title}`,
+        body:  preview,
+        tag:   `message-${project.id}`,
+        data:  { url: `${appUrl}/p/${client.portal_slug}/messages` },
+      }).catch((err) => console.error("[push]", err))
     }
   } else {
-    // Notify the freelancer
-    const { data: authUser } = await service.auth.admin.getUserById(project.freelancer_id)
-    const { data: profile } = await service
-      .from('profiles')
-      .select('full_name, business_name')
-      .eq('id', project.freelancer_id)
-      .single()
-
-    if (authUser?.user?.email) {
-      await sendNewMessageEmail({
-        to: authUser.user.email,
-        recipientName: profile?.full_name ?? '',
-        senderName: client?.name ?? 'Client',
-        senderBusiness: client?.name ?? '',
-        projectTitle: project.title,
-        messagePreview: input.content,
-        portalUrl: `${appUrl}/dashboard/clients/${client?.id}`,
-      }).catch(() => {})
-    }
+    // Notify freelancer — respect their messages preference
+    getNotificationPref(project.freelancer_id, 'messages').then(allowed => {
+      if (!allowed) return
+      sendPushToSubscriber('freelancer', project.freelancer_id, {
+        title: `${client?.name ?? 'Client'} sent a message`,
+        body:  preview,
+        tag:   `message-${project.id}`,
+        data:  { url: `${appUrl}/dashboard/chats` },
+      }).catch((err) => console.error("[push]", err))
+    }).catch((err) => console.error("[push]", err))
   }
 
   return created(data)

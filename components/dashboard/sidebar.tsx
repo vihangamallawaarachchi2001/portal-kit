@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Users, FileText, Settings,
   LogOut, Layers, FolderOpen, BookOpen, LifeBuoy, Zap,
-  ChevronLeft, ChevronRight, MessageSquare,
+  ChevronLeft, ChevronRight, MessageSquare, Paperclip, BarChart2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -19,8 +19,10 @@ const NAV = [
   { href: '/dashboard',          label: 'Dashboard', icon: LayoutDashboard, exact: true,  badge: false },
   { href: '/dashboard/projects', label: 'Projects',  icon: FolderOpen,      exact: false, badge: false },
   { href: '/dashboard/clients',  label: 'Clients',   icon: Users,           exact: false, badge: false },
-  { href: '/dashboard/chats',    label: 'Chats',     icon: MessageSquare,   exact: false, badge: true  },
+  { href: '/dashboard/chats',    label: 'Messages',  icon: MessageSquare,   exact: false, badge: true  },
   { href: '/dashboard/invoices', label: 'Invoices',  icon: FileText,        exact: false, badge: false },
+  { href: '/dashboard/files',     label: 'Files',     icon: Paperclip,  exact: false, badge: false },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart2,  exact: false, badge: false },
 ]
 
 interface SidebarProps {
@@ -29,6 +31,9 @@ interface SidebarProps {
   clientCount?: number
   collapsed?: boolean
   onToggle?: () => void
+  isMobile?: boolean
+  mobileOpen?: boolean
+  onMobileClose?: () => void
 }
 
 /* Animated label — clips to 0 width when collapsed */
@@ -52,6 +57,7 @@ function Label({ collapsed, children }: { collapsed: boolean; children: React.Re
 
 export function Sidebar({
   profile, unreadCount = 0, clientCount = 0, collapsed = true, onToggle,
+  isMobile = false, mobileOpen = false, onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -80,27 +86,33 @@ export function Sidebar({
         : 'text-slate-400 hover:bg-white/6 hover:text-white',
     )
 
+  const sidebarWidth = isMobile ? 240 : (collapsed ? 64 : 240)
+  const leftOffset   = isMobile ? (mobileOpen ? 0 : -240) : 0
+
   return (
     <TooltipProvider delayDuration={280}>
       <aside
-        className="fixed inset-y-0 left-0 z-40 flex flex-col"
+        className="fixed inset-y-0 z-40 flex flex-col"
         style={{
           background: '#0b1527',
           borderRight: '1px solid rgba(255,255,255,0.06)',
-          width: collapsed ? 64 : 240,
-          transition: 'width 220ms cubic-bezier(0.4,0,0.2,1)',
+          width: sidebarWidth,
+          left: leftOffset,
+          transition: 'width 220ms cubic-bezier(0.4,0,0.2,1), left 220ms cubic-bezier(0.4,0,0.2,1)',
         }}
       >
-        {/* ── Floating toggle button — sits outside the sidebar right edge ── */}
-        <button
-          onClick={onToggle}
-          className="absolute -right-3 top-4.5 z-50 size-6 rounded-full bg-white border border-outline-variant/60 shadow-md flex items-center justify-center text-on-surface-variant hover:text-ds-secondary hover:border-ds-secondary/40 transition-colors"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed
-            ? <ChevronRight className="size-3" />
-            : <ChevronLeft className="size-3" />}
-        </button>
+        {/* ── Floating toggle button — desktop only ── */}
+        {!isMobile && (
+          <button
+            onClick={onToggle}
+            className="absolute -right-3 top-4.5 z-50 size-6 rounded-full bg-white border border-outline-variant/60 shadow-md flex items-center justify-center text-on-surface-variant hover:text-ds-secondary hover:border-ds-secondary/40 transition-colors"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed
+              ? <ChevronRight className="size-3" />
+              : <ChevronLeft className="size-3" />}
+          </button>
+        )}
 
         {/* ── Logo ──────────────────────────────────── */}
         <div

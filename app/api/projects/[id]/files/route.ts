@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ok, created, unauthorized, notFound, badRequest, internalError, fromZodError } from '@/lib/api'
 import { registerFileSchema } from '@/lib/validations'
 import { sendFileUploadedEmail } from '@/lib/email'
+import { sendPushToSubscriber } from '@/lib/web-push'
 import { ZodError } from 'zod'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -22,11 +23,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data, error } = await supabase
     .from('files')
-    .select('*')
+    .select('id, filename, status, file_size, mime_type, version, client_comment, reviewed_at, created_at, storage_path, parent_file_id')
     .eq('project_id', id)
     .eq('freelancer_id', user.id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+    .limit(500)
 
   if (error) return internalError(error.message)
   return ok(data)
@@ -63,7 +65,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (error) return internalError(error.message)
 
   // Notify client
-  const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
+  const client = Array.isArray(project.clients) ? (project.clients[0] ?? null) : project.clients
   if (client?.email) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -80,7 +82,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       projectTitle: project.title,
       filename: input.filename,
       portalUrl: `${appUrl}/p/${client.portal_slug}`,
-    }).catch(() => {})
+    }).catch((err) => console.error('[email] file-uploaded notification failed', err))
+
+    // Push notification to client
+    if (client.id) {
+      sendPushToSubscriber('client', client.id, {
+        title: 'New file ready for review',
+        body: `"${input.filename}" was uploaded in "${project.title}"`,
+        tag: `file-upload-${data.id}`,
+        data: { url: '/dashboard' },
+      }).catch((err) => console.error("[push]", err))
+    }
   }
 
   return created(data)

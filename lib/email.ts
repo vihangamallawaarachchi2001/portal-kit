@@ -377,3 +377,105 @@ export async function sendWeeklyDigest({
     `),
   })
 }
+
+// Client receives: payment receipt after successful invoice payment
+export async function sendPaymentReceiptEmail({
+  to,
+  clientName,
+  businessName,
+  invoiceNumber,
+  total,
+  currency,
+  paidAt,
+  lineItems,
+  portalUrl,
+}: {
+  to: string
+  clientName: string
+  businessName: string
+  invoiceNumber: string
+  total: number
+  currency: string
+  paidAt: string
+  lineItems: { description: string; quantity: number; unit_price: number }[]
+  portalUrl: string
+}) {
+  const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(total)
+  const fmtItem   = (amt: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amt)
+  const paidDate  = new Date(paidAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+
+  const itemRows = lineItems.map(item => `
+    <tr>
+      <td style="padding:8px 0;font-size:14px;color:#45464d;">${item.description} × ${item.quantity}</td>
+      <td style="padding:8px 0;font-size:14px;text-align:right;font-weight:600;">${fmtItem(item.quantity * item.unit_price)}</td>
+    </tr>
+  `).join('')
+
+  await send({
+    to,
+    subject: `Payment receipt — ${invoiceNumber} from ${businessName}`,
+    html: baseTemplate(`
+      <p>Hi ${clientName},</p>
+      <p>Thank you! Your payment for invoice <strong>${invoiceNumber}</strong> from <strong>${businessName}</strong> has been successfully processed.</p>
+
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin:20px 0;display:flex;align-items:center;gap:12px;">
+        <div style="background:#15803d;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="color:white;font-size:16px;">✓</span>
+        </div>
+        <div>
+          <p style="margin:0;font-weight:700;color:#15803d;font-size:18px;">${formatted} received</p>
+          <p style="margin:4px 0 0;font-size:12px;color:#166534;">Paid on ${paidDate}</p>
+        </div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;border:1px solid #e5eeff;border-radius:8px;overflow:hidden;">
+        <thead>
+          <tr style="background:#eff4ff;">
+            <th style="padding:10px 16px;font-size:12px;color:#45464d;text-align:left;font-weight:600;text-transform:uppercase;">Item</th>
+            <th style="padding:10px 16px;font-size:12px;color:#45464d;text-align:right;font-weight:600;text-transform:uppercase;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>${itemRows}</tbody>
+        <tfoot>
+          <tr style="background:#eff4ff;">
+            <td style="padding:10px 16px;font-weight:700;font-size:15px;">Total paid</td>
+            <td style="padding:10px 16px;font-weight:700;font-size:15px;text-align:right;color:#0051d5;">${formatted}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <p>You can view this invoice at any time from your portal.</p>
+      <a href="${portalUrl}/invoices" class="button">View in Portal →</a>
+      <hr class="divider" />
+      <p class="muted">Payment processed securely by Stripe. This is your receipt — please keep it for your records.</p>
+    `),
+  })
+}
+
+// Team member receives: invitation to join a workspace
+export async function sendTeamInviteEmail({
+  to,
+  ownerName,
+  businessName,
+  role,
+  acceptUrl,
+}: {
+  to: string
+  ownerName: string
+  businessName: string
+  role: string
+  acceptUrl: string
+}) {
+  await send({
+    to,
+    subject: `${ownerName} invited you to join ${businessName} on PortalKit`,
+    html: baseTemplate(`
+      <p>Hi there,</p>
+      <p><strong>${ownerName}</strong> has invited you to join their PortalKit workspace as a <strong>${role}</strong>.</p>
+      <p>PortalKit is a client portal platform for freelancers and agencies. As a team member, you'll be able to manage clients, projects, files, and invoices together.</p>
+      <a href="${acceptUrl}" class="button">Accept invitation →</a>
+      <hr class="divider" />
+      <p class="muted">This invitation expires in 7 days. If you didn't expect this, you can safely ignore this email.</p>
+    `),
+  })
+}

@@ -1,7 +1,23 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(npx tsc *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(mkdir -p /home/vihanga/workspace/products/portal-kit/app/api/invoices/\\\\[id\\\\]/resend)",
+      "Bash(mkdir -p /home/vihanga/workspace/products/portal-kit/app/api/portal/\\\\[slug\\\\]/request-access)",
+      "Bash(mkdir -p /home/vihanga/workspace/products/portal-kit/app/api/portal/\\\\[slug\\\\]/branding)",
+      "Bash(mkdir -p /home/vihanga/workspace/products/portal-kit/app/api/portal/files/\\\\[id\\\\]/download)",
+      "Bash(mkdir -p /home/vihanga/workspace/products/portal-kit/app/api/portal/projects/\\\\[id\\\\]/messages)",
+      "Bash(mkdir -p /home/vihanga/workspace/products/portal-kit/app/api/portal/projects/\\\\[id\\\\]/upload /home/vihanga/workspace/products/portal-kit/app/api/portal/projects/\\\\[id\\\\]/files)",
+      "Bash(pnpm add *)",
+      "Bash(git rm *)"
+    ],
+    "additionalDirectories": [
+      "/home/vihanga/workspace/products/portal-kit/app/api/invoices/[id]",
+      "/home/vihanga/workspace/products/portal-kit/app/api/portal/[slug]",
+      "/home/vihanga/workspace/products/portal-kit/app/api/portal/files/[id]",
+      "/home/vihanga/workspace/products/portal-kit/app/api/portal/projects/[id]"
     ]
   }
 }

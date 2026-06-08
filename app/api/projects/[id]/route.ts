@@ -63,7 +63,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // Send email if status changed
   if (input.status && input.status !== existing.status) {
-    const client = Array.isArray(existing.clients) ? existing.clients[0] : existing.clients
+    const client = Array.isArray(existing.clients) ? (existing.clients[0] ?? null) : existing.clients
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name, business_name')
@@ -80,7 +80,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         projectTitle: existing.title,
         newStatus: input.status,
         portalUrl: `${appUrl}/p/${client.portal_slug}`,
-      }).catch(() => {})
+      }).catch((err) => console.error('[email] status-changed notification failed', err))
     }
   }
 
@@ -107,6 +107,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     .from('projects')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('freelancer_id', user.id)
 
   if (error) return internalError(error.message)
   return noContent()

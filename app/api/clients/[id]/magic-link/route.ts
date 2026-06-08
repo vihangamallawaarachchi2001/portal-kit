@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { ok, unauthorized, notFound, internalError } from '@/lib/api'
+import { ok, unauthorized, notFound, internalError, tooManyRequests } from '@/lib/api'
 import { sendPortalMagicLink } from '@/lib/email'
 import { randomBytes, createHash } from 'crypto'
 
@@ -21,6 +21,16 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   if (!client) return notFound('Client not found')
 
+  // Rate limit: max 5 magic links per client per hour to prevent accidental email spam
+  const service = createServiceClient()
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  const { count } = await service
+    .from('portal_sessions')
+    .select('id', { count: 'exact', head: true })
+    .eq('client_id', client.id)
+    .gte('created_at', oneHourAgo)
+  if ((count ?? 0) >= 5) return tooManyRequests('Too many magic links sent in the last hour')
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, business_name')
@@ -32,7 +42,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const tokenHash = createHash('sha256').update(rawToken).digest('hex')
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
-  const service = createServiceClient()
   const { error } = await service.from('portal_sessions').insert({
     client_id: client.id,
     token_hash: tokenHash,
@@ -42,7 +51,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (error) return internalError(error.message)
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portalkit.app'
-  const portalUrl = `${appUrl}/p/${client.portal_slug}?token=${rawToken}`
+  const portalUrl = `${appUrl}/p/${client.portal_slug}/access?token=${rawToken}`
 
   sendPortalMagicLink({
     to: client.email,

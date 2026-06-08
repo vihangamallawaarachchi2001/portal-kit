@@ -2,6 +2,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { ok, unauthorized, notFound, badRequest, internalError, fromZodError } from '@/lib/api'
 import { reviewFileSchema } from '@/lib/validations'
 import { sendFileReviewedEmail } from '@/lib/email'
+import { getNotificationPref } from '@/lib/notification-prefs'
+import { sendPushToSubscriber } from '@/lib/web-push'
 import { cookies } from 'next/headers'
 import { ZodError } from 'zod'
 
@@ -30,7 +32,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (!file) return notFound('File not found')
 
-  const project = Array.isArray(file.projects) ? file.projects[0] : file.projects
+  const project = Array.isArray(file.projects) ? (file.projects[0] ?? null) : file.projects
   if (project?.client_id !== clientId) return unauthorized('Access denied')
 
   const { data, error } = await service
@@ -54,9 +56,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .single()
 
   const { data: authUser } = await service.auth.admin.getUserById(file.freelancer_id)
-  const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
+  const client = Array.isArray(project.clients) ? (project.clients[0] ?? null) : project.clients
 
-  if (authUser?.user?.email) {
+  const allowed = await getNotificationPref(file.freelancer_id, 'file_review').catch(() => true)
+
+  if (authUser?.user?.email && allowed) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
     await sendFileReviewedEmail({
       to: authUser.user.email,
@@ -67,7 +71,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       status: input.status as 'approved' | 'changes_requested',
       comment: input.client_comment ?? null,
       dashboardUrl: `${appUrl}/dashboard`,
-    }).catch(() => {})
+    }).catch((err) => console.error('[email] file-review notification failed', err))
+  }
+
+  // Push notification to freelancer
+  if (allowed) {
+    const label = input.status === 'approved' ? 'approved' : 'requested changes on'
+    sendPushToSubscriber('freelancer', file.freelancer_id, {
+      title: 'File reviewed',
+      body: `${client?.name ?? 'A client'} ${label} "${file.filename}"`,
+      tag: `file-review-${id}`,
+      data: { url: '/dashboard' },
+    }).catch((err) => console.error("[push]", err))
   }
 
   return ok(data)
