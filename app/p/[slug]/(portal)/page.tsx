@@ -5,7 +5,7 @@ import { formatCurrency, formatDate, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import {
-  Clock, Layers, Paperclip, FileText, MessageSquare,
+  CalendarCheck, CalendarDays, Clock, Layers, Paperclip, FileText, MessageSquare,
   ChevronRight, AlertTriangle, CheckCircle2,
 } from 'lucide-react'
 import { Project } from '@/types/database'
@@ -44,6 +44,22 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
     .single()
 
   if (!client) redirect(`/p/${slug}/access`)
+
+  const clientProjectIds = ((client.projects ?? []) as { id: string }[]).map(p => p.id)
+
+  const [{ count: milestoneCount }, { count: meetingCount }] = await Promise.all([
+    clientProjectIds.length > 0
+      ? service
+          .from('milestones')
+          .select('id', { count: 'exact', head: true })
+          .in('project_id', clientProjectIds)
+      : Promise.resolve({ count: 0 }),
+    service
+      .from('meetings')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', clientId)
+      .neq('status', 'cancelled'),
+  ])
 
   const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
   const businessName = profile?.business_name || profile?.full_name || 'Your Portal'
@@ -234,9 +250,11 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {([
-          { href: `/p/${slug}/files`,    icon: Paperclip,     label: 'Review Files',    desc: 'Download and approve deliverables',   accent: '#f59e0b', badge: pendingFiles > 0   ? pendingFiles   : null },
-          { href: `/p/${slug}/invoices`, icon: FileText,      label: 'Invoices',        desc: 'View and pay outstanding invoices',   accent: '#0051d5', badge: null },
-          { href: `/p/${slug}/messages`, icon: MessageSquare, label: 'Messages',        desc: `Chat directly with ${businessName}`,  accent: '#0051d5', badge: unreadMessages > 0 ? unreadMessages : null },
+          { href: `/p/${slug}/files`,       icon: Paperclip,     label: 'Review Files',    desc: 'Download and approve deliverables',   accent: '#f59e0b', badge: pendingFiles > 0   ? pendingFiles   : null },
+          { href: `/p/${slug}/invoices`,    icon: FileText,      label: 'Invoices',        desc: 'View and pay outstanding invoices',   accent: '#0051d5', badge: null },
+          { href: `/p/${slug}/milestones`,  icon: CalendarCheck, label: 'Milestones',      desc: 'See progress milestones and due dates', accent: '#0f766e', badge: milestoneCount ?? 0 ? milestoneCount : null },
+          { href: `/p/${slug}/meetings`,    icon: CalendarDays,  label: 'Meetings',        desc: 'Open scheduled client meetings',        accent: '#9333ea', badge: meetingCount ?? 0 ? meetingCount : null },
+          { href: `/p/${slug}/messages`,    icon: MessageSquare, label: 'Messages',        desc: `Chat directly with ${businessName}`,  accent: '#0051d5', badge: unreadMessages > 0 ? unreadMessages : null },
         ] as const).map(link => (
           <Link
             key={link.href}
