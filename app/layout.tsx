@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import NextTopLoader from "nextjs-toploader";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -86,6 +87,14 @@ export default async function RootLayout({
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <NextTopLoader
+          color="#0051d5"
+          height={3}
+          showSpinner={false}
+          shadow="0 0 10px #0051d5,0 0 5px #0051d5"
+          easing="ease"
+          speed={200}
+        />
         <AuthProvider initialUser={user}>
           {children}
         </AuthProvider>
