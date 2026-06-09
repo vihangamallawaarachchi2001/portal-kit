@@ -118,6 +118,16 @@ export function usePushSubscription() {
         })
         await sub.unsubscribe()
       }
+
+      if ('permissions' in navigator && typeof navigator.permissions.revoke === 'function') {
+        try {
+          await (navigator.permissions as any).revoke({ name: 'notifications' })
+        } catch {
+          // some browsers do not allow programmatic permission revocation;
+          // keep going because the push subscription itself should still be removed.
+        }
+      }
+
       syncStatus('unsubscribed')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to disable — please try again.')

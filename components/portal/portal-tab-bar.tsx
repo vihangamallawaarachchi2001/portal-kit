@@ -3,13 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutGrid, Paperclip, FileText, MessageSquare } from 'lucide-react'
+import { LayoutGrid, Paperclip, FileText, MessageSquare, CalendarDays, CalendarCheck } from 'lucide-react'
 
 const TABS = [
-  { href: '',          label: 'Overview',  icon: LayoutGrid },
-  { href: '/files',    label: 'Files',     icon: Paperclip },
-  { href: '/invoices', label: 'Invoices',  icon: FileText },
-  { href: '/messages', label: 'Messages',  icon: MessageSquare },
+  { href: '',            label: 'Overview',  icon: LayoutGrid },
+  { href: '/files',      label: 'Files',     icon: Paperclip },
+  { href: '/invoices',   label: 'Invoices',  icon: FileText },
+  { href: '/milestones', label: 'Milestones', icon: CalendarCheck },
+  { href: '/meetings',   label: 'Meetings',   icon: CalendarDays },
+  { href: '/messages',   label: 'Messages',  icon: MessageSquare },
 ]
 
 export function PortalTabBar({ slug, dark }: { slug: string; dark?: boolean }) {
