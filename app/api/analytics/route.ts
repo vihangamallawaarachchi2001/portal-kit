@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('plan, base_currency')
+    .select('plan')
     .eq('id', user.id)
     .single()
 
@@ -103,7 +103,7 @@ export async function GET() {
   const totalClients   = clientsByMonth.reduce((s, m) => s + m.clients, 0)
 
   return ok({
-    currency: profile?.base_currency ?? 'USD',
+    currency: 'USD',
     revenueByMonth,
     invoiceBreakdown,
     clientsByMonth,

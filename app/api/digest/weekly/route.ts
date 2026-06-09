@@ -21,7 +21,7 @@ async function runDigest() {
   // Find all Pro/Business users with weekly_digest preference enabled
   const { data: profiles } = await service
     .from('profiles')
-    .select('id, full_name, base_currency, notification_preferences, plan')
+    .select('id, full_name, notification_preferences, plan')
     .in('plan', ['pro', 'business'])
 
   const eligible = (profiles ?? []).filter(p => {
@@ -107,7 +107,7 @@ async function runDigest() {
         freelancerName:   profile.full_name ?? 'there',
         pendingApprovals: pendingMap.get(profile.id) ?? 0,
         outstandingAmount:outstandingMap.get(profile.id) ?? 0,
-        currency:         profile.base_currency ?? 'USD',
+        currency:         'USD',
         unreadMessages:   unreadMap.get(profile.id) ?? 0,
         dashboardUrl:     `${appUrl}/dashboard`,
       }).catch((err) => console.error('[email] weekly-digest send failed', err))

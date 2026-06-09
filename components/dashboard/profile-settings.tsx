@@ -10,7 +10,6 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Camera, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { CURRENCIES } from '@/lib/currencies'
 
 interface ProfileSettingsProps {
   profile: Profile | null
@@ -28,7 +27,6 @@ export function ProfileSettings({ profile, email }: ProfileSettingsProps) {
     business_name: profile?.business_name ?? '',
     tagline:       profile?.tagline       ?? '',
     avatar_url:    profile?.avatar_url    ?? '',
-    base_currency: profile?.base_currency ?? 'USD',
   })
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile]       = useState<File | null>(null)
@@ -64,7 +62,6 @@ export function ProfileSettings({ profile, email }: ProfileSettingsProps) {
           business_name: form.business_name || null,
           tagline:       form.tagline       || null,
           avatar_url:    avatarUrl          || null,
-          base_currency: form.base_currency || 'USD',
         }),
       })
       if (res.ok) { toast.success('Profile saved'); router.refresh() }
@@ -161,24 +158,6 @@ export function ProfileSettings({ profile, email }: ProfileSettingsProps) {
           placeholder="Design that drives results"
           className="rounded-md h-10 max-w-sm"
         />
-      </SettingsRow>
-
-      <Divider />
-
-      {/* ── Base Currency ─────────────────────────── */}
-      <SettingsRow
-        label="Base Currency"
-        description="Default currency for invoices and dashboard stats."
-      >
-        <select
-          value={form.base_currency}
-          onChange={e => setForm(f => ({ ...f, base_currency: e.target.value }))}
-          className="h-10 px-3 rounded-md border border-input bg-background text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0 transition-all max-w-xs w-full"
-        >
-          {CURRENCIES.map(c => (
-            <option key={c.code} value={c.code}>{c.code} – {c.name} ({c.symbol})</option>
-          ))}
-        </select>
       </SettingsRow>
 
       <Divider />

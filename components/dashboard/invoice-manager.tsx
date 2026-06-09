@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CURRENCIES } from '@/lib/currencies'
 
 const STATUS_CONFIG: Record<Invoice['status'], { label: string; className: string }> = {
   draft:   { label: 'Draft',   className: 'bg-surface-container text-on-surface-variant border-outline-variant' },
@@ -33,14 +32,13 @@ interface InvoiceManagerProps {
   projects: Pick<Project, 'id' | 'title'>[]
   freelancerName: string
   businessName: string
-  baseCurrency?: string
   plan?: string
 }
 
 const EMPTY_LINE: LineItem = { description: '', quantity: 1, unit_price: 0 }
 
 export function InvoiceManager({
-  clientId, clientName, invoices, projects, baseCurrency = 'USD', plan = 'free',
+  clientId, clientName, invoices, projects, plan = 'free',
 }: InvoiceManagerProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -51,7 +49,7 @@ export function InvoiceManager({
   // Form state
   const [lineItems, setLineItems] = useState<LineItem[]>([{ ...EMPTY_LINE }])
   const [taxRate, setTaxRate] = useState('0')
-  const [currency, setCurrency] = useState(baseCurrency)
+  const [currency, setCurrency] = useState('USD')
   const [dueDate, setDueDate] = useState('')
   const [projectId, setProjectId] = useState('')
   const [notes, setNotes] = useState('')
@@ -71,7 +69,7 @@ export function InvoiceManager({
   function resetForm() {
     setLineItems([{ ...EMPTY_LINE }])
     setTaxRate('0')
-    setCurrency(baseCurrency)
+    setCurrency('USD')
     setDueDate('')
     setProjectId('')
     setNotes('')
@@ -453,18 +451,6 @@ export function InvoiceManager({
 
               {/* Settings grid */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-on-surface">Currency</label>
-                  <select
-                    value={currency}
-                    onChange={e => setCurrency(e.target.value)}
-                    className="h-10 px-3 rounded-md border border-input bg-background text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0 transition-all"
-                  >
-                    {CURRENCIES.map(c => (
-                      <option key={c.code} value={c.code}>{c.code} – {c.name}</option>
-                    ))}
-                  </select>
-                </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-on-surface">Tax rate</label>

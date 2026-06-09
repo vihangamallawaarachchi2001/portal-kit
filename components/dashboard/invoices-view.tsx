@@ -26,7 +26,6 @@ export type InvoiceRow = {
 interface Props {
   invoices: InvoiceRow[]
   clients: { id: string; name: string }[]
-  baseCurrency?: string
   plan?: string
 }
 
@@ -48,7 +47,8 @@ function clientAccent(name: string) {
 const INV_COL = 'grid-cols-[minmax(0,1fr)_130px_120px_110px_100px_96px]'
 
 /* ── Main component ──────────────────────────────── */
-export function InvoicesView({ invoices, clients, baseCurrency = 'USD', plan = 'free' }: Props) {
+export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
+  const baseCurrency = 'USD'
   if (plan === 'free') {
     return (
       <div className="w-full min-h-screen" style={{ background: '#f4f6fa' }}>

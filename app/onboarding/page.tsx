@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import React, { useRef, useState, useTransition } from 'react'
 import { uploadAvatarToStorage, updateProfile } from './onboard-actions'
-import { CURRENCIES } from '@/lib/currencies'
+import { createClient } from '@/lib/supabase/client'
 
 const PLANS = [
   {
@@ -71,7 +71,6 @@ interface ProfileData {
   fullName: string
   businessName: string
   tagline: string
-  baseCurrency: string
   avatarUrl: string | null
   avatarFile: File | null
 }
@@ -85,7 +84,6 @@ export default function OnBoardingScreen() {
     fullName: '',
     businessName: '',
     tagline: '',
-    baseCurrency: 'USD',
     avatarUrl: null,
     avatarFile: null,
   })
@@ -136,10 +134,14 @@ export default function OnBoardingScreen() {
           fullName: profile.fullName,
           businessName: profile.businessName,
           tagline: profile.tagline,
-          baseCurrency: profile.baseCurrency,
           avatarUrl,
           plan: 'free', // always start on free; paid plans go through Stripe
         })
+
+        // Refresh the JWT so the proxy sees onboarding_complete = true in the
+        // cookie before we navigate. Without this, the stale token causes the
+        // proxy to redirect back to /onboarding in an infinite loop.
+        await createClient().auth.refreshSession()
 
         if (selectedPlan !== 'free') {
           // Redirect to Stripe checkout for paid plans
@@ -156,9 +158,6 @@ export default function OnBoardingScreen() {
           // If Stripe fails, fall through to dashboard (user can upgrade later)
         }
 
-        // router.refresh() clears the Next.js router cache so the dashboard layout
-        // re-fetches the profile and sees onboarding_completed = true
-        router.refresh()
         router.push('/dashboard')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong.')
@@ -275,20 +274,6 @@ export default function OnBoardingScreen() {
                   <span className="text-[10px] font-semibold text-on-surface-variant px-1.5 py-0.5 rounded-md bg-surface-container border border-outline-variant">optional</span>
                 </div>
                 <Input id="tagline" type="text" placeholder="Design that drives results" value={profile.tagline} onChange={update('tagline')} className="h-10" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="base-currency" className="font-semibold text-on-surface text-sm">Base Currency</Label>
-                <select
-                  id="base-currency"
-                  value={profile.baseCurrency}
-                  onChange={e => setProfile(prev => ({ ...prev, baseCurrency: e.target.value }))}
-                  className="h-10 px-3 rounded-md border border-input bg-background text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0 transition-all"
-                >
-                  {CURRENCIES.map(c => (
-                    <option key={c.code} value={c.code}>{c.code} – {c.name} ({c.symbol})</option>
-                  ))}
-                </select>
-                <p className="text-xs text-on-surface-variant">Used for invoice defaults and dashboard stats.</p>
               </div>
             </div>
 
