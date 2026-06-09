@@ -9,7 +9,6 @@ export async function proxy(request: NextRequest) {
 
   const { response, claims } = await updateSession(request)
   const isAuthenticated = !!claims
-  const onboardingComplete = claims?.user_metadata?.onboarding_complete === true
 
   // 1. Not authenticated → trying to access a protected route → send to /auth
   if (!isAuthenticated && PROTECTED.some(p => pathname.startsWith(p))) {
@@ -18,21 +17,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 2. Authenticated → visiting /auth → redirect based on onboarding status
+  // 2. Authenticated → visiting /auth → send to dashboard.
+  //    The dashboard layout redirects to /onboarding when needed (DB check),
+  //    so we never rely on the JWT onboarding_complete flag here. That flag
+  //    can be stale between a Server Action updating user_metadata and the
+  //    browser receiving a refreshed access token.
   if (isAuthenticated && AUTH_ONLY.some(p => pathname.startsWith(p))) {
-    const destination = onboardingComplete ? '/dashboard' : '/onboarding'
-    return NextResponse.redirect(new URL(destination, request.url))
-  }
-
-  // 3. Authenticated + onboarding incomplete → trying any protected route except /onboarding
-  //    Redirect to /onboarding so they finish it before accessing the app
-  if (isAuthenticated && !onboardingComplete && !pathname.startsWith('/onboarding') && PROTECTED.some(p => pathname.startsWith(p))) {
-    return NextResponse.redirect(new URL('/onboarding', request.url))
-  }
-
-  // 4. Authenticated + onboarding already complete → visiting /onboarding again
-  //    No reason to re-onboard — send to dashboard
-  if (isAuthenticated && onboardingComplete && pathname.startsWith('/onboarding')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
