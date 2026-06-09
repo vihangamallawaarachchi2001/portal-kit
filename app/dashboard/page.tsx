@@ -8,6 +8,7 @@ import { DashboardStats } from '@/types/database'
 import Link from 'next/link'
 import { ArrowRight, BookOpen, MessageCircle } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function DashboardPage() {

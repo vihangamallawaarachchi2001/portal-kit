@@ -1,6 +1,8 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
@@ -35,26 +37,35 @@ export function MilestoneManager({ projectId }: { projectId: string }) {
     } finally { setLoading(false) }
   }
 
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+
   async function createMilestone() {
     if (!title || !dueDate) return
-    try {
-      const res = await fetch(`/api/projects/${projectId}/milestones`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, due_date: dueDate, description }),
-      })
-      if (res.ok) {
-        setOpen(false)
-        setTitle('')
-        setDueDate('')
-        setDescription('')
-        fetchList()
-      } else {
-        console.error('Create failed', await res.text())
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/milestones`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, due_date: dueDate, description }),
+        })
+        if (res.ok) {
+          setOpen(false)
+          setTitle('')
+          setDueDate('')
+          setDescription('')
+          fetchList()
+          router.refresh()
+          toast.success('Milestone added')
+        } else {
+          console.error('Create failed', await res.text())
+          toast.error('Failed to add milestone')
+        }
+      } catch (err) {
+        console.error(err)
+        toast.error('Failed to add milestone')
       }
-    } catch (err) {
-      console.error(err)
-    }
+    })
   }
 
   return (
@@ -78,8 +89,8 @@ export function MilestoneManager({ projectId }: { projectId: string }) {
               <textarea className="w-full rounded border p-2" value={description} onChange={e => setDescription(e.target.value)} />
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={createMilestone}>Create</Button>
+              <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>Cancel</Button>
+              <Button onClick={createMilestone} disabled={isPending}>Create</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

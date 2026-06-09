@@ -1,6 +1,8 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
@@ -25,23 +27,36 @@ export function MeetingScheduler({ projectId }: { projectId: string }) {
     } catch (err) { console.error(err) }
   }
 
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+
   async function createMeeting() {
     if (!title || !datetime || !link) return
-    try {
-      const res = await fetch(`/api/projects/${projectId}/meetings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, scheduled_at: new Date(datetime).toISOString(), duration_mins: duration, meet_link: link, description }),
-      })
-      if (res.ok) {
-        setOpen(false)
-        setTitle('')
-        setDatetime('')
-        setLink('')
-        setDescription('')
-        fetchList()
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/meetings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, scheduled_at: new Date(datetime).toISOString(), duration_mins: duration, meet_link: link, description }),
+        })
+        if (res.ok) {
+          setOpen(false)
+          setTitle('')
+          setDatetime('')
+          setLink('')
+          setDescription('')
+          fetchList()
+          router.refresh()
+          toast.success('Meeting scheduled')
+        } else {
+          console.error('Create failed', await res.text())
+          toast.error('Failed to schedule meeting')
+        }
+      } catch (err) {
+        console.error(err)
+        toast.error('Failed to schedule meeting')
       }
-    } catch (err) { console.error(err) }
+    })
   }
 
   return (
@@ -72,8 +87,8 @@ export function MeetingScheduler({ projectId }: { projectId: string }) {
               <textarea className="w-full rounded border p-2" value={description} onChange={e => setDescription(e.target.value)} />
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={createMeeting}>Create</Button>
+              <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>Cancel</Button>
+              <Button onClick={createMeeting} disabled={isPending}>Create</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
