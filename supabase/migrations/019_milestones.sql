@@ -15,6 +15,14 @@ CREATE INDEX idx_milestones_project    ON public.milestones(project_id);
 CREATE INDEX idx_milestones_freelancer ON public.milestones(freelancer_id);
 CREATE INDEX idx_milestones_due        ON public.milestones(due_date) WHERE completed_at IS NULL;
 
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER trg_milestones_updated_at
   BEFORE UPDATE ON public.milestones
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

@@ -23,6 +23,14 @@ CREATE INDEX idx_meetings_client     ON public.meetings(client_id);
 CREATE INDEX idx_meetings_scheduled  ON public.meetings(scheduled_at)
   WHERE status = 'scheduled';
 
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER trg_meetings_updated_at
   BEFORE UPDATE ON public.meetings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
