@@ -25,7 +25,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .order('due_date', { ascending: true })
 
   if (error) return internalError(error.message)
-  return ok(data)
+  return ok({ data })
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

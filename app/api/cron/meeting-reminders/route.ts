@@ -37,10 +37,13 @@ export async function GET(req: Request) {
           service.from('profiles').select('id, full_name, notification_preferences').eq('id', m.freelancer_id).single(),
         ])
 
+        // Fetch freelancer email from auth.users
+        const { data: { user: freelancerUser24 } } = await service.auth.admin.getUserById(m.freelancer_id)
+        const freelancerEmail24 = freelancerUser24?.email ?? ''
+
         // send to freelancer
         if (profile) {
-          const to = profile?.email ?? profile?.id ?? ''
-          sendMeetingReminderEmail({ to, recipientName: profile?.full_name ?? 'Freelancer', title: m.title, timeframe: '24 hours', meetLink: m.meet_link }).catch(err => console.error('[cron/meetings] reminder 24h freelancer', err))
+          sendMeetingReminderEmail({ to: freelancerEmail24, recipientName: profile?.full_name ?? 'Freelancer', title: m.title, timeframe: '24 hours', meetLink: m.meet_link }).catch(err => console.error('[cron/meetings] reminder 24h freelancer', err))
           if (profile.id) sendPushToSubscriber('freelancer', profile.id, { title: `Meeting in 24 hours: ${m.title}`, body: `${m.title} scheduled`, data: { url: '/dashboard/projects' } }).catch(() => {})
         }
 
@@ -77,9 +80,12 @@ export async function GET(req: Request) {
           service.from('profiles').select('id, full_name').eq('id', m.freelancer_id).single(),
         ])
 
+        // Fetch freelancer email from auth.users
+        const { data: { user: freelancerUser1 } } = await service.auth.admin.getUserById(m.freelancer_id)
+        const freelancerEmail1 = freelancerUser1?.email ?? ''
+
         if (profile) {
-          const to = profile?.email ?? profile?.id ?? ''
-          sendMeetingReminderEmail({ to, recipientName: profile?.full_name ?? 'Freelancer', title: m.title, timeframe: '1 hour', meetLink: m.meet_link }).catch(err => console.error('[cron/meetings] reminder 1h freelancer', err))
+          sendMeetingReminderEmail({ to: freelancerEmail1, recipientName: profile?.full_name ?? 'Freelancer', title: m.title, timeframe: '1 hour', meetLink: m.meet_link }).catch(err => console.error('[cron/meetings] reminder 1h freelancer', err))
           if (profile.id) sendPushToSubscriber('freelancer', profile.id, { title: `Meeting in 1 hour: ${m.title}`, body: `${m.title} starting soon`, data: { url: '/dashboard/projects' } }).catch(() => {})
         }
 

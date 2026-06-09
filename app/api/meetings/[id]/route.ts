@@ -23,6 +23,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (updates.status === 'cancelled') {
     try {
       const { data: project } = await supabase.from('projects').select('id, title, client_id').eq('id', meeting.project_id).single()
+      if (!project) throw new Error('Project not found')
       const { data: client } = await supabase.from('clients').select('id, name, email, portal_slug').eq('id', project.client_id).single()
       if (client?.email) {
         sendMeetingCancelledEmail({

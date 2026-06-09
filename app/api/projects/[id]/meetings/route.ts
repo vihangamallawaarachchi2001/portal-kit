@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data, error } = await supabase.from('meetings').select('*').eq('project_id', id).order('scheduled_at', { ascending: true })
   if (error) return internalError(error.message)
-  return ok(data)
+  return ok({ data })
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -55,40 +55,37 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // Notify client + freelancer
   try {
     const { data: client } = await supabase.from('clients').select('id, name, email, portal_slug').eq('id', project.client_id).single()
-    sendMeetingInviteEmail({
-      to: client.email,
-      clientName: client.name,
-      freelancerName: user.user_metadata?.full_name ?? user.email ?? 'Your freelancer',
-      title: meeting.title,
-      scheduledAt: meeting.scheduled_at,
-      durationMins: meeting.duration_mins,
-      meetLink: meeting.meet_link,
-    }).catch(err => console.error('[meeting email] invite failed', err))
+    if (client) {
+      sendMeetingInviteEmail({
+        to: client.email,
+        clientName: client.name,
+        freelancerName: user.user_metadata?.full_name ?? user.email ?? 'Your freelancer',
+        title: meeting.title,
+        scheduledAt: meeting.scheduled_at,
+        durationMins: meeting.duration_mins,
+        meetLink: meeting.meet_link,
+      }).catch(err => console.error('[meeting email] invite failed', err))
 
-    sendMeetingInviteConfirmEmail({
-      to: user.email ?? (user.user_metadata?.email as string | undefined) ?? '',
-      freelancerName: user.user_metadata?.full_name ?? user.email ?? 'You',
-      clientName: client.name,
-      title: meeting.title,
-      scheduledAt: meeting.scheduled_at,
-      meetLink: meeting.meet_link,
-    }).catch(err => console.error('[meeting email] confirm failed', err))
+      sendMeetingInviteConfirmEmail({
+        to: user.email ?? (user.user_metadata?.email as string | undefined) ?? '',
+        freelancerName: user.user_metadata?.full_name ?? user.email ?? 'You',
+        clientName: client.name,
+        title: meeting.title,
+        scheduledAt: meeting.scheduled_at,
+        meetLink: meeting.meet_link,
+      }).catch(err => console.error('[meeting email] confirm failed', err))
 
-    // Push notifications
-    if (client?.id) {
       sendPushToSubscriber('client', client.id, {
         title: `Meeting scheduled: ${meeting.title}`,
         body: `Scheduled for ${new Date(meeting.scheduled_at).toLocaleString()}`,
         data: { url: `/p/${client.portal_slug}` },
       }).catch(err => console.error('[meeting push] client', err))
     }
-    if (user.id) {
-      sendPushToSubscriber('freelancer', user.id, {
-        title: `Meeting scheduled with ${client?.name ?? 'client'}`,
-        body: `${meeting.title} — ${new Date(meeting.scheduled_at).toLocaleString()}`,
-        data: { url: '/dashboard/projects' },
-      }).catch(err => console.error('[meeting push] freelancer', err))
-    }
+    sendPushToSubscriber('freelancer', user.id, {
+      title: `Meeting scheduled with ${client?.name ?? 'client'}`,
+      body: `${meeting.title} — ${new Date(meeting.scheduled_at).toLocaleString()}`,
+      data: { url: '/dashboard/projects' },
+    }).catch(err => console.error('[meeting push] freelancer', err))
   } catch (err) {
     console.error('[meeting notify] failed', err)
   }

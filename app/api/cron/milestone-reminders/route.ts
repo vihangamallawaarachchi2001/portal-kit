@@ -47,11 +47,15 @@ export async function GET(req: Request) {
         const daysAway = days
         const dueDate = m.due_date
 
+        // Fetch freelancer email from auth.users
+        const { data: { user: freelancerUser } } = await service.auth.admin.getUserById(m.freelancer_id)
+        const freelancerEmail = freelancerUser?.email ?? ''
+
         // Send reminder to freelancer if they have milestone_reminders enabled
         const prefs = profile?.notification_preferences ?? {}
         if (prefs.milestone_reminders ?? true) {
           sendMilestoneReminderEmail({
-            to: profile?.email ?? profile?.id ?? '',
+            to: freelancerEmail,
             freelancerName: profile?.full_name ?? 'Freelancer',
             clientName: client?.name ?? '',
             milestoneTitle: m.title,
