@@ -21,6 +21,9 @@ export interface NotificationPreferences {
   invoice_paid: boolean
   status_change: boolean
   weekly_digest?: boolean
+  milestone_reminders?: boolean
+  milestone_client_notify?: boolean
+  meeting_reminders?: boolean
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -29,6 +32,9 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   invoice_paid: true,
   status_change: false,
   weekly_digest: false,
+  milestone_reminders: true,
+  milestone_client_notify: true,
+  meeting_reminders: true,
 }
 
 export interface Profile {
@@ -90,6 +96,36 @@ export interface Project {
   status: ProjectStatus
   due_date: string | null
   deleted_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Milestone {
+  id: string
+  project_id: string
+  freelancer_id: string
+  title: string
+  description: string | null
+  due_date: string
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Meeting {
+  id: string
+  project_id: string | null
+  freelancer_id: string
+  client_id: string
+  title: string
+  description: string | null
+  scheduled_at: string
+  duration_mins: number
+  meet_link: string
+  status: 'scheduled' | 'completed' | 'cancelled'
+  invite_sent_at: string | null
+  reminder_24h_at: string | null
+  reminder_1h_at: string | null
   created_at: string
   updated_at: string
 }

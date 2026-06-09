@@ -259,6 +259,92 @@ export async function sendInvoicePaidEmail({
   })
 }
 
+// ── Milestone emails ───────────────────────────────────────────────────────
+export async function sendMilestoneCompletedEmail({
+  to,
+  clientName,
+  freelancerName,
+  milestoneTitle,
+  projectTitle,
+  portalUrl,
+}: {
+  to: string
+  clientName: string
+  freelancerName: string
+  milestoneTitle: string
+  projectTitle: string
+  portalUrl: string
+}) {
+  await send({
+    to,
+    subject: `✅ Milestone completed: ${milestoneTitle}`,
+    html: baseTemplate(`
+      <p>Hi ${clientName},</p>
+      <p><strong>${freelancerName}</strong> has marked the milestone <strong>"${milestoneTitle}"</strong> as complete on the project <strong>${projectTitle}</strong>.</p>
+      <p>View the update in your portal.</p>
+      <a href="${portalUrl}" class="button">Open Portal →</a>
+    `),
+  })
+}
+
+export async function sendMilestoneReminderEmail({
+  to,
+  freelancerName,
+  clientName,
+  milestoneTitle,
+  projectTitle,
+  dueDate,
+  daysAway,
+  dashboardUrl,
+}: {
+  to: string
+  freelancerName: string
+  clientName: string
+  milestoneTitle: string
+  projectTitle: string
+  dueDate: string
+  daysAway: number
+  dashboardUrl: string
+}) {
+  await send({
+    to,
+    subject: `⏰ Milestone due in ${daysAway} days: ${milestoneTitle}`,
+    html: baseTemplate(`
+      <p>Hi ${freelancerName},</p>
+      <p>The milestone <strong>"${milestoneTitle}"</strong> for project <strong>${projectTitle}</strong> is due on ${dueDate} (${daysAway} days).</p>
+      <a href="${dashboardUrl}" class="button">View Project →</a>
+    `),
+  })
+}
+
+export async function sendMilestoneClientUpcomingEmail({
+  to,
+  clientName,
+  milestoneTitle,
+  projectTitle,
+  dueDate,
+  daysAway,
+  portalUrl,
+}: {
+  to: string
+  clientName: string
+  milestoneTitle: string
+  projectTitle: string
+  dueDate: string
+  daysAway: number
+  portalUrl: string
+}) {
+  await send({
+    to,
+    subject: `📅 Coming up: ${milestoneTitle} — ${daysAway} days away`,
+    html: baseTemplate(`
+      <p>Hi ${clientName},</p>
+      <p>An upcoming milestone <strong>"${milestoneTitle}"</strong> is scheduled for ${dueDate} on your project <strong>${projectTitle}</strong>.</p>
+      <a href="${portalUrl}" class="button">Open Portal →</a>
+    `),
+  })
+}
+
 // Client receives: project status changed
 export async function sendStatusChangedEmail({
   to,
@@ -448,6 +534,106 @@ export async function sendPaymentReceiptEmail({
       <a href="${portalUrl}/invoices" class="button">View in Portal →</a>
       <hr class="divider" />
       <p class="muted">Payment processed securely by Stripe. This is your receipt — please keep it for your records.</p>
+    `),
+  })
+}
+
+export async function sendMeetingInviteEmail({
+  to,
+  clientName,
+  freelancerName,
+  title,
+  scheduledAt,
+  durationMins,
+  meetLink,
+}: {
+  to: string
+  clientName: string
+  freelancerName: string
+  title: string
+  scheduledAt: string
+  durationMins: number
+  meetLink: string
+}) {
+  const when = new Date(scheduledAt).toLocaleString()
+  await send({
+    to,
+    subject: `📅 Meeting scheduled: ${title} on ${when}`,
+    html: baseTemplate(`
+      <p>Hi ${clientName},</p>
+      <p><strong>${freelancerName}</strong> has scheduled a meeting: <strong>${title}</strong></p>
+      <p>${when} · ${durationMins} minutes</p>
+      <a href="${meetLink}" class="button">Join Meeting →</a>
+    `),
+  })
+}
+
+export async function sendMeetingInviteConfirmEmail({
+  to,
+  freelancerName,
+  clientName,
+  title,
+  scheduledAt,
+  meetLink,
+}: {
+  to: string
+  freelancerName: string
+  clientName: string
+  title: string
+  scheduledAt: string
+  meetLink: string
+}) {
+  const when = new Date(scheduledAt).toLocaleString()
+  await send({
+    to,
+    subject: `Meeting scheduled with ${clientName}: ${title}`,
+    html: baseTemplate(`
+      <p>Hi ${freelancerName},</p>
+      <p>Your meeting with <strong>${clientName}</strong> is scheduled for ${when}.</p>
+      <a href="${meetLink}" class="button">Open Meeting →</a>
+    `),
+  })
+}
+
+export async function sendMeetingReminderEmail({
+  to,
+  recipientName,
+  title,
+  timeframe,
+  meetLink,
+}: {
+  to: string
+  recipientName: string
+  title: string
+  timeframe: string
+  meetLink: string
+}) {
+  await send({
+    to,
+    subject: `⏰ Meeting in ${timeframe}: ${title}`,
+    html: baseTemplate(`
+      <p>Hi ${recipientName},</p>
+      <p>Your meeting <strong>${title}</strong> is coming up (${timeframe}).</p>
+      <a href="${meetLink}" class="button">Join Meeting →</a>
+    `),
+  })
+}
+
+export async function sendMeetingCancelledEmail({
+  to,
+  clientName,
+  title,
+}: {
+  to: string
+  clientName: string
+  title: string
+}) {
+  await send({
+    to,
+    subject: `Meeting cancelled: ${title}`,
+    html: baseTemplate(`
+      <p>Hi ${clientName},</p>
+      <p>The meeting <strong>${title}</strong> has been cancelled. No further action is required.</p>
     `),
   })
 }
