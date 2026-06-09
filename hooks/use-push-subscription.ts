@@ -119,7 +119,7 @@ export function usePushSubscription() {
         await sub.unsubscribe()
       }
 
-      if ('permissions' in navigator && typeof navigator.permissions.revoke === 'function') {
+      if ('permissions' in navigator && typeof (navigator.permissions as any).revoke === 'function') {
         try {
           await (navigator.permissions as any).revoke({ name: 'notifications' })
         } catch {
