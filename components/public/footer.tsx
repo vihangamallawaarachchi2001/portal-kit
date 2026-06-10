@@ -79,7 +79,7 @@ export default function Footer() {
         {/* ── Bottom bar ───────────────────────────────────────────── */}
         <div className="mt-12 pt-6 border-t border-on-ds-primary/10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-on-ds-primary-container">
-            © 2024 PortalKit. All rights reserved.
+            © {new Date().getFullYear()} PortalKit. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             {LEGAL.map(({ label, href }) => (

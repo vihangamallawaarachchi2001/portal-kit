@@ -1,13 +1,6 @@
-import { ArrowRight, Star } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-
-const AVATARS = [
-  { initials: 'AK', gradient: 'from-violet-400 to-violet-600' },
-  { initials: 'SM', gradient: 'from-blue-400 to-blue-600' },
-  { initials: 'JR', gradient: 'from-emerald-400 to-emerald-600' },
-  { initials: 'TL', gradient: 'from-rose-400 to-rose-600' },
-]
 
 export default function HomeHero() {
   return (
@@ -70,7 +63,7 @@ export default function HomeHero() {
       </p>
 
       {/* CTAs */}
-      <div className="relative flex flex-col sm:flex-row items-center gap-3 mb-16">
+      <div className="relative flex flex-col sm:flex-row items-center gap-3">
         <Button
           asChild
           size="lg"
@@ -91,33 +84,6 @@ export default function HomeHero() {
         </Button>
       </div>
 
-      {/* Social proof */}
-      <div className="relative flex flex-col items-center gap-3">
-        <div className="flex -space-x-3">
-          {AVATARS.map(({ initials, gradient }) => (
-            <div
-              key={initials}
-              className={`size-10 rounded-full ring-2 ring-[#080d1a] bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-xs font-bold tracking-wide shrink-0`}
-            >
-              {initials}
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-col items-center gap-1.5">
-          <div className="flex items-center gap-0.5">
-            {[0, 1, 2, 3, 4].map(i => (
-              <Star key={i} size={12} fill="#facc15" strokeWidth={0} />
-            ))}
-          </div>
-          <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            Trusted by{' '}
-            <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>
-              2,000+
-            </span>{' '}
-            freelancers worldwide
-          </p>
-        </div>
-      </div>
     </section>
   )
 }

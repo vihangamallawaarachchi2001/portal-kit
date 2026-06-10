@@ -6,8 +6,6 @@ import HowItWorks from "@/components/home/how-it-works";
 import Pricing from "@/components/home/pricing";
 import Problem from "@/components/home/problem";
 import ProductShowcase from "@/components/home/product-showcase";
-import Stats from "@/components/home/stats";
-import Testimonials from "@/components/home/testimonials";
 import Footer from "@/components/public/footer";
 import { Header } from "@/components/public/header";
 
@@ -17,12 +15,10 @@ export default function Home() {
       <Header />
       <main>
         <HomeHero />
-        <Stats />
         <ProductShowcase />
         <Problem />
         <HowItWorks />
         <Features />
-        <Testimonials />
         <Pricing />
         <FAQ />
         <CTABanner />
