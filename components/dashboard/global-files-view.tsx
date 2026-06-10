@@ -342,7 +342,7 @@ export function GlobalFilesView({ rawFiles, plan = 'free' }: Props) {
                               return next
                             })}
                             className={cn(
-                              'size-7 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center',
+                              'size-7 rounded-lg md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center justify-center',
                               commentExpanded ? 'bg-amber-50 text-amber-600' : 'hover:bg-amber-50 text-on-surface-variant',
                             )}
                             title="Show feedback"
@@ -353,7 +353,7 @@ export function GlobalFilesView({ rawFiles, plan = 'free' }: Props) {
                         <button
                           onClick={() => handleDownload(f.id, f.filename)}
                           disabled={downloadingId === f.id}
-                          className="size-7 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-ds-secondary/8 flex items-center justify-center text-ds-secondary disabled:opacity-50"
+                          className="size-7 rounded-lg md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-ds-secondary/8 flex items-center justify-center text-ds-secondary disabled:opacity-50"
                           title="Download"
                         >
                           {downloadingId === f.id

@@ -274,7 +274,7 @@ export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
                       {/* View link */}
                       <div className="flex items-center justify-end">
                         <Link href={href}
-                          className="h-7 px-2.5 rounded-lg text-xs font-medium text-ds-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:bg-ds-secondary/8 flex items-center gap-1">
+                          className="h-7 px-2.5 rounded-lg text-xs font-medium text-ds-secondary md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-ds-secondary/8 flex items-center gap-1">
                           View <ArrowRight className="size-3" />
                         </Link>
                       </div>

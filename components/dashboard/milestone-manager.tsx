@@ -199,7 +199,7 @@ export function MilestoneManager({ projectId }: { projectId: string }) {
                 <button
                   onClick={() => deleteMilestone(m.id)}
                   disabled={deleting === m.id}
-                  className="mt-0.5 shrink-0 text-on-surface-variant/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all disabled:cursor-default"
+                  className="mt-0.5 shrink-0 text-on-surface-variant/40 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-all disabled:cursor-default"
                   title="Delete milestone"
                 >
                   {deleting === m.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}

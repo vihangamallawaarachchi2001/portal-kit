@@ -225,7 +225,7 @@ export function InvoiceManager({
                       </p>
 
                       {/* Actions */}
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         {inv.status === 'draft' && (
                           <button
                             onClick={() => handleSend(inv.id)}

@@ -215,7 +215,7 @@ export function TeamSettings({ plan, initialMembers }: TeamSettingsProps) {
                       <button
                         onClick={() => handleRemove(m.id)}
                         disabled={isPending}
-                        className="opacity-0 group-hover:opacity-100 size-7 rounded-md flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-40"
+                        className="md:opacity-0 md:group-hover:opacity-100 size-7 rounded-md flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-40"
                         title="Remove member"
                       >
                         <Trash2 className="size-3.5" />
