@@ -30,7 +30,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   messages: true,
   file_review: true,
   invoice_paid: true,
-  status_change: false,
+  status_change: true,
   weekly_digest: false,
   milestone_reminders: true,
   milestone_client_notify: true,

@@ -138,7 +138,13 @@ export function MeetingScheduler({ projectId }: { projectId: string }) {
           <div className="rounded-xl border border-dashed border-outline-variant/40 bg-surface-container/30 p-6 text-center">
             <Video className="size-8 text-on-surface-variant/30 mx-auto mb-2" />
             <p className="text-sm font-medium text-on-surface-variant">No meetings scheduled</p>
-            <p className="text-xs text-on-surface-variant/70 mt-0.5">Schedule a call to share a video link and send an invite to your client.</p>
+            <p className="text-xs text-on-surface-variant/70 mt-1">Schedule a call and your client gets an invite with the video link automatically.</p>
+            <button
+              onClick={() => setOpen(true)}
+              className="mt-3 inline-flex items-center gap-1.5 h-8 px-4 rounded-md bg-ds-secondary text-white text-xs font-semibold hover:bg-ds-secondary/90 transition-colors"
+            >
+              <Plus className="size-3.5" />Schedule first meeting
+            </button>
           </div>
         ) : (
           meetings.map(m => {

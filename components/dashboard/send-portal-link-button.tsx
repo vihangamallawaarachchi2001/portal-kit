@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { Send, CheckCircle, Loader2, Copy, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-export function SendPortalLinkButton({ clientId }: { clientId: string }) {
+export function SendPortalLinkButton({ clientId, clientEmail }: { clientId: string; clientEmail?: string }) {
   const [sent, setSent] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -14,7 +14,9 @@ export function SendPortalLinkButton({ clientId }: { clientId: string }) {
       const res = await fetch(`/api/clients/${clientId}/magic-link`, { method: 'POST' })
       if (res.ok) {
         setSent(true)
-        toast.success('Portal link sent to client')
+        toast.success(clientEmail
+          ? `Access link sent to ${clientEmail}. You'll be notified when they open their portal.`
+          : 'Access link sent to client.')
         setTimeout(() => setSent(false), 5000)
       } else {
         toast.error('Failed to send portal link')

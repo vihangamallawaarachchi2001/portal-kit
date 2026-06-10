@@ -74,10 +74,13 @@ export function ClientsView({ clients, plan = 'free' }: ClientsViewProps) {
   }, [clients, search, filter])
 
   function handleSendMagicLink(clientId: string) {
+    const email = clients.find(c => c.id === clientId)?.email
     startTransition(async () => {
       const res = await fetch(`/api/clients/${clientId}/magic-link`, { method: 'POST' })
-      if (res.ok) toast.success('Magic link sent')
-      else        toast.error('Failed to send magic link')
+      if (res.ok) toast.success(email
+        ? `Access link sent to ${email}. You'll be notified when they open their portal.`
+        : 'Access link sent to client.')
+      else toast.error('Failed to send access link')
     })
   }
 
