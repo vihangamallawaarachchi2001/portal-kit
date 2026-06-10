@@ -2,6 +2,57 @@
 
 import { createClient } from '@/lib/supabase/server'
 
+// ── New focused actions for the 3-step wizard ──────────────────────────────
+
+export async function saveFullName(fullName: string) {
+  const supabase = await createClient()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ full_name: fullName.trim() || null, updated_at: new Date().toISOString() })
+    .eq('id', user.id)
+
+  if (error) throw new Error(error.message)
+  return { success: true }
+}
+
+export async function skipStripeConnect() {
+  const supabase = await createClient()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ stripe_onboarding_skipped: true, updated_at: new Date().toISOString() })
+    .eq('id', user.id)
+
+  if (error) throw new Error(error.message)
+  return { success: true }
+}
+
+export async function finishOnboarding() {
+  const supabase = await createClient()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
+    .eq('id', user.id)
+
+  if (error) throw new Error(error.message)
+
+  // Mirror flag into JWT user_metadata so the middleware gate clears immediately
+  const { error: metaError } = await supabase.auth.updateUser({ data: { onboarding_complete: true } })
+  if (metaError) console.error('[onboarding] updateUser metadata:', metaError.message)
+
+  return { success: true }
+}
+
+// ── Legacy action (kept for any existing callers) ──────────────────────────
+
 export async function updateProfile({
   fullName,
   businessName,

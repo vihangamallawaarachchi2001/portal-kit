@@ -50,6 +50,7 @@ export interface Profile {
   subscription_status: SubscriptionStatus | null
   stripe_connect_account_id: string | null
   stripe_connect_onboarded: boolean
+  stripe_onboarding_skipped: boolean
   bank_details: BankDetails | null
   notification_preferences: NotificationPreferences
   custom_domain: string | null

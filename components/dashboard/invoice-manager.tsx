@@ -6,9 +6,10 @@ import { formatCurrency, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   Plus, Trash2, Send, FileText, Loader2, ChevronDown, ChevronUp, X,
-  Receipt, CalendarDays, Percent, FolderOpen, Download, Zap,
+  Receipt, CalendarDays, Percent, FolderOpen, Download, Zap, CreditCard,
 } from 'lucide-react'
 import { EmptyState } from './empty-state'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -33,12 +34,13 @@ interface InvoiceManagerProps {
   freelancerName: string
   businessName: string
   plan?: string
+  stripeConnected?: boolean
 }
 
 const EMPTY_LINE: LineItem = { description: '', quantity: 1, unit_price: 0 }
 
 export function InvoiceManager({
-  clientId, clientName, invoices, projects, plan = 'free',
+  clientId, clientName, invoices, projects, plan = 'free', stripeConnected = false,
 }: InvoiceManagerProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -326,6 +328,23 @@ export function InvoiceManager({
               </div>
             </div>
           </div>
+
+          {/* ── Stripe nudge ─────────────────────────── */}
+          {!stripeConnected && !invoiceGated && (
+            <div className="mx-6 mt-4 flex items-start gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+              <CreditCard className="size-4 text-blue-600 mt-0.5 shrink-0" />
+              <p className="text-xs text-blue-900 leading-snug">
+                Clients can&apos;t pay online until you connect Stripe.{' '}
+                <Link
+                  href="/dashboard/settings/billing"
+                  onClick={() => setModalOpen(false)}
+                  className="font-semibold underline underline-offset-2 hover:opacity-80"
+                >
+                  Set up payments →
+                </Link>
+              </p>
+            </div>
+          )}
 
           {/* ── Pro gate ─────────────────────────────── */}
           {invoiceGated ? (

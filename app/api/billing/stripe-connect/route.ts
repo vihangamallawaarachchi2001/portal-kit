@@ -7,10 +7,14 @@ function getStripe() {
 }
 
 // POST — create Express account (or reuse existing) and return onboarding URL
-export async function POST() {
+// Body: { from?: 'onboarding' | 'settings' } — controls where the return URL redirects
+export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+
+  const body = await req.json().catch(() => ({})) as { from?: string }
+  const from = body?.from === 'onboarding' ? 'onboarding' : 'settings'
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -40,7 +44,7 @@ export async function POST() {
   const link = await stripe.accountLinks.create({
     account: accountId,
     refresh_url: `${appUrl}/api/billing/stripe-connect`,
-    return_url:  `${appUrl}/api/billing/stripe-connect/return?uid=${user.id}`,
+    return_url:  `${appUrl}/api/billing/stripe-connect/return?uid=${user.id}&from=${from}`,
     type: 'account_onboarding',
   })
 
