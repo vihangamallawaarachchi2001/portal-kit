@@ -12,6 +12,7 @@ import {
   Receipt, CalendarDays, Percent, FolderOpen, Download, CreditCard,
 } from 'lucide-react'
 import { UpgradePrompt } from '@/components/upgrade-prompt'
+import { CURRENCIES, isStripeSupported } from '@/lib/currencies'
 import { EmptyState } from './empty-state'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -504,6 +505,41 @@ export function InvoiceManager({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Currency — Pro+ only; free plan is locked to USD */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-on-surface">Currency</label>
+                  {plan === 'free' ? (
+                    <div className="h-10 px-3 rounded-md border border-outline-variant bg-surface-container/50 flex items-center justify-between text-sm text-on-surface-variant">
+                      <span className="font-medium text-on-surface">USD</span>
+                      <span className="text-[10px] text-on-surface-variant/60 font-medium uppercase tracking-wide">Pro to unlock</span>
+                    </div>
+                  ) : (
+                    <Select value={currency} onValueChange={setCurrency}>
+                      <SelectTrigger className="h-10 rounded-md border-outline-variant">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        {CURRENCIES.map(c => (
+                          <SelectItem key={c.code} value={c.code} className="rounded-md">
+                            <span className="flex items-center gap-2">
+                              <span className="font-mono text-[11px] font-bold text-on-surface-variant w-8">{c.code}</span>
+                              <span className="text-sm">{c.name}</span>
+                              {!isStripeSupported(c.code) && (
+                                <span className="text-[10px] text-on-surface-variant/50 ml-auto">bank transfer only</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {currency && !isStripeSupported(currency) && plan !== 'free' && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1 leading-snug">
+                      {currency} isn&apos;t supported by Stripe — clients will see your bank transfer details for payment.
+                    </p>
+                  )}
                 </div>
               </div>
 

@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { Invoice } from '@/types/database'
+import { Invoice, BankDetails } from '@/types/database'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
-  CheckCircle, Clock, AlertTriangle, FileText, CreditCard, Loader2, ChevronDown, ChevronUp,
+  CheckCircle, Clock, AlertTriangle, FileText, CreditCard, Loader2, ChevronDown, ChevronUp, Banknote,
 } from 'lucide-react'
 import { EmptyState } from '@/components/dashboard/empty-state'
+import { isStripeSupported } from '@/lib/currencies'
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   sent:    { label: 'Awaiting Payment', className: 'bg-blue-50 text-blue-600 border-blue-200',   icon: Clock },
@@ -18,7 +19,12 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
 
 interface LineItem { description: string; quantity: number; unit_price: number }
 
-export function PortalInvoices({ invoices, slug, justPaid }: { invoices: Invoice[]; slug: string; justPaid?: boolean }) {
+export function PortalInvoices({ invoices, slug, justPaid, bankDetails }: {
+  invoices: Invoice[]
+  slug: string
+  justPaid?: boolean
+  bankDetails?: BankDetails | null
+}) {
   const [isPending, startTransition] = useTransition()
   const [payingId, setPayingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -87,16 +93,23 @@ export function PortalInvoices({ invoices, slug, justPaid }: { invoices: Invoice
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          onClick={() => handlePay(inv.id)}
-                          disabled={isPending}
-                          className="flex items-center gap-2 h-10 px-5 rounded-lg bg-ds-secondary text-white font-semibold text-sm hover:bg-ds-secondary-container transition-colors disabled:opacity-50"
-                        >
-                          {payingId === inv.id && isPending
-                            ? <><Loader2 className="size-4 animate-spin" />Redirecting to Stripe…</>
-                            : <><CreditCard className="size-4" />Pay now</>
-                          }
-                        </button>
+                        {isStripeSupported(inv.currency) ? (
+                          <button
+                            onClick={() => handlePay(inv.id)}
+                            disabled={isPending}
+                            className="flex items-center gap-2 h-10 px-5 rounded-lg bg-ds-secondary text-white font-semibold text-sm hover:bg-ds-secondary-container transition-colors disabled:opacity-50"
+                          >
+                            {payingId === inv.id && isPending
+                              ? <><Loader2 className="size-4 animate-spin" />Redirecting to Stripe…</>
+                              : <><CreditCard className="size-4" />Pay now</>
+                            }
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-2 h-10 px-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium">
+                            <Banknote className="size-4 shrink-0" />
+                            Bank transfer only
+                          </div>
+                        )}
                         <button
                           onClick={() => setExpandedId(expanded ? null : inv.id)}
                           className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-on-surface"
@@ -125,6 +138,38 @@ export function PortalInvoices({ invoices, slug, justPaid }: { invoices: Invoice
                             <span>{formatCurrency(inv.total, inv.currency)}</span>
                           </div>
                           {inv.notes && <p className="text-xs text-on-surface-variant mt-1 italic">{inv.notes}</p>}
+
+                          {/* Bank transfer details for non-Stripe currencies */}
+                          {!isStripeSupported(inv.currency) && (
+                            <div className="mt-3 pt-3 border-t border-outline-variant">
+                              <p className="text-xs font-semibold text-on-surface mb-2 flex items-center gap-1.5">
+                                <Banknote className="size-3.5" />Bank transfer details
+                              </p>
+                              {bankDetails ? (
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                  {bankDetails.bank_name && (
+                                    <><span className="text-on-surface-variant">Bank</span><span className="font-medium">{bankDetails.bank_name}</span></>
+                                  )}
+                                  {bankDetails.account_holder && (
+                                    <><span className="text-on-surface-variant">Account name</span><span className="font-medium">{bankDetails.account_holder}</span></>
+                                  )}
+                                  {bankDetails.account_number && (
+                                    <><span className="text-on-surface-variant">Account number</span><span className="font-mono font-medium">{bankDetails.account_number}</span></>
+                                  )}
+                                  {bankDetails.routing_number && (
+                                    <><span className="text-on-surface-variant">Routing / BSB</span><span className="font-mono font-medium">{bankDetails.routing_number}</span></>
+                                  )}
+                                  {bankDetails.country && (
+                                    <><span className="text-on-surface-variant">Country</span><span className="font-medium">{bankDetails.country}</span></>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-on-surface-variant">
+                                  Contact your freelancer for payment instructions.
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { PortalInvoices } from '@/components/portal/portal-invoices'
-import { Invoice } from '@/types/database'
+import { Invoice, BankDetails } from '@/types/database'
 
 export default async function PortalInvoicesPage({
   params,
@@ -20,7 +20,7 @@ export default async function PortalInvoicesPage({
   const service = createServiceClient()
   const { data: client } = await service
     .from('clients')
-    .select('id, invoices(*)')
+    .select('id, freelancer_id, invoices(*)')
     .eq('portal_slug', slug)
     .eq('id', clientId)
     .is('deleted_at', null)
@@ -32,5 +32,13 @@ export default async function PortalInvoicesPage({
     .filter(i => !i.deleted_at && i.status !== 'draft')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-  return <PortalInvoices invoices={invoices} slug={slug} justPaid={paid === 'true'} />
+  const { data: freelancerProfile } = await service
+    .from('profiles')
+    .select('bank_details')
+    .eq('id', (client as { freelancer_id: string }).freelancer_id)
+    .single()
+
+  const bankDetails = (freelancerProfile?.bank_details as BankDetails | null) ?? null
+
+  return <PortalInvoices invoices={invoices} slug={slug} justPaid={paid === 'true'} bankDetails={bankDetails} />
 }

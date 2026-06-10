@@ -48,7 +48,6 @@ const INV_COL = 'grid-cols-[minmax(0,1fr)_130px_120px_110px_100px_96px]'
 
 /* ── Main component ──────────────────────────────── */
 export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
-  const baseCurrency = 'USD'
   if (plan === 'free') {
     return (
       <div className="w-full min-h-screen" style={{ background: '#f4f6fa' }}>
@@ -84,11 +83,24 @@ export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
   const [clientFilter, setClientFilter] = useState('all')
   const [pickerOpen, setPickerOpen]     = useState(false)
 
-  /* Derived stats — sums are in base currency only to avoid mixing currencies */
-  const baseInvoices     = invoices.filter(i => i.currency === baseCurrency)
-  const totalOutstanding = baseInvoices.filter(i => i.status === 'sent').reduce((s, i) => s + Number(i.total), 0)
-  const totalOverdue     = baseInvoices.filter(i => i.status === 'overdue').reduce((s, i) => s + Number(i.total), 0)
-  const totalPaid        = baseInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total), 0)
+  /* Derived stats — grouped by currency; no cross-currency conversion */
+  function sumByCurrency(invs: InvoiceRow[]): Record<string, number> {
+    return invs.reduce<Record<string, number>>((acc, i) => {
+      acc[i.currency] = (acc[i.currency] ?? 0) + Number(i.total)
+      return acc
+    }, {})
+  }
+  function formatMultiCurrency(byCur: Record<string, number>): string {
+    const parts = Object.entries(byCur).filter(([, amt]) => amt > 0)
+    if (parts.length === 0) return formatCurrency(0)
+    return parts.map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ')
+  }
+
+  const outstandingByCur = sumByCurrency(invoices.filter(i => i.status === 'sent'))
+  const overdueByCur     = sumByCurrency(invoices.filter(i => i.status === 'overdue'))
+  const paidByCur        = sumByCurrency(invoices.filter(i => i.status === 'paid'))
+  const hasOutstanding   = Object.values(outstandingByCur).some(a => a > 0)
+  const hasOverdue       = Object.values(overdueByCur).some(a => a > 0)
   const draftCount       = invoices.filter(i => i.status === 'draft').length
   const overdueCount     = invoices.filter(i => i.status === 'overdue').length
   const sentCount        = invoices.filter(i => i.status === 'sent').length
@@ -139,19 +151,19 @@ export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
         {/* ── KPI cards ───────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <MetricCard
-            icon={TrendingUp} label="Outstanding" amount={formatCurrency(totalOutstanding, baseCurrency)}
+            icon={TrendingUp} label="Outstanding" amount={formatMultiCurrency(outstandingByCur)}
             count={`${sentCount} invoice${sentCount !== 1 ? 's' : ''} sent`}
             iconBg="bg-ds-secondary/10" iconColor="text-ds-secondary"
-            pulse={totalOutstanding > 0} pulseColor="bg-ds-secondary"
+            pulse={hasOutstanding} pulseColor="bg-ds-secondary"
           />
           <MetricCard
-            icon={AlertTriangle} label="Overdue" amount={formatCurrency(totalOverdue, baseCurrency)}
+            icon={AlertTriangle} label="Overdue" amount={formatMultiCurrency(overdueByCur)}
             count={`${overdueCount} past due date`}
             iconBg="bg-red-50" iconColor="text-red-600"
-            pulse={totalOverdue > 0} pulseColor="bg-red-500" urgent={totalOverdue > 0}
+            pulse={hasOverdue} pulseColor="bg-red-500" urgent={hasOverdue}
           />
           <MetricCard
-            icon={CheckCircle2} label="Collected" amount={formatCurrency(totalPaid, baseCurrency)}
+            icon={CheckCircle2} label="Collected" amount={formatMultiCurrency(paidByCur)}
             count={`${paidCount} invoice${paidCount !== 1 ? 's' : ''} paid`}
             iconBg="bg-emerald-50" iconColor="text-emerald-600"
           />
@@ -416,7 +428,10 @@ function MetricCard({ icon: Icon, label, amount, count, iconBg, iconColor, pulse
         )}
       </div>
       <div>
-        <p className={cn('font-extrabold text-on-surface tracking-tight leading-none', plain ? 'text-[28px]' : 'text-[22px]')}>
+        <p className={cn(
+          'font-extrabold text-on-surface tracking-tight leading-tight',
+          plain ? 'text-[28px]' : amount.includes('·') ? 'text-[14px]' : 'text-[22px]',
+        )}>
           {amount}
         </p>
         <p className="text-[13px] font-semibold text-on-surface mt-1.5">{label}</p>

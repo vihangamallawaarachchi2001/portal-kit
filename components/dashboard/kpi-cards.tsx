@@ -8,7 +8,18 @@ interface KpiCardsProps {
   stats: DashboardStats
 }
 
+function formatMultiCurrency(byCur: Record<string, number>): string {
+  const parts = Object.entries(byCur).filter(([, amt]) => amt > 0)
+  if (parts.length === 0) return formatCurrency(0)
+  return parts.map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ')
+}
+
 export function KpiCards({ stats }: KpiCardsProps) {
+  const hasOutstanding = Object.values(stats.outstanding_by_currency).some(a => a > 0)
+  const hasOverdue     = Object.values(stats.overdue_by_currency).some(a => a > 0)
+  const outstandingStr = formatMultiCurrency(stats.outstanding_by_currency)
+  const overdueStr     = formatMultiCurrency(stats.overdue_by_currency)
+
   const cards: {
     label: string
     value: string
@@ -22,25 +33,25 @@ export function KpiCards({ stats }: KpiCardsProps) {
   }[] = [
     {
       label: 'Outstanding',
-      value: formatCurrency(stats.total_outstanding),
-      sub: stats.total_outstanding > 0 ? `${formatCurrency(stats.total_outstanding)} to collect` : 'No unpaid invoices',
+      value: outstandingStr,
+      sub: hasOutstanding ? 'Awaiting payment' : 'No unpaid invoices',
       icon: DollarSign,
       href: '/dashboard/invoices',
-      alert: stats.total_outstanding > 0,
+      alert: hasOutstanding,
       alertColor: 'text-ds-secondary',
       iconBg: 'bg-ds-secondary/10',
       iconColor: 'text-ds-secondary',
     },
     {
       label: 'Overdue',
-      value: formatCurrency(stats.total_overdue),
-      sub: stats.total_overdue > 0 ? 'Requires attention' : 'Nothing past due',
+      value: overdueStr,
+      sub: hasOverdue ? 'Requires attention' : 'Nothing past due',
       icon: AlertTriangle,
       href: '/dashboard/invoices',
-      alert: stats.total_overdue > 0,
+      alert: hasOverdue,
       alertColor: 'text-red-600',
-      iconBg: stats.total_overdue > 0 ? 'bg-red-50' : 'bg-surface-container',
-      iconColor: stats.total_overdue > 0 ? 'text-red-500' : 'text-on-surface-variant',
+      iconBg: hasOverdue ? 'bg-red-50' : 'bg-surface-container',
+      iconColor: hasOverdue ? 'text-red-500' : 'text-on-surface-variant',
     },
     {
       label: 'Active Clients',
@@ -87,7 +98,8 @@ export function KpiCards({ stats }: KpiCardsProps) {
           {/* Value + label */}
           <div>
             <p className={cn(
-              'text-[1.6rem] font-extrabold leading-none tracking-tight tabular-nums',
+              'font-extrabold leading-tight tracking-tight',
+              card.value.includes('·') ? 'text-[0.95rem]' : 'text-[1.6rem]',
               card.alert ? card.alertColor : 'text-on-surface'
             )}>
               {card.value}

@@ -230,6 +230,8 @@ export interface MessageWithSender extends Message {
 export interface DashboardStats {
   total_outstanding: number
   total_overdue: number
+  outstanding_by_currency: Record<string, number>
+  overdue_by_currency: Record<string, number>
   pending_approvals: number
   unread_messages: number
   active_clients: number
