@@ -57,6 +57,8 @@ export interface Profile {
   custom_domain_verified: boolean
   hide_branding: boolean
   onboarding_completed: boolean
+  free_invoices_month_count: number
+  free_invoices_month_reset: string | null
   created_at: string
   updated_at: string
 }

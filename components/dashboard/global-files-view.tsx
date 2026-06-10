@@ -22,7 +22,7 @@ export type GlobalFile = {
   projects: RawProject | null
 }
 
-const FREE_FILE_LIMIT = 3
+const FREE_FILE_LIMIT = 10 // 10 files per portal; enforced server-side per-portal
 
 interface Props { rawFiles: GlobalFile[]; plan?: string }
 
@@ -171,8 +171,8 @@ export function GlobalFilesView({ rawFiles, plan = 'free' }: Props) {
               <Zap className={cn('size-4 shrink-0', rootFileCount >= FREE_FILE_LIMIT ? 'text-red-500' : 'text-amber-500')} />
               <p className={cn('text-sm font-semibold', rootFileCount >= FREE_FILE_LIMIT ? 'text-red-700' : 'text-amber-700')}>
                 {rootFileCount >= FREE_FILE_LIMIT
-                  ? `File limit reached (${FREE_FILE_LIMIT}/${FREE_FILE_LIMIT}) — upgrade to upload more`
-                  : `Free plan: ${rootFileCount} of ${FREE_FILE_LIMIT} files used`}
+                  ? `File limit reached — upgrade to Pro for unlimited uploads`
+                  : `Free plan: ${rootFileCount} of ${FREE_FILE_LIMIT} files used · 500 MB storage`}
               </p>
             </div>
             <Link

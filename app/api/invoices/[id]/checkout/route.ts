@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service'
-import { ok, badRequest, unauthorized, notFound, internalError } from '@/lib/api'
+import { ok, badRequest, unauthorized, notFound, internalError, paymentRequired } from '@/lib/api'
 import Stripe from 'stripe'
 import { cookies } from 'next/headers'
 
@@ -23,7 +23,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       *,
       clients ( id, name, email, portal_slug ),
       profiles:freelancer_id (
-        full_name, business_name,
+        full_name, business_name, plan,
         stripe_connect_account_id, stripe_connect_onboarded
       )
     `)
@@ -38,6 +38,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const client  = Array.isArray(invoice.clients)  ? (invoice.clients[0] ?? null)  : invoice.clients
   const profile = Array.isArray(invoice.profiles) ? (invoice.profiles[0] ?? null) : invoice.profiles
+
+  // Stripe payment collection is a Pro+ feature
+  if (profile?.plan === 'free') {
+    return paymentRequired(
+      'Online invoice payments are available on Pro and above.',
+      { code: 'invoice_stripe' },
+    )
+  }
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const successUrl = `${appUrl}/p/${client?.portal_slug}/invoices?paid=true`
   const cancelUrl  = `${appUrl}/p/${client?.portal_slug}/invoices`

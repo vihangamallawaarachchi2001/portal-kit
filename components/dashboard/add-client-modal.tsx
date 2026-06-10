@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button'
 import { slugify } from '@/lib/format'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Loader2, AlertCircle, Users, Globe, AtSign, Zap } from 'lucide-react'
+import { Loader2, AlertCircle, Users, Globe, AtSign, Zap, Check } from 'lucide-react'
 import Link from 'next/link'
+import { isUpgradePromptDismissed } from '@/components/upgrade-prompt'
 
 interface AddClientModalProps {
   open: boolean
@@ -28,7 +29,7 @@ export function AddClientModal({ open, onOpenChange, plan = 'free', clientCount 
   const [error, setError]             = useState<string | null>(null)
   const [limitHit, setLimitHit]       = useState(false)
 
-  const atClientLimit = plan === 'free' && clientCount >= 1
+  const atClientLimit = plan === 'free' && clientCount >= 3
 
   function handleNameChange(value: string) {
     setName(value)
@@ -90,33 +91,50 @@ export function AddClientModal({ open, onOpenChange, plan = 'free', clientCount 
 
         {(atClientLimit || limitHit) ? (
           /* ── Upgrade gate ──────────────────────── */
-          <div className="flex flex-col items-center text-center gap-5 px-8 py-10">
-            <div className="size-14 rounded-2xl bg-amber-50 flex items-center justify-center">
-              <Zap className="size-7 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-base font-bold text-on-surface">Client portal limit reached</p>
-              <p className="text-sm text-on-surface-variant mt-2 leading-relaxed max-w-xs">
-                The Free plan allows 1 active client portal. Upgrade to Pro for unlimited clients.
+          <>
+            <div
+              className="px-7 pt-7 pb-6 text-center relative"
+              style={{ background: 'linear-gradient(145deg, #003299 0%, #0051d5 55%, #2d66f0 100%)' }}
+            >
+              <div className="size-12 rounded-2xl bg-white/15 ring-2 ring-white/20 flex items-center justify-center mx-auto mb-3">
+                <Zap className="size-6 text-amber-400 fill-amber-400/20" />
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/45 mb-1">Pro plan — $15/mo</p>
+              <h2 className="text-base font-bold text-white leading-snug">Unlimited client portals</h2>
+              <p className="text-[13px] text-white/60 mt-1.5 leading-relaxed">
+                You&apos;ve reached the 3-portal limit on the Free plan.
               </p>
             </div>
-            <div className="flex items-center gap-2.5">
+            <div className="px-7 py-4 space-y-2 border-b border-outline-variant">
+              {['Unlimited client portals', 'Unlimited invoices', 'Custom domain', 'Remove PortalKit branding'].map(h => (
+                <div key={h} className="flex items-center gap-2.5">
+                  <span className="size-4.5 rounded-full bg-ds-secondary/10 flex items-center justify-center shrink-0">
+                    <Check className="size-2.5 text-ds-secondary" strokeWidth={3} />
+                  </span>
+                  <span className="text-[13px] text-on-surface">{h}</span>
+                </div>
+              ))}
+            </div>
+            <div className="px-7 py-4 flex flex-col gap-2">
               <Link
-                href="/dashboard/settings/billing"
+                href="/dashboard/settings/billing?plan=pro"
                 onClick={handleClose}
-                className="inline-flex items-center gap-1.5 h-9 px-5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
+                className="flex items-center justify-center gap-2 h-10 w-full rounded-xl bg-ds-secondary text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
               >
                 <Zap className="size-3.5" />
-                Upgrade to Pro
+                Upgrade to Pro — $15/mo
               </Link>
               <button
-                onClick={handleClose}
-                className="h-9 px-4 rounded-lg border border-outline-variant text-sm font-medium text-on-surface-variant hover:bg-surface-container transition-colors"
+                onClick={() => {
+                  try { localStorage.setItem('upgrade_prompt_client_limit_dismissed', String(Date.now() + 7 * 24 * 60 * 60 * 1000)) } catch {}
+                  handleClose()
+                }}
+                className="h-9 text-[13px] text-on-surface-variant hover:text-on-surface transition-colors"
               >
-                Cancel
+                Remind me later
               </button>
             </div>
-          </div>
+          </>
         ) : (
           <>
         {/* ── Header ──────────────────────────────── */}

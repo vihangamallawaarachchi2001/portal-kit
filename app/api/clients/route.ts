@@ -46,8 +46,8 @@ export async function POST(req: Request) {
       .eq('status', 'active')
       .is('deleted_at', null)
 
-    if ((count ?? 0) >= 1) {
-      return paymentRequired('Free plan allows 1 active client portal. Upgrade to Pro for unlimited.', { code: 'client_limit', limit: 1, current: count })
+    if ((count ?? 0) >= 3) {
+      return paymentRequired('Free plan allows 3 active client portals. Upgrade to Pro for unlimited.', { code: 'client_limit', limit: 3, current: count })
     }
   }
 

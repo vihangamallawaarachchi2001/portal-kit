@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { unauthorized, notFound } from '@/lib/api'
+import { unauthorized, notFound, paymentRequired } from '@/lib/api'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { InvoicePDF } from '@/lib/invoice-pdf'
 import { cookies } from 'next/headers'
@@ -21,13 +21,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   if (!user && !portalClientId) return unauthorized()
 
-  // ── Fetch invoice ─────────────────────────────────────────────────────────
+  // ── Fetch invoice + freelancer plan ───────────────────────────────────────
   const { data: invoice } = await service
     .from('invoices')
     .select(`
       *,
       clients ( id, name, email ),
-      profiles:freelancer_id ( full_name, business_name, tagline )
+      profiles:freelancer_id ( full_name, business_name, tagline, plan )
     `)
     .eq('id', id)
     .is('deleted_at', null)
@@ -39,8 +39,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (user && invoice.freelancer_id !== user.id) return unauthorized()
   if (!user && portalClientId && invoice.client_id !== portalClientId) return unauthorized()
 
-  const client  = Array.isArray(invoice.clients)  ? (invoice.clients[0] ?? null)  : invoice.clients
+  // PDF export is a Pro+ feature — block if freelancer is on Free plan
   const profile = Array.isArray(invoice.profiles) ? (invoice.profiles[0] ?? null) : invoice.profiles
+  if (profile?.plan === 'free') {
+    return paymentRequired('PDF invoice export is available on Pro and above.', { code: 'invoice_pdf' })
+  }
+
+  const client = Array.isArray(invoice.clients) ? (invoice.clients[0] ?? null) : invoice.clients
 
   // ── Render PDF ────────────────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
