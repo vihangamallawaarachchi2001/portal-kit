@@ -18,6 +18,8 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portalkit.com'
+
 export const metadata: Metadata = {
   title: {
     default: "PortalKit — Client Portal Software for Freelancers",
@@ -36,11 +38,11 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "PortalKit" }],
   creator: "PortalKit",
-  metadataBase: new URL("https://portalkit.com"),
+  metadataBase: new URL(APP_URL),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://portalkit.com",
+    url: APP_URL,
     siteName: "PortalKit",
     title: "PortalKit — Client Portal Software for Freelancers",
     description:
