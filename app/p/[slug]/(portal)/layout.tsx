@@ -1,12 +1,29 @@
 import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/service'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getInitials } from '@/lib/format'
 import { Toaster } from '@/components/ui/sonner'
 import { PortalTabBar } from '@/components/portal/portal-tab-bar'
 import { PortalPushSetup } from '@/components/portal/portal-push-setup'
+import { PortalRequestAccessScreen } from '@/components/portal/portal-request-access'
 import { Layers } from 'lucide-react'
+
+async function fetchBranding(slug: string) {
+  const service = createServiceClient()
+  const { data } = await service
+    .from('clients')
+    .select('profiles:freelancer_id ( full_name, business_name, avatar_url, tagline, plan, hide_branding )')
+    .eq('portal_slug', slug)
+    .is('deleted_at', null)
+    .single()
+  const profile = Array.isArray(data?.profiles) ? (data?.profiles[0] ?? null) : data?.profiles
+  return {
+    businessName: profile?.business_name || profile?.full_name || 'Your Portal',
+    tagline:      profile?.tagline ?? null,
+    avatarUrl:    profile?.avatar_url ?? null,
+    hideBranding: (profile?.plan !== 'free') && (profile?.hide_branding ?? false),
+  }
+}
 
 export default async function PortalLayout({
   children,
@@ -18,7 +35,11 @@ export default async function PortalLayout({
   const { slug } = await params
   const cookieStore = await cookies()
   const clientId = cookieStore.get('portal_client_id')?.value
-  if (!clientId) redirect(`/p/${slug}/access`)
+
+  if (!clientId) {
+    const branding = await fetchBranding(slug)
+    return <PortalRequestAccessScreen slug={slug} branding={branding} />
+  }
 
   const service = createServiceClient()
   const { data: client } = await service
@@ -32,7 +53,10 @@ export default async function PortalLayout({
     .is('deleted_at', null)
     .single()
 
-  if (!client) redirect(`/p/${slug}/access`)
+  if (!client) {
+    const branding = await fetchBranding(slug)
+    return <PortalRequestAccessScreen slug={slug} branding={branding} staleCookie />
+  }
 
   const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
   const businessName = profile?.business_name || profile?.full_name || 'Your Portal'
