@@ -638,6 +638,44 @@ export async function sendMeetingCancelledEmail({
   })
 }
 
+// Waitlist signup confirmation
+export async function sendWaitlistConfirmEmail({
+  to,
+  isFoundingMember,
+}: {
+  to: string
+  isFoundingMember: boolean
+}) {
+  await send({
+    to,
+    subject: isFoundingMember
+      ? "You're on the PortalKit founding member list"
+      : "You're on the PortalKit waitlist",
+    html: baseTemplate(
+      isFoundingMember
+        ? `
+          <p>You're in.</p>
+          <p>You've secured a <strong>founding member spot</strong> for PortalKit — that means <strong>40% off your subscription, forever</strong>, applied automatically when you sign up.</p>
+          <p>We're putting the finishing touches on PortalKit right now and will email you as soon as it's ready.</p>
+          <p><strong>What founding members get:</strong></p>
+          <ul style="color:#0b1c30;font-size:15px;line-height:1.8;margin:0 0 16px;padding-left:20px;">
+            <li>40% off Pro or Business plan, forever</li>
+            <li>Early access before public launch</li>
+            <li>Direct line to the team</li>
+          </ul>
+          <hr class="divider" />
+          <p class="muted">Your discount is tied to this email address and will be applied automatically at checkout.</p>
+        `
+        : `
+          <p>You're on the waitlist.</p>
+          <p>All 20 founding member spots have been claimed, but we'll email you when PortalKit launches with a special offer for early members.</p>
+          <hr class="divider" />
+          <p class="muted">We'll be in touch soon.</p>
+        `,
+    ),
+  })
+}
+
 // Team member receives: invitation to join a workspace
 export async function sendTeamInviteEmail({
   to,

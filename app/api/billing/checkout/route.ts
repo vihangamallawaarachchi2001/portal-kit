@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { ok, unauthorized, badRequest, internalError } from '@/lib/api'
 import Stripe from 'stripe'
 
@@ -54,15 +55,32 @@ export async function POST(req: Request) {
     await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id)
   }
 
-  const session = await getStripe().checkout.sessions.create({
+  // Check if this user is a founding member — auto-apply coupon if so
+  const foundingMemberCouponId = process.env.STRIPE_FOUNDING_MEMBER_COUPON_ID
+  let isFoundingMember = false
+  if (foundingMemberCouponId && user.email) {
+    const service = createServiceClient()
+    const { data: waitlistEntry } = await service
+      .from('waitlist')
+      .select('is_founding_member')
+      .eq('email', user.email.toLowerCase())
+      .maybeSingle()
+    isFoundingMember = waitlistEntry?.is_founding_member === true
+  }
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
     mode: 'subscription',
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${appUrl}/dashboard/settings/billing?upgraded=true`,
     cancel_url: `${appUrl}/dashboard/settings/billing`,
     subscription_data: { metadata: { supabase_user_id: user.id } },
-    allow_promotion_codes: true,
-  })
+    ...(isFoundingMember && foundingMemberCouponId
+      ? { discounts: [{ coupon: foundingMemberCouponId }] }
+      : { allow_promotion_codes: true }),
+  }
+
+  const session = await getStripe().checkout.sessions.create(sessionParams)
 
   if (!session.url) return internalError('Failed to create Stripe session')
   return ok({ url: session.url })
