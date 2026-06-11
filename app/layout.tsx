@@ -39,6 +39,14 @@ export const metadata: Metadata = {
   authors: [{ name: "PortalKit" }],
   creator: "PortalKit",
   metadataBase: new URL(APP_URL),
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  manifest: '/manifest.json',
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -47,21 +55,14 @@ export const metadata: Metadata = {
     title: "PortalKit — Client Portal Software for Freelancers",
     description:
       "Share files, collect approvals, track invoices, and manage projects — all through one branded client portal link.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "PortalKit — Client Portal Software",
-      },
-    ],
+    // og:image is auto-injected from app/opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
     title: "PortalKit — Client Portal Software for Freelancers",
     description:
       "Share files, collect approvals, track invoices, and manage projects — all through one branded client portal link.",
-    images: ["/og-image.png"],
+    // twitter:image is auto-injected from app/opengraph-image.tsx
   },
   robots: {
     index: true,
