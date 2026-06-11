@@ -10,9 +10,10 @@ import { useUser } from '../providers/auth-provider'
 import { logout } from '@/app/auth/action'
 
 const NAV_LINKS = [
-  { label: 'Features', href: '/features' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'About', href: '/about' },
+  { label: 'Platform',   href: '/features' },
+  { label: 'Solutions',  href: '/about'    },
+  { label: 'Developers', href: '/docs'     },
+  { label: 'Pricing',    href: '/pricing'  },
 ] as const
 
 export function Header() {
@@ -64,7 +65,7 @@ export function Header() {
         'fixed inset-x-0 top-0 z-50 transition-all duration-300',
         isTransparent
           ? 'bg-transparent'
-          : 'bg-surface/95 backdrop-blur-md border-b border-outline-variant shadow-sm'
+          : 'bg-white border-b border-gray-100'
       )}
     >
       {/* ── Main bar ─────────────────────────────────────────────── */}
@@ -104,7 +105,7 @@ export function Header() {
                   'rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   isTransparent
                     ? active ? 'text-white' : 'text-white/70'
-                    : active ? 'text-ds-secondary' : 'text-on-surface-variant'
+                    : active ? 'text-[#0051D5]' : 'text-gray-700'
                 )}
               >
                 {label}
@@ -129,13 +130,13 @@ export function Header() {
             size="sm"
             className={cn(
               'text-base font-medium',
-              isTransparent ? 'text-white/80' : 'text-on-surface-variant'
+              isTransparent ? 'text-white/80' : 'text-gray-600'
             )}
           >
             {user ? (
               <Link href="/dashboard">Dashboard</Link>
             ) : (
-              <Link href="/auth">Sign in</Link>
+              <Link href="/auth">Log In</Link>
             )}
           </Button>
           {user ? (
@@ -154,7 +155,7 @@ export function Header() {
               size="sm"
               className="text-base bg-ds-secondary text-on-ds-secondary font-semibold px-4"
             >
-              <Link href="/auth">Start free</Link>
+              <Link href="/auth">Get Started</Link>
             </Button>
           )}
         </div>
@@ -221,14 +222,14 @@ export function Header() {
               {user ? (
                 <Link href="/dashboard">Dashboard</Link>
               ) : (
-                <Link href="/auth">Sign in</Link>
+                <Link href="/auth">Log In</Link>
               )}
             </Button>
             <Button
               asChild
               className="w-full justify-center text-base bg-ds-secondary text-on-ds-secondary font-semibold"
             >
-              <Link href="/auth">Start free — no credit card needed</Link>
+              <Link href="/auth">Get Started</Link>
             </Button>
           </div>
         </div>
