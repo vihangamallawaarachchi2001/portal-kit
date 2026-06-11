@@ -1,75 +1,82 @@
 import Image from 'next/image'
-import { CheckCircle2, Clock, LayoutDashboard } from 'lucide-react'
+import { GitBranch, FileCheck, Receipt } from 'lucide-react'
 
-const STATS = [
+const CALLOUTS = [
   {
-    icon: LayoutDashboard,
-    iconColor: '#0051D5',
-    iconBg: 'rgba(0,81,213,0.1)',
-    label: 'PROJECT PROGRESS',
-    value: '68%',
-    sub: 'Brand Identity Refresh',
-    accent: (
-      <div className="mt-3 w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-        <div className="bg-[#0051D5] h-full rounded-full" style={{ width: '68%' }} />
-      </div>
-    ),
+    icon: GitBranch,
+    title: 'Real-time milestones',
+    description: 'Clients see every project stage live — no more status update calls.',
   },
   {
-    icon: Clock,
-    iconColor: '#D97706',
-    iconBg: 'rgba(217,119,6,0.1)',
-    label: 'PENDING APPROVALS',
-    value: '03',
-    sub: 'Action required',
-    subColor: '#D97706',
+    icon: FileCheck,
+    title: 'One-click approvals',
+    description: 'Review and approve files without a single email thread.',
   },
   {
-    icon: CheckCircle2,
-    iconColor: '#059669',
-    iconBg: 'rgba(5,150,105,0.1)',
-    label: 'NEXT MILESTONE',
-    value: 'Oct 24',
-    sub: 'Initial Draft Review',
+    icon: Receipt,
+    title: 'Instant invoicing',
+    description: 'Send and collect payment in one place, fully tracked.',
   },
 ]
 
+const BADGE = 'hidden md:flex absolute items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/85 backdrop-blur-md border border-white/60 shadow-lg text-sm font-semibold z-10 transition-transform duration-200 hover:scale-105 cursor-default select-none'
+
 export default function ProductShowcase() {
   return (
-    <section className="relative py-24 bg-surface overflow-hidden">
+    <section className="relative py-28 bg-surface overflow-hidden">
 
-      {/* Subtle background glow */}
+      {/* Background glow — centered below the image */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background: 'radial-gradient(ellipse 70% 50% at 50% 60%, rgba(0,81,213,0.05) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 80% 55% at 50% 70%, rgba(0,81,213,0.045) 0%, transparent 70%)',
         }}
       />
 
       <div className="relative max-w-7xl mx-auto px-6">
 
         {/* ── Heading ── */}
-        <div className="max-w-2xl mb-16">
-          <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#0051D5] mb-4">
-            The Portal Experience
+        <div className="max-w-2xl mb-12">
+          <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-ds-secondary mb-4">
+            See it in action
           </p>
-          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-on-surface leading-[1.06] mb-6">
+          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-on-surface leading-[1.06] mb-5">
             Transparency is the<br className="hidden sm:block" /> ultimate luxury.
           </h2>
-          <p className="text-lg text-on-surface-variant leading-relaxed">
+          <p className="text-lg text-on-surface-variant leading-relaxed max-w-xl">
             Stop hunting through email threads. Give your clients a dedicated,
             high-fidelity space to track milestones, approve deliverables,
             and manage invoices — all in one branded portal.
           </p>
         </div>
 
+        {/* ── Feature callouts ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-14">
+          {CALLOUTS.map(({ icon: Icon, title, description }) => (
+            <div key={title} className="flex items-start gap-4">
+              <div
+                className="flex items-center justify-center size-10 rounded-xl shrink-0 mt-0.5"
+                style={{ background: 'rgba(0,81,213,0.08)' }}
+              >
+                <Icon size={18} strokeWidth={1.75} style={{ color: '#0051D5' }} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-on-surface">{title}</p>
+                <p className="text-sm text-on-surface-variant leading-relaxed">{description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* ── Browser frame ── */}
         <div
           className="relative rounded-2xl border border-outline-variant bg-white overflow-hidden"
-          style={{ boxShadow: '0 32px 64px -16px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+          style={{
+            boxShadow: '0 8px 24px -4px rgba(0,81,213,0.08), 0 32px 64px -12px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.04)',
+          }}
         >
-          {/* Browser chrome */}
+          {/* Chrome bar */}
           <div className="flex items-center gap-3 px-4 h-11 bg-[#f5f5f5] border-b border-outline-variant shrink-0">
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="w-3 h-3 rounded-full bg-[#FF5F57]" />
@@ -80,55 +87,62 @@ export default function ProductShowcase() {
               <div className="flex items-center gap-2 w-full max-w-xs h-6 rounded-md bg-gray-200/70 px-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                 <span className="text-[11px] text-gray-500 font-medium truncate">
-                  app.portalkit.com/portal/acme-brand-strategy
+                  app.portalkit.com/dashboard
                 </span>
               </div>
             </div>
-            <div className="w-14 shrink-0" />
+            <div className="w-14 shrink-0" aria-hidden />
           </div>
 
-          {/* Dashboard image */}
-          <Image
-            src="/dashboard.png"
-            alt="PortalKit client portal dashboard"
-            width={1200}
-            height={750}
-            priority
-            className="w-full h-auto block"
-          />
-        </div>
+          {/* Dashboard image + annotation badges */}
+          {/*
+            IMPORTANT: Badge positions are calibrated for dashboard.png at its
+            natural 1869×963 (1.94:1) ratio. If this image changes, re-verify
+            badge positions across viewport widths before shipping.
+          */}
+          <div className="relative">
+            <Image
+              src="/dashboard.png"
+              alt="PortalKit dashboard showing project milestones, file approvals, and invoice tracking"
+              width={1869}
+              height={963}
+              priority
+              className="w-full h-auto block"
+            />
 
-        {/* ── Stat cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-6">
-          {STATS.map(({ icon: Icon, iconColor, iconBg, label, value, sub, subColor, accent }) => (
-            <div
-              key={label}
-              className="flex flex-col gap-3 p-5 rounded-xl border border-outline-variant bg-white"
-              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold tracking-[0.14em] text-on-surface-variant">
-                  {label}
-                </p>
-                <span
-                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg shrink-0"
-                  style={{ background: iconBg }}
-                >
-                  <Icon size={14} style={{ color: iconColor }} strokeWidth={2.5} />
-                </span>
-              </div>
-              <p className="text-3xl font-extrabold text-on-surface tracking-tight leading-none">
-                {value}
-              </p>
-              <p
-                className="text-xs font-semibold"
-                style={{ color: subColor ?? 'var(--on-surface-variant)' }}
-              >
-                {sub}
-              </p>
-              {accent}
+            {/* Badge 1 — Pending Approvals (top-right) */}
+            <div className={BADGE} style={{ top: '11%', right: '3%' }}>
+              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+              <span className="text-amber-700">3 Pending Approvals</span>
             </div>
-          ))}
+
+            {/* Badge 2 — Invoice Paid (mid-left) */}
+            <div className={BADGE} style={{ top: '44%', left: '2.5%' }}>
+              <span
+                className="inline-flex items-center justify-center w-4 h-4 rounded-full shrink-0"
+                style={{ background: 'var(--ds-tertiary-action)' }}
+              >
+                <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden>
+                  <path d="M1.5 4.5L3.5 6.5L7 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span className="text-on-surface">Invoice Paid</span>
+              <span className="text-on-surface-variant font-normal">·</span>
+              <span style={{ color: 'var(--ds-tertiary-action)' }}>$3,200</span>
+            </div>
+
+            {/* Badge 3 — Progress (bottom-right) */}
+            <div className={BADGE} style={{ bottom: '10%', right: '7%' }}>
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ background: 'var(--ds-secondary)' }}
+              />
+              <span className="text-on-surface">68% Complete</span>
+              <span className="text-on-surface-variant font-normal">·</span>
+              <span className="text-on-surface-variant font-medium">Phase 2</span>
+            </div>
+
+          </div>
         </div>
 
       </div>
