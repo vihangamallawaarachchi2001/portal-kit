@@ -638,6 +638,104 @@ export async function sendMeetingCancelledEmail({
   })
 }
 
+// ── Drip email sequence ──────────────────────────────────────────────────────
+// Day 1 — sent ~24h after onboarding completes
+
+export async function sendDripDay1Email({ to, name }: { to: string; name: string }) {
+  const greeting = name ? `Hi ${name},` : 'Hi there,'
+  await send({
+    to,
+    subject: 'Your first portal takes 5 minutes',
+    html: baseTemplate(`
+      <p>${greeting}</p>
+      <p>Welcome to PortalKit. Here's the fastest way to get value today:</p>
+      <ol style="color:#0b1c30;font-size:15px;line-height:1.9;margin:0 0 16px;padding-left:20px;">
+        <li><strong>Add a client</strong> — just their name and email.</li>
+        <li><strong>Send them the portal link</strong> — one click, no login required on their end.</li>
+        <li><strong>Upload a file or create a project</strong> — they'll see it immediately.</li>
+      </ol>
+      <p>That's it. Your client gets a professional, branded workspace without signing up for anything.</p>
+      <a href="${APP_URL}/dashboard" class="button">Go to your dashboard →</a>
+      <hr class="divider" />
+      <p class="muted">Reply to this email if you have any questions — we read every one.</p>
+    `),
+  })
+}
+
+// Day 3 — sent ~3 days after onboarding completes
+export async function sendDripDay3Email({ to, name }: { to: string; name: string }) {
+  const greeting = name ? `Hi ${name},` : 'Hi there,'
+  await send({
+    to,
+    subject: "End the 'which version is final?' problem",
+    html: baseTemplate(`
+      <p>${greeting}</p>
+      <p>If you've ever sent a file over email and lost track of which version the client approved — PortalKit fixes that.</p>
+      <p>Here's how it works:</p>
+      <ul style="color:#0b1c30;font-size:15px;line-height:1.9;margin:0 0 16px;padding-left:20px;">
+        <li>Upload a file to a client's portal.</li>
+        <li>They approve it (or send it back with comments) directly in the portal.</li>
+        <li>You get notified. The approval is on record. No inbox archaeology.</li>
+      </ul>
+      <p>Every file has a clear status: <strong>pending review</strong>, <strong>approved</strong>, or <strong>changes requested</strong>. No ambiguity.</p>
+      <a href="${APP_URL}/dashboard" class="button">Upload your first file →</a>
+      <hr class="divider" />
+      <p class="muted">Questions? Just reply.</p>
+    `),
+  })
+}
+
+// Day 5 — sent ~5 days after onboarding completes
+export async function sendDripDay5Email({ to, name }: { to: string; name: string }) {
+  const greeting = name ? `Hi ${name},` : 'Hi there,'
+  await send({
+    to,
+    subject: 'Have you shared your portal yet?',
+    html: baseTemplate(`
+      <p>${greeting}</p>
+      <p>Quick check-in: have you sent a client their portal link yet?</p>
+      <p>If not, here's the easiest way to do it:</p>
+      <ol style="color:#0b1c30;font-size:15px;line-height:1.9;margin:0 0 16px;padding-left:20px;">
+        <li>Open a client from your dashboard.</li>
+        <li>Click <strong>"Send portal link"</strong> — they'll get an email with a magic link. No password needed.</li>
+      </ol>
+      <p>The first time a client opens their portal is usually when it clicks for them. It's worth 30 seconds.</p>
+      <a href="${APP_URL}/dashboard/clients" class="button">Send a portal link now →</a>
+      <hr class="divider" />
+      <p class="muted">If you're already using PortalKit with clients, ignore this — you're ahead of the game.</p>
+    `),
+  })
+}
+
+// Day 7 — sent ~7 days after onboarding completes; includes founding member CTA
+export async function sendDripDay7Email({
+  to,
+  name,
+  foundingMemberUrl,
+}: {
+  to: string
+  name: string
+  foundingMemberUrl: string
+}) {
+  const greeting = name ? `Hi ${name},` : 'Hi there,'
+  await send({
+    to,
+    subject: 'One week in — a quick note',
+    html: baseTemplate(`
+      <p>${greeting}</p>
+      <p>It's been a week since you joined PortalKit. I wanted to check in personally.</p>
+      <p>How is it going? Have you sent a client their portal link, collected a file approval, or sent an invoice through the platform yet? If you have, I'd love to hear how it went — just reply to this email.</p>
+      <p>If you haven't had a chance to dig in yet, no pressure. Here's the one thing that'll make it worthwhile: <strong>send one client their portal link</strong>. Five minutes, and you'll see immediately why it's different.</p>
+      <hr class="divider" />
+      <p><strong>One more thing — founding member pricing</strong></p>
+      <p>We're offering 20 freelancers the chance to lock in <strong>40% off PortalKit, forever</strong>. If you're planning to upgrade at any point, this is the best time to do it.</p>
+      <a href="${foundingMemberUrl}" class="button">See founding member details →</a>
+      <hr class="divider" />
+      <p class="muted">You're receiving this because you signed up for PortalKit. Reply any time — I read every message.</p>
+    `),
+  })
+}
+
 // Waitlist signup confirmation
 export async function sendWaitlistConfirmEmail({
   to,
