@@ -89,7 +89,7 @@ export default function Pricing() {
         </div>
 
         {/* ── Cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
           {PLANS.map(({ name, price, period, tagline, cta, href, featured, features }) => (
             <div
               key={name}
