@@ -189,7 +189,7 @@ export default function Pricing() {
 
               {/* ── Feature list ── */}
               <ul className="px-7 pt-5 pb-7">
-                {features.map(({ text, included }) => (
+                {features.filter(f => f.included).map(({ text, included }) => (
                   <li
                     key={text}
                     className="flex items-start gap-2.5 py-2.5"
