@@ -26,7 +26,7 @@ const PAIN_POINTS = [
 export default function Problem() {
   return (
     <section className="bg-surface-container-low py-24 px-6">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-7xl">
 
         {/* Header */}
         <div className="text-center mb-14 space-y-4">

@@ -75,7 +75,7 @@ const FEATURES: {
 export default function Features() {
   return (
     <section className="bg-surface py-24 px-6">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-7xl">
 
         {/* ── Header row ──────────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">

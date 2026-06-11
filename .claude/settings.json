@@ -11,7 +11,9 @@
       "Bash(mkdir -p /home/vihanga/workspace/products/portal-kit/app/api/portal/projects/\\\\[id\\\\]/messages)",
       "Bash(mkdir -p /home/vihanga/workspace/products/portal-kit/app/api/portal/projects/\\\\[id\\\\]/upload /home/vihanga/workspace/products/portal-kit/app/api/portal/projects/\\\\[id\\\\]/files)",
       "Bash(pnpm add *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(sed -i s/max-w-6xl/max-w-7xl/g /home/vihanga/workspace/products/portal-kit/components/public/header.tsx /home/vihanga/workspace/products/portal-kit/components/home/hero.tsx /home/vihanga/workspace/products/portal-kit/components/home/product-showcase.tsx)",
+      "Bash(sed -i 's/\\\\bmax-w-5xl\\\\b/max-w-7xl/g' /home/vihanga/workspace/products/portal-kit/components/home/how-it-works.tsx /home/vihanga/workspace/products/portal-kit/components/home/features.tsx /home/vihanga/workspace/products/portal-kit/components/home/problem.tsx /home/vihanga/workspace/products/portal-kit/components/home/faq.tsx /home/vihanga/workspace/products/portal-kit/components/home/pricing.tsx /home/vihanga/workspace/products/portal-kit/components/public/footer.tsx)"
     ],
     "additionalDirectories": [
       "/home/vihanga/workspace/products/portal-kit/app/api/invoices/[id]",

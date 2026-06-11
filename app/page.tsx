@@ -2,6 +2,7 @@ import CTABanner from "@/components/home/cta-banner";
 import FAQ from "@/components/home/faq";
 import Features from "@/components/home/features";
 import HomeHero from "@/components/home/hero";
+import TrustedBy from "@/components/home/trusted-by";
 import HowItWorks from "@/components/home/how-it-works";
 import Pricing from "@/components/home/pricing";
 import Problem from "@/components/home/problem";
@@ -15,6 +16,7 @@ export default function Home() {
       <Header />
       <main>
         <HomeHero />
+        <TrustedBy />
         <ProductShowcase />
         <Problem />
         <HowItWorks />

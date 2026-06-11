@@ -1,122 +1,134 @@
 import Image from 'next/image'
+import { CheckCircle2, Clock, LayoutDashboard } from 'lucide-react'
+
+const STATS = [
+  {
+    icon: LayoutDashboard,
+    iconColor: '#0051D5',
+    iconBg: 'rgba(0,81,213,0.1)',
+    label: 'PROJECT PROGRESS',
+    value: '68%',
+    sub: 'Brand Identity Refresh',
+    accent: (
+      <div className="mt-3 w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+        <div className="bg-[#0051D5] h-full rounded-full" style={{ width: '68%' }} />
+      </div>
+    ),
+  },
+  {
+    icon: Clock,
+    iconColor: '#D97706',
+    iconBg: 'rgba(217,119,6,0.1)',
+    label: 'PENDING APPROVALS',
+    value: '03',
+    sub: 'Action required',
+    subColor: '#D97706',
+  },
+  {
+    icon: CheckCircle2,
+    iconColor: '#059669',
+    iconBg: 'rgba(5,150,105,0.1)',
+    label: 'NEXT MILESTONE',
+    value: 'Oct 24',
+    sub: 'Initial Draft Review',
+  },
+]
 
 export default function ProductShowcase() {
   return (
-    <section className="relative bg-surface px-6 py-20 overflow-hidden">
+    <section className="relative py-24 bg-surface overflow-hidden">
 
-      {/* ── Outer frame — browser window chrome ───────────────────── */}
-      <div className="mx-auto max-w-5xl rounded-2xl border border-outline-variant shadow-2xl shadow-on-surface/10 overflow-hidden">
+      {/* Subtle background glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse 70% 50% at 50% 60%, rgba(0,81,213,0.05) 0%, transparent 70%)',
+        }}
+      />
 
-        {/* Browser top bar */}
-        <div className="flex items-center gap-3 px-4 h-11 bg-surface-container-low border-b border-outline-variant">
+      <div className="relative max-w-7xl mx-auto px-6">
 
-          {/* Traffic-light dots */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="size-3 rounded-full bg-red-400" />
-            <span className="size-3 rounded-full bg-yellow-400" />
-            <span className="size-3 rounded-full bg-green-400" />
-          </div>
-
-          {/* URL bar */}
-          <div className="flex-1 flex justify-center">
-            <div className="flex items-center gap-2 w-full max-w-xs h-6 rounded-md bg-surface-container px-3">
-              <div className="size-2 rounded-full bg-ds-tertiary-action shrink-0" />
-              <span className="text-xs text-on-surface-variant font-medium truncate">
-                portalkit.com/project/alpha-design-system
-              </span>
-            </div>
-          </div>
-
-          {/* Spacer to balance the dots */}
-          <div className="w-14 shrink-0" />
+        {/* ── Heading ── */}
+        <div className="max-w-2xl mb-16">
+          <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#0051D5] mb-4">
+            The Portal Experience
+          </p>
+          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-on-surface leading-[1.06] mb-6">
+            Transparency is the<br className="hidden sm:block" /> ultimate luxury.
+          </h2>
+          <p className="text-lg text-on-surface-variant leading-relaxed">
+            Stop hunting through email threads. Give your clients a dedicated,
+            high-fidelity space to track milestones, approve deliverables,
+            and manage invoices — all in one branded portal.
+          </p>
         </div>
 
-        {/* ── Viewport — dark teal canvas ─────────────────────────── */}
-        <div className="relative bg-[#243b4f] flex items-center justify-center p-8 md:p-14 min-h-[420px] md:min-h-[560px]">
-
-          {/* Swap this <div> for a real <Image> when the screenshot is ready */}
-          <div className="relative w-full max-w-lg md:max-w-xl rounded-2xl overflow-hidden shadow-2xl shadow-black/40">
-            <Image
-              src="/placeholder-dashboard.png"
-              alt="PortalKit client portal dashboard"
-              width={960}
-              height={640}
-              priority
-              className="w-full h-auto"
-              onError={undefined}
-              // Remove the placeholder block below once you drop the real image in
-            />
-
-            {/* ── PLACEHOLDER — delete when real image is ready ─────── */}
-            <div className="absolute inset-0 bg-surface flex flex-col overflow-hidden">
-
-              {/* Mini app top bar */}
-              <div className="flex items-center gap-3 px-4 h-10 border-b border-outline-variant bg-surface-container-lowest shrink-0">
-                <div className="size-5 rounded bg-ds-primary/80" />
-                <div className="h-2.5 w-24 rounded-full bg-surface-container" />
-                <div className="ml-auto flex gap-2">
-                  <div className="h-2.5 w-14 rounded-full bg-surface-container" />
-                  <div className="h-2.5 w-14 rounded-full bg-surface-container" />
-                </div>
-              </div>
-
-              <div className="flex flex-1 overflow-hidden">
-
-                {/* Sidebar */}
-                <div className="w-36 shrink-0 border-r border-outline-variant bg-surface-container-low px-3 py-4 flex flex-col gap-2.5">
-                  {[70, 50, 60, 45, 55].map((w, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="size-3 rounded bg-surface-container-high shrink-0" />
-                      <div
-                        className="h-2 rounded-full bg-surface-container-high"
-                        style={{ width: `${w}%` }}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Main content */}
-                <div className="flex-1 p-4 flex flex-col gap-4 overflow-hidden">
-
-                  {/* Page title */}
-                  <div className="h-3 w-36 rounded-full bg-on-surface/10" />
-
-                  {/* Metric cards row */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { accent: 'bg-ds-secondary/20' },
-                      { accent: 'bg-ds-tertiary-action/20' },
-                      { accent: 'bg-ds-error/10' },
-                    ].map(({ accent }, i) => (
-                      <div key={i} className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3 flex flex-col gap-2">
-                        <div className={`size-5 rounded ${accent}`} />
-                        <div className="h-3 w-10 rounded-full bg-surface-container-high" />
-                        <div className="h-2 w-14 rounded-full bg-surface-container" />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Chart area */}
-                  <div className="flex-1 rounded-lg border border-outline-variant bg-surface-container-lowest p-3 flex flex-col gap-3">
-                    <div className="h-2.5 w-20 rounded-full bg-surface-container-high" />
-                    {/* Bar chart */}
-                    <div className="flex-1 flex items-end gap-1.5 px-1 pb-1">
-                      {[45, 70, 55, 85, 60, 90, 50, 75, 65, 80, 55, 70].map((h, i) => (
-                        <div
-                          key={i}
-                          className="flex-1 rounded-sm bg-ds-secondary/30"
-                          style={{ height: `${h}%` }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                </div>
+        {/* ── Browser frame ── */}
+        <div
+          className="relative rounded-2xl border border-outline-variant bg-white overflow-hidden"
+          style={{ boxShadow: '0 32px 64px -16px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+        >
+          {/* Browser chrome */}
+          <div className="flex items-center gap-3 px-4 h-11 bg-[#f5f5f5] border-b border-outline-variant shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="w-3 h-3 rounded-full bg-[#FF5F57]" />
+              <span className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
+              <span className="w-3 h-3 rounded-full bg-[#28C840]" />
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="flex items-center gap-2 w-full max-w-xs h-6 rounded-md bg-gray-200/70 px-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-[11px] text-gray-500 font-medium truncate">
+                  app.portalkit.com/portal/acme-brand-strategy
+                </span>
               </div>
             </div>
-            {/* ── END PLACEHOLDER ────────────────────────────────────── */}
-
+            <div className="w-14 shrink-0" />
           </div>
+
+          {/* Dashboard image */}
+          <Image
+            src="/dashboard.png"
+            alt="PortalKit client portal dashboard"
+            width={1200}
+            height={750}
+            priority
+            className="w-full h-auto block"
+          />
+        </div>
+
+        {/* ── Stat cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-6">
+          {STATS.map(({ icon: Icon, iconColor, iconBg, label, value, sub, subColor, accent }) => (
+            <div
+              key={label}
+              className="flex flex-col gap-3 p-5 rounded-xl border border-outline-variant bg-white"
+              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-bold tracking-[0.14em] text-on-surface-variant">
+                  {label}
+                </p>
+                <span
+                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg shrink-0"
+                  style={{ background: iconBg }}
+                >
+                  <Icon size={14} style={{ color: iconColor }} strokeWidth={2.5} />
+                </span>
+              </div>
+              <p className="text-3xl font-extrabold text-on-surface tracking-tight leading-none">
+                {value}
+              </p>
+              <p
+                className="text-xs font-semibold"
+                style={{ color: subColor ?? 'var(--on-surface-variant)' }}
+              >
+                {sub}
+              </p>
+              {accent}
+            </div>
+          ))}
         </div>
 
       </div>

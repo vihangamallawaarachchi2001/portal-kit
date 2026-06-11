@@ -44,7 +44,7 @@ export function Header() {
     <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
 
       {/* ── Main bar ─────────────────────────────────────── */}
-      <div className="flex justify-between items-center max-w-6xl mx-auto px-6 h-16">
+      <div className="flex justify-between items-center max-w-7xl mx-auto px-6 h-16">
 
         {/* Left: logo + nav links */}
         <div className="flex items-center gap-12">

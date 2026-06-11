@@ -59,7 +59,7 @@ export default function HowItWorks() {
         }}
       />
 
-      <div className="relative mx-auto max-w-5xl">
+      <div className="relative mx-auto max-w-7xl">
 
         {/* Header */}
         <div className="text-center mb-16 space-y-4">

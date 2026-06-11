@@ -60,7 +60,7 @@ export default function HomeHero() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-6xl mx-auto px-6 w-full grid lg:grid-cols-12 gap-12 items-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 w-full grid lg:grid-cols-12 gap-12 items-center">
 
         {/* ── Left: copy ── */}
         <div className="lg:col-span-6 space-y-8">

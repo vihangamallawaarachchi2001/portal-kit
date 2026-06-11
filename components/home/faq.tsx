@@ -41,7 +41,7 @@ const FAQS = [
 export default function FAQ() {
   return (
     <section className="bg-surface py-24 px-6" id="faq">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-7xl">
         <div className="flex flex-col lg:flex-row gap-16">
 
           {/* Left: sticky header */}
