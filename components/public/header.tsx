@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Layers, Menu, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useUser } from '../providers/auth-provider'
 import { logout } from '@/app/auth/action'
@@ -19,144 +18,100 @@ const NAV_LINKS = [
 export function Header() {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const { user } = useUser();
-  const [pending, startTransition] = useTransition();
+  const { user } = useUser()
+  const [pending, startTransition] = useTransition()
 
   function handleSignOut() {
-    startTransition(async () => {
-      await logout();
-    })
+    startTransition(async () => { await logout() })
   }
-
-
-  // Transparent-over-dark only on the home page hero
-  const isTransparent = !scrolled && pathname === '/'
 
   const closeMobile = useCallback(() => setMobileOpen(false), [])
 
-  // Close on route change
   useEffect(() => { closeMobile() }, [pathname, closeMobile])
 
-  // Close when resized to desktop
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 768) closeMobile() }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [closeMobile])
 
-  // Scroll-aware background — check initial position on mount
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  // Lock body scroll while mobile menu is open
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
 
   return (
-    <header
-      className={cn(
-        'fixed inset-x-0 top-0 z-50 transition-all duration-300',
-        isTransparent
-          ? 'bg-transparent'
-          : 'bg-white border-b border-gray-100'
-      )}
-    >
-      {/* ── Main bar ─────────────────────────────────────────────── */}
-      <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between gap-8">
+    <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
 
-        {/* Logo */}
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span className="flex items-center justify-center size-8 rounded-md bg-blue-600 shrink-0">
-            <Layers className="size-4.5 text-white" strokeWidth={1.75} />
-          </span>
-          <span
-            className={cn(
-              'font-bold text-lg tracking-tight transition-colors duration-300',
-              isTransparent ? 'text-white' : 'text-on-surface'
-            )}
-          >
-            PortalKit
-          </span>
-        </Link>
+      {/* ── Main bar ─────────────────────────────────────── */}
+      <div className="flex justify-between items-center max-w-6xl mx-auto px-6 h-16">
 
-        {/* Desktop nav */}
-        <nav
-          className="hidden md:flex items-center gap-8 flex-1 justify-center"
-          aria-label="Main navigation"
-        >
-          {NAV_LINKS.map(({ label, href }) => {
-            const active = pathname === href
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  'relative py-1 text-base font-medium transition-colors duration-200',
-                  'rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  isTransparent
-                    ? active ? 'text-white' : 'text-white/70'
-                    : active ? 'text-[#0051D5]' : 'text-gray-700'
-                )}
-              >
-                {label}
-                {active && (
-                  <span
-                    className={cn(
-                      'absolute -bottom-0.5 inset-x-0 h-0.5 rounded-full',
-                      isTransparent ? 'bg-white' : 'bg-ds-secondary'
-                    )}
-                  />
-                )}
-              </Link>
-            )
-          })}
-        </nav>
+        {/* Left: logo + nav links */}
+        <div className="flex items-center gap-12">
 
-        {/* Desktop CTA */}
-        <div className="hidden md:flex items-center gap-2 shrink-0">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className={cn(
-              'text-base font-medium',
-              isTransparent ? 'text-white/80' : 'text-gray-600'
-            )}
-          >
-            {user ? (
-              <Link href="/dashboard">Dashboard</Link>
-            ) : (
-              <Link href="/auth">Log In</Link>
-            )}
-          </Button>
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            <span className="flex items-center justify-center size-8 rounded-md bg-blue-600 shrink-0">
+              <Layers className="size-4.5 text-white" strokeWidth={1.75} />
+            </span>
+            <span className="font-bold text-lg tracking-tight text-gray-900">PortalKit</span>
+          </Link>
+
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-8">
+            {NAV_LINKS.map(({ label, href }) => {
+              const active = pathname === href
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'text-sm font-medium transition-colors py-1',
+                    active
+                      ? 'text-[#0051D5] font-semibold border-b-2 border-[#0051D5]'
+                      : 'text-gray-600 hover:text-[#0051D5]'
+                  )}
+                >
+                  {label}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Right: CTA buttons */}
+        <div className="hidden md:flex items-center gap-4">
           {user ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-base bg-ds-secondary text-on-ds-secondary font-semibold px-4 cursor-pointer"
+            <Link
+              href="/dashboard"
+              className="px-5 py-2.5 text-sm font-medium text-gray-900 hover:text-[#0051D5] transition-colors"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <Link
+              href="/auth"
+              className="px-5 py-2.5 text-sm font-medium text-gray-900 hover:text-[#0051D5] transition-colors"
+            >
+              Log In
+            </Link>
+          )}
+
+          {user ? (
+            <button
               onClick={handleSignOut}
               disabled={pending}
+              className="bg-[#0051D5] text-white px-6 py-2.5 rounded text-sm font-medium hover:opacity-90 active:scale-95 transition-all duration-200 disabled:opacity-60"
             >
               {pending ? 'Signing out…' : 'Sign out'}
-            </Button>
+            </button>
           ) : (
-            <Button
-              asChild
-              size="sm"
-              className="text-base bg-ds-secondary text-on-ds-secondary font-semibold px-4"
+            <Link
+              href="/auth"
+              className="bg-[#0051D5] text-white px-6 py-2.5 rounded text-sm font-medium hover:opacity-90 active:scale-95 transition-all duration-200"
             >
-              <Link href="/auth">Get Started</Link>
-            </Button>
+              Get Started
+            </Link>
           )}
         </div>
 
@@ -167,73 +122,82 @@ export function Header() {
           aria-expanded={mobileOpen}
           aria-controls="mobile-menu"
           onClick={() => setMobileOpen(prev => !prev)}
-          className={cn(
-            'md:hidden flex items-center justify-center size-9 rounded-md transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            isTransparent
-              ? 'text-white/80'
-              : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
-          )}
+          className="md:hidden flex items-center justify-center size-9 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
         >
-          {mobileOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={2} />}
+          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-      {/* ── Mobile menu panel ────────────────────────────────────── */}
+      {/* ── Mobile menu ──────────────────────────────────── */}
       {mobileOpen && (
-        <div
-          id="mobile-menu"
-          className="md:hidden border-t border-outline-variant bg-surface-container-lowest"
-        >
-          <nav aria-label="Mobile navigation" className="flex flex-col">
-            {NAV_LINKS.map(({ label, href }) => {
-              const active = pathname === href
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={closeMobile}
-                  className={cn(
-                    'flex items-center gap-3 px-6 py-4 text-sm font-medium transition-colors',
-                    'border-b border-outline-variant/40',
-                    active
-                      ? 'text-ds-secondary bg-surface-container-low'
-                      : 'text-on-surface hover:bg-surface-container-low'
-                  )}
-                >
-                  <span
+        <>
+          {/* Backdrop */}
+          <div
+            aria-hidden
+            className="md:hidden fixed inset-0 top-16 bg-black/20 z-40"
+            onClick={closeMobile}
+          />
+          <div id="mobile-menu" className="md:hidden border-t border-gray-200 bg-white relative z-50">
+            <nav className="flex flex-col">
+              {NAV_LINKS.map(({ label, href }) => {
+                const active = pathname === href
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={closeMobile}
                     className={cn(
-                      'size-1.5 rounded-full shrink-0',
-                      active ? 'bg-ds-secondary' : 'bg-outline-variant'
+                      'px-6 py-4 text-sm font-medium border-b border-gray-100 transition-colors',
+                      active
+                        ? 'text-[#0051D5] bg-blue-50'
+                        : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
                     )}
-                  />
-                  {label}
-                </Link>
-              )
-            })}
-          </nav>
-
-          <div className="flex flex-col gap-3 px-6 py-5">
-            <Button
-              asChild
-              variant="ghost"
-              className="w-full justify-center text-base text-on-surface-variant"
-            >
+                  >
+                    {label}
+                  </Link>
+                )
+              })}
+            </nav>
+            <div className="flex flex-col gap-3 px-6 py-5">
               {user ? (
-                <Link href="/dashboard">Dashboard</Link>
+                <>
+                  <Link
+                    href="/dashboard"
+                    onClick={closeMobile}
+                    className="w-full text-center px-5 py-2.5 text-sm font-medium text-gray-900 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={() => { closeMobile(); handleSignOut() }}
+                    disabled={pending}
+                    className="w-full text-center bg-[#0051D5] text-white px-6 py-2.5 rounded text-sm font-medium disabled:opacity-60"
+                  >
+                    {pending ? 'Signing out…' : 'Sign out'}
+                  </button>
+                </>
               ) : (
-                <Link href="/auth">Log In</Link>
+                <>
+                  <Link
+                    href="/auth"
+                    onClick={closeMobile}
+                    className="w-full text-center px-5 py-2.5 text-sm font-medium text-gray-900 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    href="/auth"
+                    onClick={closeMobile}
+                    className="w-full text-center bg-[#0051D5] text-white px-6 py-2.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
+                  >
+                    Get Started
+                  </Link>
+                </>
               )}
-            </Button>
-            <Button
-              asChild
-              className="w-full justify-center text-base bg-ds-secondary text-on-ds-secondary font-semibold"
-            >
-              <Link href="/auth">Get Started</Link>
-            </Button>
+            </div>
           </div>
-        </div>
+        </>
       )}
-    </header>
+    </nav>
   )
 }
