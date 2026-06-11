@@ -4,6 +4,7 @@ import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import NextTopLoader from "nextjs-toploader";
+import { CookieBanner } from "@/components/cookie-consent";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -101,6 +102,7 @@ export default async function RootLayout({
         <AuthProvider initialUser={user}>
           {children}
         </AuthProvider>
+        <CookieBanner />
       </body>
     </html>
   );
