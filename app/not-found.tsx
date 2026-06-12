@@ -64,11 +64,11 @@ export default function NotFound() {
             </p>
             <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
               {[
-                { label: 'Features', href: '/features' },
-                { label: 'Pricing',  href: '/pricing'  },
-                { label: 'Docs',     href: '/docs'     },
-                { label: 'Help',     href: '/help'     },
-                { label: 'About',    href: '/about'    },
+                { label: 'Platform',  href: '/platform'  },
+                { label: 'Pricing',   href: '/pricing'   },
+                { label: 'Docs',      href: '/docs'      },
+                { label: 'Help',      href: '/help'      },
+                { label: 'About',     href: '/about'    },
               ].map(({ label, href }) => (
                 <Link
                   key={href}
