@@ -2,13 +2,13 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Header } from '@/components/public/header'
 import Footer from '@/components/public/footer'
-import PostCard from '@/components/blog/post-card'
+import PostsWithFilter from '@/components/blog/posts-with-filter'
 import { getPublishedPosts } from '@/lib/blog'
 
 export const revalidate = 60
 
 export const metadata: Metadata = {
-  title: 'Blog',
+  title: 'Blog — PortalKit',
   description: 'Guides, tips, and insights for freelancers — from the PortalKit team.',
 }
 
@@ -18,181 +18,265 @@ function DotGrid() {
       aria-hidden
       className="pointer-events-none absolute inset-0"
       style={{
-        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px)',
+        backgroundImage:
+          'radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px)',
         backgroundSize: '28px 28px',
       }}
     />
   )
 }
 
-function Eyebrow({ label }: { label: string }) {
-  return (
-    <div
-      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-6"
-      style={{
-        background: 'rgba(255,255,255,0.06)',
-        color: 'rgba(255,255,255,0.55)',
-        border: '1px solid rgba(255,255,255,0.1)',
-      }}
-    >
-      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-      {label}
-    </div>
-  )
-}
-
 export default async function BlogPage() {
   const posts = await getPublishedPosts()
+  const featured = posts[0] ?? null
 
   return (
     <>
       <Header />
       <main className="pt-16">
 
-        {/* ── Hero ─────────────────────────────────────────────────── */}
+        {/* ── Hero ──────────────────────────────────────────────────── */}
         <section
-          className="relative overflow-hidden py-28 px-6 text-center"
+          className="relative overflow-hidden"
           style={{ background: '#060b18' }}
         >
           <DotGrid />
-          {/* Blue glow */}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 h-px"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(0,81,213,0.4), transparent)' }}
+            style={{
+              background:
+                'linear-gradient(90deg, transparent, rgba(0,81,213,0.4), transparent)',
+            }}
           />
           <div
             aria-hidden
-            className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-32 w-[700px] h-[400px] rounded-full"
-            style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,0.18) 0%, transparent 70%)' }}
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-32 w-[900px] h-[500px]"
+            style={{
+              background:
+                'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,0.16) 0%, transparent 70%)',
+            }}
           />
 
-          <div className="relative max-w-3xl mx-auto">
-            <Eyebrow label="Blog" />
-            <h1
-              className="font-extrabold tracking-tight text-white leading-[1.06]"
-              style={{ fontSize: 'clamp(2.5rem, 5vw, 3.75rem)' }}
-            >
-              Insights for{' '}
-              <span
-                style={{
-                  backgroundImage: 'linear-gradient(90deg, #60a5fa, #93c5fd)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                modern freelancers.
-              </span>
-            </h1>
-            <p
-              className="mt-6 text-lg leading-relaxed max-w-xl mx-auto"
-              style={{ color: 'rgba(255,255,255,0.55)' }}
-            >
-              Practical guides on client management, getting paid faster, and building a
-              delivery workflow your clients will love.
-            </p>
-          </div>
-        </section>
+          <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-0">
+            <div className="grid lg:grid-cols-[1fr_460px] gap-10 xl:gap-20 items-start pb-20">
 
-        {/* ── Posts grid ───────────────────────────────────────────── */}
-        <section className="bg-[#f8fafc] py-24 px-6">
-          <div className="max-w-7xl mx-auto">
+              {/* Left: editorial headline */}
+              <div className="lg:pt-8">
+                <div
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-6"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.55)',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                  The PortalKit Blog
+                </div>
 
-            {posts.length > 0 ? (
-              <>
-                {/* Featured post (first) */}
-                {posts.length >= 1 && (
-                  <div className="mb-12">
-                    <Link
-                      href={`/blog/${posts[0].slug}`}
-                      className="group grid lg:grid-cols-2 rounded-3xl overflow-hidden border border-gray-200 bg-white hover:border-[#0051D5]/30 hover:shadow-[0_12px_40px_-8px_rgba(0,81,213,0.12)] transition-all duration-300"
+                <h1
+                  className="font-extrabold text-white tracking-tight leading-[1.04]"
+                  style={{ fontSize: 'clamp(2.75rem, 5.5vw, 4.5rem)' }}
+                >
+                  Guides for<br />
+                  <span
+                    style={{
+                      backgroundImage: 'linear-gradient(90deg, #60a5fa, #93c5fd)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}
+                  >
+                    modern<br />freelancers.
+                  </span>
+                </h1>
+
+                <p
+                  className="mt-6 text-lg leading-relaxed max-w-md"
+                  style={{ color: 'rgba(255,255,255,0.5)' }}
+                >
+                  Practical articles on client management, getting paid faster, and building
+                  a delivery experience your clients will love.
+                </p>
+
+                <div className="flex items-center gap-8 mt-10">
+                  <div>
+                    <div className="text-4xl font-extrabold text-white tabular-nums">
+                      {posts.length}
+                    </div>
+                    <div
+                      className="text-[11px] uppercase tracking-widest font-semibold mt-1"
+                      style={{ color: 'rgba(255,255,255,0.35)' }}
                     >
-                      {/* Cover */}
-                      {posts[0].cover_image_url ? (
+                      Articles
+                    </div>
+                  </div>
+                  <div
+                    className="w-px h-12"
+                    style={{ background: 'rgba(255,255,255,0.08)' }}
+                  />
+                  <div>
+                    <div className="text-4xl font-extrabold text-white">New</div>
+                    <div
+                      className="text-[11px] uppercase tracking-widest font-semibold mt-1"
+                      style={{ color: 'rgba(255,255,255,0.35)' }}
+                    >
+                      Posts weekly
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: featured article card */}
+              {featured && (
+                <Link href={`/blog/${featured.slug}`} className="group block mt-0 lg:mt-4">
+                  <div
+                    className="rounded-2xl overflow-hidden"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    {/* Cover image */}
+                    <div className="relative h-[230px] overflow-hidden">
+                      {featured.cover_image_url ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img
-                          src={posts[0].cover_image_url}
-                          alt={posts[0].title}
-                          className="w-full h-64 lg:h-auto object-cover"
+                          src={featured.cover_image_url}
+                          alt={featured.title}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          style={{ opacity: 0.9 }}
                         />
                       ) : (
                         <div
-                          className="w-full h-64 lg:h-auto"
+                          className="w-full h-full"
                           style={{
-                            background: 'linear-gradient(135deg, rgba(0,81,213,0.1) 0%, rgba(18,104,255,0.05) 50%, rgba(139,92,246,0.08) 100%)',
-                            minHeight: '280px',
+                            background:
+                              'linear-gradient(135deg, rgba(0,81,213,0.2) 0%, rgba(139,92,246,0.15) 100%)',
+                          }}
+                        />
+                      )}
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          background:
+                            'linear-gradient(to top, rgba(6,11,24,0.8) 0%, transparent 55%)',
+                        }}
+                      />
+                      {featured.tags?.[0] && (
+                        <span
+                          className="absolute bottom-4 left-4 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                          style={{
+                            background: 'rgba(0,81,213,0.35)',
+                            color: '#93c5fd',
+                            border: '1px solid rgba(0,81,213,0.4)',
                           }}
                         >
-                          <div className="h-full flex items-center justify-center">
-                            <div className="w-16 h-16 rounded-2xl bg-[#0051D5]/10 flex items-center justify-center">
-                              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0051D5" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
+                          {featured.tags[0]}
+                        </span>
                       )}
-                      {/* Content */}
-                      <div className="p-8 lg:p-10 flex flex-col justify-center">
-                        {posts[0].tags?.[0] && (
-                          <span className="inline-flex self-start text-[11px] font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 mb-4">
-                            {posts[0].tags[0]}
-                          </span>
-                        )}
-                        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-snug group-hover:text-[#0051D5] transition-colors mb-4">
-                          {posts[0].title}
-                        </h2>
-                        {posts[0].excerpt && (
-                          <p className="text-gray-500 leading-relaxed line-clamp-3 mb-6">
-                            {posts[0].excerpt}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-3 text-sm text-gray-400">
-                          <div className="w-7 h-7 rounded-full bg-[#0051D5]/10 flex items-center justify-center text-[11px] font-bold text-[#0051D5]">
-                            {posts[0].author_name[0].toUpperCase()}
-                          </div>
-                          <span>{posts[0].author_name}</span>
-                          {posts[0].reading_time_mins && (
-                            <>
-                              <span className="text-gray-300">·</span>
-                              <span>{posts[0].reading_time_mins} min read</span>
-                            </>
-                          )}
-                          {posts[0].published_at && (
-                            <>
-                              <span className="text-gray-300">·</span>
-                              <span>{new Date(posts[0].published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                )}
+                      <span
+                        className="absolute top-4 right-4 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
+                        style={{
+                          background: 'rgba(255,255,255,0.1)',
+                          color: 'rgba(255,255,255,0.6)',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                        }}
+                      >
+                        Featured
+                      </span>
+                    </div>
 
-                {/* Remaining posts grid */}
-                {posts.length > 1 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {posts.slice(1).map(post => (
-                      <PostCard key={post.id} post={post} />
-                    ))}
+                    {/* Content */}
+                    <div className="p-5 pb-6">
+                      <h3
+                        className="font-bold text-white leading-snug line-clamp-2 group-hover:text-blue-300 transition-colors duration-200"
+                        style={{ fontSize: '1.05rem' }}
+                      >
+                        {featured.title}
+                      </h3>
+                      {featured.excerpt && (
+                        <p
+                          className="mt-2 text-sm line-clamp-2 leading-relaxed"
+                          style={{ color: 'rgba(255,255,255,0.45)' }}
+                        >
+                          {featured.excerpt}
+                        </p>
+                      )}
+                      <div
+                        className="flex items-center gap-2 mt-4 text-xs"
+                        style={{ color: 'rgba(255,255,255,0.35)' }}
+                      >
+                        <span>{featured.author_name}</span>
+                        {featured.reading_time_mins && (
+                          <>
+                            <span>·</span>
+                            <span>{featured.reading_time_mins} min read</span>
+                          </>
+                        )}
+                        {featured.published_at && (
+                          <>
+                            <span>·</span>
+                            <span>
+                              {new Date(featured.published_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </>
+                </Link>
+              )}
+            </div>
+
+            {/* Bottom section divider */}
+            <div
+              className="h-px"
+              style={{
+                background:
+                  'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)',
+              }}
+            />
+          </div>
+        </section>
+
+        {/* ── All posts grid ────────────────────────────────────────── */}
+        <section className="bg-[#f8fafc] py-24 px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-10">
+              <h2 className="text-2xl font-bold text-gray-900">All articles</h2>
+              <span className="text-sm text-gray-400 font-medium">{posts.length} posts</span>
+            </div>
+
+            {posts.length > 0 ? (
+              <PostsWithFilter posts={posts} featuredId={featured?.id} />
             ) : (
-              /* Empty state */
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
                   style={{ background: 'rgba(0,81,213,0.07)' }}
                 >
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0051D5" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#0051D5"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                   </svg>
                 </div>
                 <h2 className="text-xl font-bold text-gray-800 mb-2">Coming soon</h2>
                 <p className="text-gray-500 max-w-sm leading-relaxed">
-                  We're working on guides for freelancers. Check back soon — or start
+                  We&apos;re working on guides for freelancers. Check back soon — or start
                   your free trial in the meantime.
                 </p>
                 <Link
@@ -206,16 +290,20 @@ export default async function BlogPage() {
           </div>
         </section>
 
-        {/* ── CTA ──────────────────────────────────────────────────── */}
+        {/* ── CTA ───────────────────────────────────────────────────── */}
         <section
           className="relative overflow-hidden py-24 px-6"
-          style={{ background: 'linear-gradient(150deg, #002a9e 0%, #0051D5 55%, #1268ff 100%)' }}
+          style={{
+            background:
+              'linear-gradient(150deg, #002a9e 0%, #0051D5 55%, #1268ff 100%)',
+          }}
         >
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0"
             style={{
-              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
+              backgroundImage:
+                'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
               backgroundSize: '28px 28px',
             }}
           />
@@ -229,15 +317,22 @@ export default async function BlogPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <Link
                 href="/auth"
-                className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-8 rounded bg-white text-[#003db5] text-base font-bold hover:brightness-95 transition-all"
-                style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
+                className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-8 rounded text-base font-bold hover:brightness-95 transition-all"
+                style={{
+                  background: '#fff',
+                  color: '#003db5',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                }}
               >
                 Start for free
               </Link>
               <Link
                 href="/platform"
                 className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-8 rounded text-base font-semibold text-white transition-all hover:bg-white/10"
-                style={{ border: '1px solid rgba(255,255,255,0.28)', background: 'rgba(255,255,255,0.07)' }}
+                style={{
+                  border: '1px solid rgba(255,255,255,0.28)',
+                  background: 'rgba(255,255,255,0.07)',
+                }}
               >
                 See the platform
               </Link>
