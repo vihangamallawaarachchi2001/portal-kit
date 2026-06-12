@@ -288,6 +288,90 @@ export default function AboutPage() {
           </div>
         </section>
 
+        {/* ══ Talk to us — light ════════════════════════════════════ */}
+        <section className="bg-white py-24 px-6">
+          <div className="max-w-7xl mx-auto grid lg:grid-cols-[1.1fr_0.9fr] gap-16 lg:gap-20 items-center">
+
+            {/* Left: copy */}
+            <div className="space-y-6">
+              <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#0051D5]">
+                Get in touch
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 leading-[1.06]">
+                We&apos;re a small team.<br />We read every message.
+              </h2>
+              <p className="text-lg text-gray-500 leading-relaxed max-w-md">
+                Whether you have a question, a feature idea, or you just want to share
+                how you&apos;re using PortalKit — we genuinely want to hear it. Your
+                feedback directly shapes what we build next.
+              </p>
+              <p className="text-lg text-gray-500 leading-relaxed max-w-md">
+                We&apos;re not a faceless SaaS. There&apos;s a real person on the other
+                end of every reply, and we aim to respond within one business day.
+              </p>
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-2 h-12 px-8 rounded bg-[#0051D5] text-white text-base font-semibold hover:brightness-110 transition-all"
+                style={{ boxShadow: '0 4px 20px rgba(0,81,213,0.28)' }}
+              >
+                Send us a message
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                  <path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+            </div>
+
+            {/* Right: contact option cards */}
+            <div className="flex flex-col gap-3">
+              {[
+                {
+                  label:   'Questions & feedback',
+                  desc:    'Anything about the product, pricing, or how to get the most out of PortalKit.',
+                  time:    'Replies within 1 business day',
+                  tcolor:  'text-emerald-600',
+                  tbg:     'bg-emerald-50',
+                },
+                {
+                  label:   'Bug reports',
+                  desc:    'Something not working as expected? Tell us exactly what happened and we\'ll fix it.',
+                  time:    'Acknowledged within 4 hours',
+                  tcolor:  'text-amber-700',
+                  tbg:     'bg-amber-50',
+                },
+                {
+                  label:   'Partnership & press',
+                  desc:    'Integrations, co-marketing, media enquiries, and anything else that doesn\'t fit above.',
+                  time:    'Replies within 2 business days',
+                  tcolor:  'text-blue-700',
+                  tbg:     'bg-blue-50',
+                },
+              ].map(({ label, desc, time, tcolor, tbg }) => (
+                <Link
+                  key={label}
+                  href="/contact"
+                  className="group flex flex-col gap-2 rounded-2xl bg-white border border-gray-200 p-5 transition-all duration-200 hover:border-gray-300 hover:shadow-sm"
+                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-[15px] font-semibold text-gray-900">{label}</p>
+                    <svg
+                      className="shrink-0 mt-0.5 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all"
+                      width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden
+                    >
+                      <path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+                  <span className={`self-start text-[10px] font-semibold px-2.5 py-1 rounded-full ${tcolor} ${tbg}`}>
+                    {time}
+                  </span>
+                </Link>
+              ))}
+            </div>
+
+          </div>
+        </section>
+
         {/* ══ CTA — blue gradient ═══════════════════════════════════ */}
         <section
           className="relative overflow-hidden py-28 px-6"
