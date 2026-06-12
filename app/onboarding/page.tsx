@@ -1,11 +1,14 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { Check, CreditCard, ExternalLink, FileText, Layers, Loader2, Lock, Users } from 'lucide-react'
+import {
+  ArrowRight, Camera, Check, ChevronDown, FileText,
+  Layers, Loader2, Lock, Upload, Users, Zap,
+} from 'lucide-react'
 import Link from 'next/link'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useTransition } from 'react'
-import { saveFullName, skipStripeConnect, finishOnboarding } from './onboard-actions'
+import { saveProfile, uploadAvatarToStorage, finishOnboarding } from './onboard-actions'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,32 +21,96 @@ function toSlug(name: string) {
     .slice(0, 60)
 }
 
+const CURRENCIES = ['AUD', 'USD', 'GBP', 'EUR', 'CAD', 'NZD', 'SGD']
+
+const PLANS = [
+  {
+    id: 'free' as const,
+    name: 'Free',
+    price: { monthly: 0, annual: 0 },
+    features: ['1 active client portal', '3 file uploads', 'Invoice payments', 'PortalKit branding'],
+  },
+  {
+    id: 'pro' as const,
+    name: 'Pro',
+    price: { monthly: 15, annual: 12.5 },
+    features: ['Unlimited client portals', '5 GB file storage', 'Remove PortalKit branding', 'PDF invoices', 'Priority support'],
+    popular: true,
+  },
+  {
+    id: 'business' as const,
+    name: 'Business',
+    price: { monthly: 29, annual: 24 },
+    features: ['Everything in Pro', '20 GB storage', 'White-label portal', 'Weekly digest emails', 'Dedicated support'],
+  },
+]
+
 export default function OnboardingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const rawStep = parseInt(searchParams.get('step') ?? '0', 10)
   const initialStep = isNaN(rawStep) ? 0 : Math.min(Math.max(rawStep, 0), 2)
 
-  const [step, setStep]             = useState(initialStep)
-  const [fullName, setFullName]     = useState('')
-  const [clientName, setClientName] = useState('')
+  // ── Step state ────────────────────────────────────────────────────────────
+  const [step, setStep] = useState(initialStep)
+
+  // ── Step 0: Profile fields ────────────────────────────────────────────────
+  const [fullName, setFullName]             = useState('')
+  const [businessName, setBusinessName]     = useState('')
+  const [tagline, setTagline]               = useState('')
+  const [currency, setCurrency]             = useState('')
+  const [avatarUrl, setAvatarUrl]           = useState<string | null>(null)
+  const [avatarPreview, setAvatarPreview]   = useState<string | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // ── Step 1: Plan selection ────────────────────────────────────────────────
+  const [billing, setBilling]       = useState<'monthly' | 'annual'>('monthly')
+  const [planLoading, setPlanLoading] = useState<string | null>(null)
+
+  // ── Step 2: Client creation ───────────────────────────────────────────────
+  const [clientName, setClientName]   = useState('')
   const [clientEmail, setClientEmail] = useState('')
-  const [error, setError]           = useState<string | null>(null)
+
+  // ── Shared ────────────────────────────────────────────────────────────────
+  const [error, setError]            = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-  const [stripeLoading, setStripeLoading] = useState(false)
 
-  // ── Live preview values (step 0) ────────────────────────────────────────
-  const displayName    = fullName.trim() || 'Your Name'
-  const displayInitials = displayName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
-  const portalSlug     = toSlug(fullName || 'yourname')
+  // Live preview values (step 0)
+  const displayName     = fullName.trim() || 'Your Name'
+  const displayBusiness = businessName.trim() || null
+  const displayInitials = displayName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+  const portalSlug      = toSlug(fullName || 'yourname')
 
-  // ── Step 0: save name + advance ─────────────────────────────────────────
+  // ── Avatar upload ─────────────────────────────────────────────────────────
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarPreview(URL.createObjectURL(file))
+    setAvatarUploading(true)
+    try {
+      const url = await uploadAvatarToStorage(file)
+      setAvatarUrl(url)
+    } catch {
+      setAvatarUrl(null)
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
+  // ── Step 0: save profile + advance ───────────────────────────────────────
   async function handleStep0() {
     if (!fullName.trim()) { setError('Please enter your name.'); return }
     setError(null)
     startTransition(async () => {
       try {
-        await saveFullName(fullName)
+        await saveProfile({
+          fullName,
+          businessName: businessName || undefined,
+          tagline: tagline || undefined,
+          avatarUrl: avatarUrl ?? undefined,
+          baseCurrency: currency || undefined,
+        })
         setStep(1)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Something went wrong.')
@@ -51,39 +118,33 @@ export default function OnboardingPage() {
     })
   }
 
-  // ── Step 1: launch Stripe Connect ───────────────────────────────────────
-  async function handleConnectStripe() {
-    setStripeLoading(true)
+  // ── Step 1: free → advance; paid → Stripe Checkout ───────────────────────
+  async function handleSelectPlan(planId: string) {
     setError(null)
+    if (planId === 'free') {
+      setStep(2)
+      return
+    }
+    setPlanLoading(planId)
     try {
-      const res = await fetch('/api/billing/stripe-connect', {
+      const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: 'onboarding' }),
+        body: JSON.stringify({ plan: planId, billing, successUrl: '/onboarding?step=2' }),
       })
-      if (!res.ok) throw new Error('Failed to start Stripe onboarding.')
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Failed to start checkout.')
+      }
       const { url } = await res.json()
       window.location.href = url
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.')
-      setStripeLoading(false)
+      setPlanLoading(null)
     }
   }
 
-  // ── Step 1: skip Stripe ─────────────────────────────────────────────────
-  async function handleSkipStripe() {
-    setError(null)
-    startTransition(async () => {
-      try {
-        await skipStripeConnect()
-        setStep(2)
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Something went wrong.')
-      }
-    })
-  }
-
-  // ── Step 2: create first client + finish ────────────────────────────────
+  // ── Step 2: create first client + finish ─────────────────────────────────
   async function handleCreateClient(e: React.FormEvent) {
     e.preventDefault()
     if (!clientName.trim()) { setError('Client name is required.'); return }
@@ -99,10 +160,8 @@ export default function OnboardingPage() {
 
         let clientId: string | null = null
         if (res.ok) {
-          const data = await res.json()
-          clientId = data.id
+          clientId = (await res.json()).id
         } else if (res.status === 409) {
-          // Slug taken — append timestamp suffix and retry
           const slugFallback = `${slug}-${Date.now().toString(36)}`
           const retry = await fetch('/api/clients', {
             method: 'POST',
@@ -125,7 +184,7 @@ export default function OnboardingPage() {
     })
   }
 
-  // ── Step 2: skip client creation ─────────────────────────────────────────
+  // ── Step 2: skip ─────────────────────────────────────────────────────────
   async function handleSkipClient() {
     setError(null)
     startTransition(async () => {
@@ -142,7 +201,7 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-surface">
 
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 bg-surface/80 backdrop-blur-sm z-10 border-b border-outline-variant">
         <div className="flex items-center justify-between px-8 py-3.5 max-w-6xl mx-auto w-full">
           <Link href="/" className="flex items-center gap-2.5 shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -159,7 +218,7 @@ export default function OnboardingPage() {
                   key={i}
                   className={cn(
                     'h-1.5 rounded-full transition-all duration-500',
-                    step > i ? 'w-8 bg-ds-secondary' : step === i ? 'w-8 bg-ds-secondary' : 'w-5 bg-outline-variant'
+                    step >= i ? 'w-8 bg-ds-secondary' : 'w-5 bg-outline-variant'
                   )}
                 />
               ))}
@@ -168,42 +227,129 @@ export default function OnboardingPage() {
         </div>
       </header>
 
-      {/* ── Step 0: Name ────────────────────────────────────────────────────── */}
+      {/* ── Step 0: Profile Setup ─────────────────────────────────────────── */}
       {step === 0 && (
         <main className="max-w-6xl mx-auto w-full px-8 py-14 grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-14 lg:gap-20 items-start">
 
           {/* Form */}
-          <div className="flex flex-col gap-9 max-w-md">
+          <div className="flex flex-col gap-8 max-w-lg">
             <div className="flex flex-col gap-2.5">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-ds-secondary/10 border border-ds-secondary/20 w-fit text-xs font-semibold text-ds-secondary">
                 <span className="size-1.5 rounded-full bg-ds-secondary inline-block" />
                 Getting started
               </span>
               <h1 className="text-[1.85rem] font-bold text-on-surface tracking-tight leading-[1.2]">
-                What should we<br />call you?
+                Set up your profile
               </h1>
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                This is how you appear to clients across invoices, portals, and emails.
+                This is how you and your business appear across portals, invoices, and emails.
               </p>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="full-name" className="font-semibold text-on-surface text-sm">
-                Your name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="full-name"
-                type="text"
-                placeholder="Jane Smith"
-                value={fullName}
-                onChange={e => { setFullName(e.target.value); setError(null) }}
-                onKeyDown={e => e.key === 'Enter' && handleStep0()}
-                autoFocus
-                className="h-10"
-              />
-              <p className="text-xs text-on-surface-variant">
-                You can add a business name, logo, and tagline from Settings after sign-up.
-              </p>
+            {/* Logo + name row */}
+            <div className="flex items-start gap-5">
+              {/* Avatar uploader */}
+              <div className="flex flex-col items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative size-20 rounded-full border-2 border-dashed border-outline-variant hover:border-ds-secondary/50 bg-surface-container-low transition-colors overflow-hidden group"
+                >
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Logo preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full gap-1">
+                      <Camera className="size-5 text-on-surface-variant group-hover:text-ds-secondary transition-colors" />
+                    </div>
+                  )}
+                  {avatarUploading && (
+                    <div className="absolute inset-0 bg-surface/60 flex items-center justify-center">
+                      <Loader2 className="size-4 animate-spin text-ds-secondary" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Upload className="size-4 text-white" />
+                  </div>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <p className="text-[10px] text-on-surface-variant text-center leading-tight">Logo /<br />photo</p>
+              </div>
+
+              {/* Name + business name */}
+              <div className="flex-1 flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="full-name" className="font-semibold text-on-surface text-sm">
+                    Your name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="full-name"
+                    type="text"
+                    placeholder="Jane Smith"
+                    value={fullName}
+                    onChange={e => { setFullName(e.target.value); setError(null) }}
+                    onKeyDown={e => e.key === 'Enter' && handleStep0()}
+                    autoFocus
+                    className="h-10"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="business-name" className="font-semibold text-on-surface text-sm">
+                    Business name <span className="text-xs text-on-surface-variant font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    id="business-name"
+                    type="text"
+                    placeholder="Jane Smith Design"
+                    value={businessName}
+                    onChange={e => setBusinessName(e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Tagline + currency */}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="tagline" className="font-semibold text-on-surface text-sm">
+                    Tagline <span className="text-xs text-on-surface-variant font-normal">(optional)</span>
+                  </Label>
+                  <span className="text-[11px] text-on-surface-variant tabular-nums">{tagline.length}/120</span>
+                </div>
+                <Input
+                  id="tagline"
+                  type="text"
+                  placeholder="Crafting digital experiences that convert"
+                  value={tagline}
+                  onChange={e => setTagline(e.target.value.slice(0, 120))}
+                  className="h-10"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="currency" className="font-semibold text-on-surface text-sm">
+                  Base currency <span className="text-xs text-on-surface-variant font-normal">(optional)</span>
+                </Label>
+                <div className="relative">
+                  <select
+                    id="currency"
+                    value={currency}
+                    onChange={e => setCurrency(e.target.value)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 pr-8 text-sm text-on-surface appearance-none outline-none focus:ring-2 focus:ring-ring cursor-pointer transition-colors"
+                  >
+                    <option value="">Select currency…</option>
+                    {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-on-surface-variant pointer-events-none" />
+                </div>
+              </div>
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
@@ -211,7 +357,7 @@ export default function OnboardingPage() {
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleStep0}
-                disabled={isPending}
+                disabled={isPending || avatarUploading}
                 className="w-full h-11 rounded-xl bg-ds-secondary hover:bg-ds-secondary-container text-white font-semibold text-sm transition-colors shadow-sm disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {isPending ? <><Loader2 className="size-4 animate-spin" />Saving…</> : 'Continue →'}
@@ -234,6 +380,7 @@ export default function OnboardingPage() {
             </div>
             <div className="rounded-2xl bg-surface-container-low border border-outline-variant p-4">
               <div className="rounded-xl overflow-hidden border border-outline-variant/70 shadow-md">
+                {/* Browser chrome */}
                 <div className="bg-surface-container-high flex items-center gap-3 px-3 py-2.5 border-b border-outline-variant/50">
                   <div className="flex items-center gap-1.25 shrink-0">
                     <div className="size-2.5 rounded-full bg-ds-error/60" />
@@ -244,21 +391,40 @@ export default function OnboardingPage() {
                     portalkit.app/{portalSlug}
                   </div>
                 </div>
+                {/* Portal header */}
                 <div className="px-5 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #0051d5 0%, #316bf3 100%)' }}>
                   <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-white/15 ring-2 ring-white/25 flex items-center justify-center text-white font-bold text-sm">
-                      {displayInitials}
+                    <div className="size-10 rounded-xl overflow-hidden ring-2 ring-white/25 shrink-0 bg-white/15">
+                      {avatarPreview ? (
+                        <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
+                          {displayInitials}
+                        </div>
+                      )}
                     </div>
                     <div>
-                      <p className="text-white font-semibold text-sm leading-snug">{displayName}</p>
-                      <p className="text-white/60 text-[11px]">Client portal</p>
+                      <p className="text-white font-semibold text-sm leading-snug">
+                        {displayBusiness ?? displayName}
+                      </p>
+                      {displayBusiness && (
+                        <p className="text-white/70 text-[11px] leading-tight">{displayName}</p>
+                      )}
+                      {tagline.trim() ? (
+                        <p className="text-white/50 text-[10px] leading-tight mt-0.5 max-w-48 truncate">{tagline}</p>
+                      ) : !displayBusiness ? (
+                        <p className="text-white/60 text-[11px]">Client portal</p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
+                {/* Portal body */}
                 <div className="bg-surface px-4 py-4 flex flex-col gap-3">
                   <div>
                     <p className="text-xs font-semibold text-on-surface">Welcome back 👋</p>
-                    <p className="text-[10px] text-on-surface-variant mt-0.5">Here's your snapshot with {displayName}.</p>
+                    <p className="text-[10px] text-on-surface-variant mt-0.5">
+                      Here&apos;s your snapshot with {displayBusiness ?? displayName}.
+                    </p>
                   </div>
                   <div className="bg-white rounded-xl border border-outline-variant/50 px-3 py-2.5 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
@@ -277,82 +443,133 @@ export default function OnboardingPage() {
             </div>
             <p className="text-[11px] text-center text-on-surface-variant">Preview updates as you type</p>
           </div>
+
         </main>
       )}
 
-      {/* ── Step 1: Stripe Connect ──────────────────────────────────────────── */}
+      {/* ── Step 1: Plan Selection ─────────────────────────────────────────── */}
       {step === 1 && (
-        <main className="flex-1 flex items-center justify-center px-8 py-14">
-          <div className="w-full max-w-md flex flex-col gap-8">
+        <main className="max-w-5xl mx-auto w-full px-8 py-14 flex flex-col gap-10">
 
-            {/* Icon */}
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="size-16 rounded-2xl bg-ds-secondary/10 border border-ds-secondary/15 flex items-center justify-center">
-                <CreditCard className="size-8 text-ds-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <h1 className="text-2xl font-bold text-on-surface tracking-tight">Get paid through your portals</h1>
-                <p className="text-sm text-on-surface-variant leading-relaxed max-w-sm mx-auto">
-                  Connect Stripe so clients can pay invoices directly — no chasing, no back-and-forth.
-                </p>
-              </div>
-            </div>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-ds-secondary/10 border border-ds-secondary/20 w-fit text-xs font-semibold text-ds-secondary">
+              <span className="size-1.5 rounded-full bg-ds-secondary inline-block" />
+              Choose your plan
+            </span>
+            <h1 className="text-[1.85rem] font-bold text-on-surface tracking-tight leading-[1.2]">
+              Start free, upgrade anytime
+            </h1>
+            <p className="text-sm text-on-surface-variant max-w-sm leading-relaxed">
+              No credit card required for the free plan. Upgrade at any time from Settings.
+            </p>
+          </div>
 
-            {/* Benefits */}
-            <div className="rounded-xl border border-outline-variant bg-surface-container-low p-5 space-y-3">
-              {[
-                'Clients pay invoices with a single click',
-                'Payments land in your bank within 2 business days',
-                'Invoice status updates automatically when paid',
-              ].map(b => (
-                <div key={b} className="flex items-start gap-3">
-                  <span className="size-5 rounded-full bg-ds-secondary/10 border border-ds-secondary/20 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check className="size-3 text-ds-secondary" strokeWidth={3} />
-                  </span>
-                  <span className="text-sm text-on-surface leading-snug">{b}</span>
-                </div>
+          {/* Billing toggle */}
+          <div className="flex justify-center">
+            <div className="flex items-center bg-surface-container border border-outline-variant rounded-lg p-0.5">
+              {(['monthly', 'annual'] as const).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setBilling(p)}
+                  className={cn(
+                    'px-4 py-1.5 rounded-md text-xs font-semibold transition-all',
+                    billing === p
+                      ? 'bg-white text-on-surface shadow-sm'
+                      : 'text-on-surface-variant hover:text-on-surface'
+                  )}
+                >
+                  {p === 'monthly' ? 'Monthly' : 'Annual · 20% off'}
+                </button>
               ))}
             </div>
-
-            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-
-            {/* CTAs */}
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleConnectStripe}
-                disabled={stripeLoading || isPending}
-                className="w-full h-11 rounded-xl bg-ds-secondary hover:bg-ds-secondary-container text-white font-semibold text-sm transition-colors shadow-sm disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {stripeLoading ? (
-                  <><Loader2 className="size-4 animate-spin" />Redirecting to Stripe…</>
-                ) : (
-                  <><ExternalLink className="size-4" />Connect Stripe</>
-                )}
-              </button>
-              <button
-                onClick={handleSkipStripe}
-                disabled={stripeLoading || isPending}
-                className="w-full h-10 rounded-xl border border-outline-variant text-on-surface-variant hover:text-on-surface hover:border-outline transition-colors text-sm font-medium disabled:opacity-50"
-              >
-                {isPending ? <Loader2 className="size-4 animate-spin mx-auto" /> : "Skip for now — I'll set this up later"}
-              </button>
-            </div>
-
-            <p className="text-center text-xs text-on-surface-variant/60">
-              Takes about 2 minutes. You can also connect Stripe later from{' '}
-              <span className="font-medium">Settings → Billing</span>.
-            </p>
-
           </div>
+
+          {/* Plan cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {PLANS.map(p => (
+              <div
+                key={p.id}
+                className={cn(
+                  'relative rounded-xl border-2 p-6 flex flex-col gap-5',
+                  p.popular
+                    ? 'border-ds-secondary shadow-lg shadow-ds-secondary/10'
+                    : 'border-outline-variant'
+                )}
+              >
+                {p.popular && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-ds-secondary px-3 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">
+                      <Zap className="size-2.5" /> Popular
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <p className="font-extrabold text-on-surface text-lg">{p.name}</p>
+                  <div className="flex items-baseline gap-1 mt-1.5">
+                    <span className="text-3xl font-extrabold text-on-surface">
+                      ${billing === 'annual' ? p.price.annual : p.price.monthly}
+                    </span>
+                    <span className="text-sm text-on-surface-variant">/mo</span>
+                  </div>
+                  {billing === 'annual' && p.price.annual > 0 && (
+                    <p className="text-xs text-ds-tertiary-action font-semibold mt-0.5">
+                      Billed ${(p.price.annual * 12).toFixed(0)}/year
+                    </p>
+                  )}
+                  {p.id === 'free' && (
+                    <p className="text-xs text-on-surface-variant mt-0.5">Free forever</p>
+                  )}
+                </div>
+
+                <ul className="flex flex-col gap-2.5 flex-1">
+                  {p.features.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-on-surface">
+                      <Check className="size-4 text-ds-secondary shrink-0 mt-0.5" strokeWidth={2.5} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => handleSelectPlan(p.id)}
+                  disabled={planLoading !== null}
+                  className={cn(
+                    'h-10 rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60',
+                    p.popular
+                      ? 'bg-ds-secondary text-white hover:bg-ds-secondary-container shadow-sm'
+                      : p.id === 'free'
+                      ? 'border-2 border-outline-variant text-on-surface-variant hover:border-outline hover:text-on-surface'
+                      : 'border-2 border-ds-secondary/30 text-ds-secondary hover:bg-ds-secondary/5'
+                  )}
+                >
+                  {planLoading === p.id ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : p.id === 'free' ? (
+                    <>Continue free <ArrowRight className="size-3.5" /></>
+                  ) : (
+                    <>Choose {p.name} <ArrowRight className="size-3.5" /></>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+
+          <p className="text-center text-xs text-on-surface-variant">
+            You can change your plan at any time from{' '}
+            <span className="font-medium text-on-surface">Settings → Billing</span>.
+          </p>
+
         </main>
       )}
 
-      {/* ── Step 2: Create First Client ─────────────────────────────────────── */}
+      {/* ── Step 2: Create First Client ───────────────────────────────────── */}
       {step === 2 && (
         <main className="flex-1 flex items-center justify-center px-8 py-14">
           <div className="w-full max-w-md flex flex-col gap-8">
 
-            {/* Header */}
             <div className="flex flex-col items-center gap-4 text-center">
               <div className="size-16 rounded-2xl bg-ds-secondary/10 border border-ds-secondary/15 flex items-center justify-center">
                 <Users className="size-8 text-ds-secondary" />
@@ -360,12 +577,11 @@ export default function OnboardingPage() {
               <div className="space-y-1.5">
                 <h1 className="text-2xl font-bold text-on-surface tracking-tight">Add your first client</h1>
                 <p className="text-sm text-on-surface-variant leading-relaxed max-w-sm mx-auto">
-                  Create a portal for your first client. You can share the link as soon as you're done.
+                  Create a portal for your first client. You can share the link as soon as you&apos;re done.
                 </p>
               </div>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleCreateClient} className="flex flex-col gap-5">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="client-name" className="font-semibold text-on-surface text-sm">
@@ -382,13 +598,16 @@ export default function OnboardingPage() {
                 />
                 {clientName.trim() && (
                   <p className="text-xs text-on-surface-variant">
-                    Portal URL: <span className="font-mono text-ds-secondary">portalkit.app/p/{toSlug(clientName)}</span>
+                    Portal URL:{' '}
+                    <span className="font-mono text-ds-secondary">portalkit.app/p/{toSlug(clientName)}</span>
                   </p>
                 )}
               </div>
+
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="client-email" className="font-semibold text-on-surface text-sm">
-                  Client email <span className="text-red-500">*</span>
+                  Client email{' '}
+                  <span className="text-xs text-on-surface-variant font-normal">(optional)</span>
                 </Label>
                 <Input
                   id="client-email"
@@ -412,13 +631,13 @@ export default function OnboardingPage() {
               </button>
             </form>
 
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center">
               <button
                 onClick={handleSkipClient}
                 disabled={isPending}
                 className="text-sm text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-50"
               >
-                I'll do this later → go to dashboard
+                I&apos;ll do this later → go to dashboard
               </button>
             </div>
 

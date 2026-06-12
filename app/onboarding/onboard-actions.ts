@@ -96,6 +96,39 @@ export async function updateProfile({
   return { success: true }
 }
 
+export async function saveProfile({
+  fullName,
+  businessName,
+  tagline,
+  avatarUrl,
+  baseCurrency,
+}: {
+  fullName: string
+  businessName?: string
+  tagline?: string
+  avatarUrl?: string | null
+  baseCurrency?: string
+}) {
+  const supabase = await createClient()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: fullName.trim() || null,
+      business_name: businessName?.trim() || null,
+      tagline: tagline?.trim() || null,
+      ...(avatarUrl !== undefined ? { avatar_url: avatarUrl } : {}),
+      ...(baseCurrency ? { base_currency: baseCurrency } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id)
+
+  if (error) throw new Error(error.message)
+  return { success: true }
+}
+
 export async function uploadAvatarToStorage(file: File) {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()

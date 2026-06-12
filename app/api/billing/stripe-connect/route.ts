@@ -25,30 +25,35 @@ export async function POST(req: Request) {
   const stripe = getStripe()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portalkit.app'
 
-  let accountId = profile?.stripe_connect_account_id
+  try {
+    let accountId = profile?.stripe_connect_account_id
 
-  // Create a new Express account if they don't have one
-  if (!accountId) {
-    const account = await stripe.accounts.create({ type: 'express' })
-    accountId = account.id
+    // Create a new Express account if they don't have one
+    if (!accountId) {
+      const account = await stripe.accounts.create({ type: 'express' })
+      accountId = account.id
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ stripe_connect_account_id: accountId, stripe_connect_onboarded: false })
-      .eq('id', user.id)
+      const { error } = await supabase
+        .from('profiles')
+        .update({ stripe_connect_account_id: accountId, stripe_connect_onboarded: false })
+        .eq('id', user.id)
 
-    if (error) return internalError(error.message)
+      if (error) return internalError(error.message)
+    }
+
+    // Create an account link for onboarding / re-onboarding
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${appUrl}/api/billing/stripe-connect`,
+      return_url:  `${appUrl}/api/billing/stripe-connect/return?uid=${user.id}&from=${from}`,
+      type: 'account_onboarding',
+    })
+
+    return ok({ url: link.url })
+  } catch (err) {
+    console.error('[stripe-connect] POST error:', err)
+    return internalError('Failed to start Stripe Connect. Please verify STRIPE_SECRET_KEY is configured.')
   }
-
-  // Create an account link for onboarding / re-onboarding
-  const link = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: `${appUrl}/api/billing/stripe-connect`,
-    return_url:  `${appUrl}/api/billing/stripe-connect/return?uid=${user.id}&from=${from}`,
-    type: 'account_onboarding',
-  })
-
-  return ok({ url: link.url })
 }
 
 // DELETE — disconnect Stripe Connect account

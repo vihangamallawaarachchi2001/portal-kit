@@ -24,11 +24,15 @@ export async function POST(req: Request) {
   let body: unknown
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }
 
-  const { plan, billing } = body as { plan?: string; billing?: string }
+  const { plan, billing, successUrl } = body as { plan?: string; billing?: string; successUrl?: string }
   if (!plan || !billing) return badRequest('plan and billing are required')
 
   const priceId = PRICE_IDS[plan]?.[billing]
-  if (!priceId) return badRequest('Invalid plan or billing period')
+  if (!priceId) return badRequest(
+    process.env.NODE_ENV === 'development'
+      ? `Stripe price ID not configured for ${plan}_${billing} — check .env.local`
+      : 'Unable to process upgrade. Please contact support.'
+  )
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -72,7 +76,9 @@ export async function POST(req: Request) {
     mode: 'subscription',
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/dashboard/settings/billing?upgraded=true`,
+    success_url: successUrl?.startsWith('/')
+      ? `${appUrl}${successUrl}`
+      : `${appUrl}/dashboard/settings/billing?upgraded=true`,
     cancel_url: `${appUrl}/dashboard/settings/billing`,
     subscription_data: { metadata: { supabase_user_id: user.id } },
     ...(isFoundingMember && foundingMemberCouponId
