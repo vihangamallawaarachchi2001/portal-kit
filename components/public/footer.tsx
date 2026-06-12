@@ -13,9 +13,7 @@ const LINKS = {
     { label: 'Careers',  href: '/careers' },
   ],
   Support: [
-    { label: 'Documentation', href: '/docs'    },
-    { label: 'Help Center',   href: '/help'    },
-    { label: 'Contact',       href: '/contact' },
+    { label: 'Contact', href: '/contact' },
   ],
 } as const
 
