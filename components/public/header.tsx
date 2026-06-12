@@ -9,8 +9,8 @@ import { useUser } from '../providers/auth-provider'
 import { logout } from '@/app/auth/action'
 
 const NAV_LINKS = [
-  { label: 'Platform',   href: '/features' },
-  { label: 'Solutions',  href: '/about'    },
+  { label: 'Platform',   href: '/platform'  },
+  { label: 'About',      href: '/about'     },
   { label: 'Developers', href: '/docs'     },
   { label: 'Pricing',    href: '/pricing'  },
 ] as const

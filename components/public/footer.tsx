@@ -3,12 +3,12 @@ import { Layers } from 'lucide-react'
 
 const LINKS = {
   Product: [
-    { label: 'Features',  href: '/features' },
+    { label: 'Platform',  href: '/platform' },
     { label: 'Pricing',   href: '/pricing'  },
     { label: 'Security',  href: '/security' },
   ],
   Company: [
-    { label: 'About',    href: '/about'   },
+    { label: 'About',     href: '/about'    },
     { label: 'Blog',     href: '/blog'    },
     { label: 'Careers',  href: '/careers' },
   ],
