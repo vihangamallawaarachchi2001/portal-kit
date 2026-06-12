@@ -8,9 +8,8 @@ const LINKS = {
     { label: 'Security',  href: '/security' },
   ],
   Company: [
-    { label: 'About',     href: '/about'    },
-    { label: 'Blog',     href: '/blog'    },
-    { label: 'Careers',  href: '/careers' },
+    { label: 'About', href: '/about' },
+    { label: 'Blog',  href: '/blog'  },
   ],
   Support: [
     { label: 'Contact', href: '/contact' },

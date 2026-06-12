@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Mail, CreditCard, Shield, MessageSquare, Clock, BookOpen } from 'lucide-react'
+import { Mail, CreditCard, Shield, MessageSquare, Clock, BookOpen, Check, Users, HeartHandshake } from 'lucide-react'
 import { Header } from '@/components/public/header'
 import Footer from '@/components/public/footer'
 import ContactForm from '@/components/contact/contact-form'
@@ -49,7 +49,7 @@ function DotGrid() {
       aria-hidden
       className="pointer-events-none absolute inset-0"
       style={{
-        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.028) 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px)',
         backgroundSize: '28px 28px',
       }}
     />
@@ -63,63 +63,177 @@ export default function ContactPage() {
       <main className="pt-16">
 
         {/* ── Hero ──────────────────────────────────────────────── */}
-        <section className="relative bg-[#060b18] pt-28 pb-16 px-6 overflow-hidden">
+        <section className="relative bg-[#060b18] pt-36 pb-28 px-6 overflow-hidden">
           <DotGrid />
+          {/* Blue glow offset toward the bento side */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-px"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(0,81,213,0.45), transparent)' }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -top-32 right-1/4 w-[600px] h-[500px]"
-            style={{ background: 'radial-gradient(ellipse at center, rgba(0,81,213,0.11) 0%, transparent 68%)' }}
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(ellipse 80% 65% at 68% 42%, rgba(0,81,213,0.11) 0%, transparent 65%)',
+            }}
           />
 
-          <div className="relative max-w-5xl mx-auto">
-            <p className="text-[11px] font-bold uppercase tracking-[0.15em] mb-4" style={{ color: '#6B9EFF' }}>
-              Contact
-            </p>
-            <h1
-              className="font-extrabold text-white tracking-tight leading-[1.06]"
-              style={{ fontSize: 'clamp(2.5rem, 4.5vw, 3.5rem)' }}
-            >
-              We&apos;d love to<br />
-              <span
-                style={{
-                  backgroundImage: 'linear-gradient(90deg, #60a5fa, #93c5fd)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
+          <div className="relative max-w-7xl mx-auto grid lg:grid-cols-[1.05fr_0.95fr] gap-12 xl:gap-20 items-center">
+
+            {/* Left: headline + CTAs */}
+            <div className="space-y-8 max-w-xl">
+              <p
+                className="text-[11px] font-semibold tracking-[0.16em] uppercase"
+                style={{ color: '#6B9EFF' }}
               >
-                hear from you.
-              </span>
-            </h1>
-            <p className="mt-5 text-base max-w-md leading-relaxed" style={{ color: 'rgba(255,255,255,0.48)' }}>
-              We&apos;re a small team and we read every message. Send us a note and you&apos;ll
-              hear back from a real person within one business day.
-            </p>
+                Contact
+              </p>
+              <h1
+                className="font-extrabold tracking-tight text-white leading-[1.03]"
+                style={{ fontSize: 'clamp(2.75rem, 5.5vw, 4.25rem)' }}
+              >
+                We&apos;d love to<br />hear from you.
+              </h1>
+              <p
+                className="text-xl leading-relaxed max-w-md"
+                style={{ color: 'rgba(255,255,255,0.52)' }}
+              >
+                We&apos;re a small team and we read every message. You&apos;ll hear back from
+                a real person — not a bot — within one business day.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  href="#contact-form"
+                  className="inline-flex items-center justify-center h-12 px-8 rounded bg-[#0051D5] text-white text-base font-semibold hover:brightness-110 transition-all"
+                  style={{ boxShadow: '0 4px 20px rgba(0,81,213,0.4)' }}
+                >
+                  Send a message
+                </Link>
+                <a
+                  href="mailto:hello@portalkit.com"
+                  className="inline-flex items-center justify-center h-12 px-8 rounded text-base font-semibold text-white transition-all hover:bg-white/8"
+                  style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.05)' }}
+                >
+                  Email us directly
+                </a>
+              </div>
+              {/* Trust chips */}
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                {[
+                  'Replies in < 1 business day',
+                  'Real people, no bots',
+                  'Free support on all plans',
+                ].map(t => (
+                  <span key={t} className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                    <Check size={11} strokeWidth={2.5} className="text-blue-400/70 shrink-0" />
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-            {/* Response time pill */}
-            <div
-              className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.10)',
-                color: 'rgba(255,255,255,0.55)',
-              }}
-            >
-              <span
-                className="size-2 rounded-full shrink-0"
-                style={{ background: '#4ade80', boxShadow: '0 0 6px #4ade80' }}
-              />
-              Typically replies within 1 business day
+            {/* Right: 2×2 contact bento */}
+            <div className="grid grid-cols-2 gap-3">
+
+              {/* Response time */}
+              <div
+                className="rounded-2xl p-5 flex flex-col gap-3"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <div>
+                  <p className="text-[10px] font-mono mb-1" style={{ color: 'rgba(255,255,255,0.28)' }}>response time</p>
+                  <p className="text-3xl font-extrabold text-white leading-none">&lt; 1 day</p>
+                  <span
+                    className="inline-block mt-2 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80' }}
+                  >
+                    ● Typically faster
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">One business day</p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Mon–Fri, 9 am–6 pm AEST
+                  </p>
+                </div>
+              </div>
+
+              {/* Human support */}
+              <div
+                className="rounded-2xl p-5 flex flex-col gap-3"
+                style={{ background: 'rgba(0,81,213,0.09)', border: '1px solid rgba(0,81,213,0.24)' }}
+              >
+                <div>
+                  <p className="text-[10px] font-mono mb-1" style={{ color: 'rgba(255,255,255,0.28)' }}>support type</p>
+                  <div className="flex items-center gap-2">
+                    <Users size={28} strokeWidth={1.5} className="text-blue-300 shrink-0" />
+                  </div>
+                  <span
+                    className="inline-block mt-2 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.6)' }}
+                  >
+                    No AI bots
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Real people</p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Straight to our inbox, always
+                  </p>
+                </div>
+              </div>
+
+              {/* Channels */}
+              <div
+                className="rounded-2xl p-5 flex flex-col gap-3"
+                style={{ background: 'rgba(0,81,213,0.09)', border: '1px solid rgba(0,81,213,0.24)' }}
+              >
+                <div>
+                  <p className="text-[10px] font-mono mb-1" style={{ color: 'rgba(255,255,255,0.28)' }}>contact channels</p>
+                  <p className="text-3xl font-extrabold text-white leading-none">3</p>
+                  <span
+                    className="inline-block mt-2 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.6)' }}
+                  >
+                    General · Billing · Security
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Right inbox, first time</p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Route your question directly
+                  </p>
+                </div>
+              </div>
+
+              {/* Free support */}
+              <div
+                className="rounded-2xl p-5 flex flex-col gap-3"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <div>
+                  <p className="text-[10px] font-mono mb-1" style={{ color: 'rgba(255,255,255,0.28)' }}>cost</p>
+                  <div className="flex items-center gap-2">
+                    <HeartHandshake size={28} strokeWidth={1.5} className="text-white/70 shrink-0" />
+                  </div>
+                  <span
+                    className="inline-block mt-2 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
+                  >
+                    All plans
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Free for everyone</p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Including the free tier
+                  </p>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
 
         {/* ── Main content ──────────────────────────────────────── */}
-        <section className="bg-white py-20 px-6">
+        <section id="contact-form" className="bg-white py-20 px-6 scroll-mt-16">
           <div className="max-w-5xl mx-auto">
             <div className="lg:grid lg:grid-cols-[340px_1fr] gap-14 items-start">
 
