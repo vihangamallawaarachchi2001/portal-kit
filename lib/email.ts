@@ -9,6 +9,7 @@ interface SendOptions {
   to: string
   subject: string
   html: string
+  replyTo?: string
 }
 
 async function send(opts: SendOptions) {
@@ -17,6 +18,7 @@ async function send(opts: SendOptions) {
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
+    ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
   })
   if (error) console.error('[email]', error)
 }
@@ -798,6 +800,63 @@ export async function sendTeamInviteEmail({
       <a href="${acceptUrl}" class="button">Accept invitation →</a>
       <hr class="divider" />
       <p class="muted">This invitation expires in 7 days. If you didn't expect this, you can safely ignore this email.</p>
+    `),
+  })
+}
+
+// Contact form submitted via /contact page
+export async function sendContactFormEmail({
+  name,
+  email,
+  topic,
+  message,
+}: {
+  name: string
+  email: string
+  topic: string
+  message: string
+}) {
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (!adminEmail) {
+    console.warn('[email] ADMIN_EMAIL not set — contact form email skipped')
+    return
+  }
+
+  const safeMessage = message
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br />')
+
+  await send({
+    to: adminEmail,
+    replyTo: `${name} <${email}>`,
+    subject: `[Contact] ${topic} — ${name}`,
+    html: baseTemplate(`
+      <p style="font-size:13px;color:#45464d;margin:0 0 20px;">
+        New contact form submission from <strong style="color:#0b1c30;">${name}</strong>.
+        Reply directly to this email to respond.
+      </p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13px;">
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #e5eeff;color:#45464d;width:70px;vertical-align:top;">Name</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e5eeff;font-weight:600;color:#0b1c30;">${name}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #e5eeff;color:#45464d;vertical-align:top;">Email</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e5eeff;">
+            <a href="mailto:${email}" style="color:#0051d5;text-decoration:none;">${email}</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;color:#45464d;vertical-align:top;">Topic</td>
+          <td style="padding:10px 0;font-weight:600;color:#0b1c30;">${topic}</td>
+        </tr>
+      </table>
+      <p style="font-size:13px;font-weight:600;color:#0b1c30;margin:0 0 10px;">Message</p>
+      <div style="background:#f8f9ff;border-radius:8px;padding:18px;font-size:14px;line-height:1.75;color:#0b1c30;border:1px solid #e5eeff;">
+        ${safeMessage}
+      </div>
     `),
   })
 }
