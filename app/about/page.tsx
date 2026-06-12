@@ -1,50 +1,63 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Heart, Zap, Eye, Shield, Check } from 'lucide-react'
+import { Check, Zap, Eye, Heart, Shield } from 'lucide-react'
 import { Header } from '@/components/public/header'
 import Footer from '@/components/public/footer'
-import { PageHero } from '@/components/public/page-hero'
-import { Button } from '@/components/ui/button'
 
 export const metadata: Metadata = {
   title: 'About',
   description:
-    'PortalKit was built by freelancers, for freelancers. Learn about our mission to make client collaboration professional, simple, and stress-free.',
+    'PortalKit was built by freelancers who got tired of losing clients not because of their work, but because of how they delivered it.',
 }
+
+/* ─── Primitives ────────────────────────────────────────────────── */
+
+function DotGrid() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0"
+      style={{
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+      }}
+    />
+  )
+}
+
+/* ─── Data ──────────────────────────────────────────────────────── */
+
+const STATS = [
+  { value: '2026',      label: 'Year founded'        },
+  { value: '< 10 min', label: 'To set up a portal'   },
+  { value: '0',        label: 'Accounts for clients' },
+  { value: '1',        label: 'Place for all of it'  },
+]
 
 const VALUES = [
   {
-    icon: Zap,
+    Icon: Zap,
     title: 'Simplicity first',
-    description:
-      "If a freelancer can't set it up in 10 minutes, it's not done. Every feature earns its place by solving a real problem, not by sounding impressive.",
+    body: "If a freelancer can't set it up in 10 minutes, it's not done. Every feature earns its place by solving a real problem, not by sounding impressive.",
   },
   {
-    icon: Eye,
+    Icon: Eye,
     title: 'Radical transparency',
-    description:
-      'No hidden fees, no dark patterns, no lock-in. The relationship between a tool and its users should be as honest as the work you do for your clients.',
+    body: 'No hidden fees, no dark patterns, no lock-in. The relationship between a tool and its users should be as honest as the work you do for your clients.',
   },
   {
-    icon: Heart,
+    Icon: Heart,
     title: 'Client-centric delivery',
-    description:
-      "Great freelance work deserves a great delivery experience. We obsess over the client side of PortalKit just as much as the freelancer side.",
+    body: "Great freelance work deserves a great delivery experience. We obsess over the client side of PortalKit just as much as the freelancer side.",
   },
   {
-    icon: Shield,
+    Icon: Shield,
     title: 'Reliability as a feature',
-    description:
-      "When you're presenting to a client, things need to work. We treat uptime, security, and performance as core features, not afterthoughts.",
+    body: "When you're presenting to a client, things need to work. We treat uptime, security, and performance as core features, not afterthoughts.",
   },
 ]
 
-const STATS = [
-  { value: '2023',   label: 'Year founded' },
-  { value: '2,000+', label: 'Freelancers served' },
-  { value: '$4M+',   label: 'Invoiced through portals' },
-  { value: '98%',    label: 'Client satisfaction' },
-]
+/* ─── Page ──────────────────────────────────────────────────────── */
 
 export default function AboutPage() {
   return (
@@ -52,125 +65,269 @@ export default function AboutPage() {
       <Header />
       <main className="pt-16">
 
-        <PageHero
-          eyebrow="About PortalKit"
-          headline="Built by freelancers,"
-          accentLine="for freelancers."
-          description="We got tired of losing clients not because of our work, but because of how we delivered it. So we built the tool we always wished existed."
-        />
+        {/* ══ Hero ═════════════════════════════════════════════════ */}
+        <section className="relative bg-[#060b18] pt-36 pb-28 px-6 overflow-hidden">
+          <DotGrid />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'radial-gradient(ellipse 65% 55% at 50% 60%, rgba(0,81,213,0.1) 0%, transparent 70%)' }}
+          />
 
-        {/* ── Our story ─────────────────────────────────────────── */}
-        <section className="bg-surface py-20 px-6">
-          <div className="mx-auto max-w-5xl">
-            <div className="flex flex-col md:flex-row gap-16 items-start">
-              <div className="flex-1 space-y-5">
-                <p className="text-sm font-semibold uppercase tracking-widest text-ds-secondary">Our story</p>
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-on-surface">
-                  The problem we lived through
-                </h2>
-                <p className="text-base text-on-surface-variant leading-relaxed">
-                  Before PortalKit, we ran our client projects the way most freelancers
-                  do: email threads for feedback, Dropbox links for files, separate
-                  invoicing apps that clients never bothered logging into, and constant
-                  &ldquo;how is it going?&rdquo; check-ins that ate up half our week.
-                </p>
-                <p className="text-base text-on-surface-variant leading-relaxed">
-                  We were doing excellent work, but delivering it in a way that felt
-                  fragmented and unprofessional. Clients sensed that. Some walked away
-                  not because our design was bad, but because the experience of
-                  working with us felt disorganised.
-                </p>
-                <p className="text-base text-on-surface-variant leading-relaxed">
-                  In 2023, after researching every tool on the market and finding
-                  nothing that fit the freelance workflow, we built PortalKit —
-                  a single, branded portal that a freelancer can set up in minutes
-                  and a client can use without creating an account.
-                </p>
-              </div>
-              <div className="flex-1 md:max-w-xs">
-                <div className="rounded-2xl bg-[#080d1a] border border-white/10 p-6 space-y-5">
-                  <div
-                    className="size-12 rounded-xl bg-ds-secondary/20 flex items-center justify-center text-2xl"
-                    aria-hidden
-                  >
-                    ✦
-                  </div>
-                  <blockquote className="text-sm leading-relaxed italic" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                    &ldquo;We realised the gap wasn&apos;t in the quality of work — it was in
-                    the delivery experience. PortalKit is our answer to that.&rdquo;
-                  </blockquote>
-                  <div className="border-t border-white/10 pt-4">
-                    <p className="text-sm font-semibold text-white">The PortalKit Team</p>
-                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Founders, 2023</p>
-                  </div>
-                </div>
-              </div>
+          <div className="relative max-w-3xl mx-auto text-center space-y-8">
+            <p className="text-[11px] font-semibold tracking-[0.16em] uppercase" style={{ color: '#6B9EFF' }}>
+              Our story
+            </p>
+
+            <h1
+              className="font-extrabold tracking-tight text-white leading-[1.06]"
+              style={{ fontSize: 'clamp(2.25rem, 5vw, 3.75rem)' }}
+            >
+              We built the tool we<br />
+              <span style={{ color: 'rgba(255,255,255,0.4)' }}>always wished existed.</span>
+            </h1>
+
+            <p className="text-xl leading-relaxed max-w-xl mx-auto" style={{ color: 'rgba(255,255,255,0.52)' }}>
+              PortalKit started when we realised we were losing clients not because of our
+              work — but because of how we delivered it.
+            </p>
+
+            <div
+              className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full text-sm"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.45)',
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#0051D5]" />
+              Founded 2026 &nbsp;·&nbsp; Built by freelancers &nbsp;·&nbsp; For freelancers
             </div>
           </div>
         </section>
 
-        {/* ── Stats bar (dark, like home) ───────────────────────── */}
-        <section className="bg-[#080d1a] px-6 py-16 border-y border-white/5">
-          <div className="mx-auto max-w-5xl">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
-              {STATS.map(({ value, label }) => (
-                <div key={label} className="flex flex-col items-center text-center gap-2">
-                  <span className="text-3xl md:text-4xl font-bold tracking-tight text-blue-400">{value}</span>
-                  <span className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+        {/* ══ Story — light ════════════════════════════════════════ */}
+        <section className="bg-[#f8fafc] py-24 px-6">
+          <div className="max-w-7xl mx-auto grid lg:grid-cols-[1.1fr_0.9fr] gap-16 lg:gap-20 items-start">
+
+            {/* Left: story copy */}
+            <div className="space-y-6">
+              <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#0051D5]">
+                The problem we lived through
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 leading-[1.06]">
+                Great work.<br />Messy delivery.
+              </h2>
+              <p className="text-lg text-gray-500 leading-relaxed">
+                Before PortalKit, we ran our client projects the way most freelancers do —
+                email threads for feedback, Dropbox links for files, a separate invoicing
+                app that clients never bothered logging into, and constant &ldquo;how is it
+                going?&rdquo; check-ins that ate up half our week.
+              </p>
+              <p className="text-lg text-gray-500 leading-relaxed">
+                We were doing excellent work but delivering it in a way that felt fragmented
+                and unprofessional. Some clients sensed that and walked away — not because
+                our design was bad, but because the experience of working with us felt
+                disorganised.
+              </p>
+              <p className="text-lg text-gray-500 leading-relaxed">
+                In 2026, after researching every tool on the market and finding nothing that
+                fit the freelance workflow, we built PortalKit — a single, branded portal
+                that a freelancer can set up in minutes and a client can access with one
+                link, no account required.
+              </p>
+            </div>
+
+            {/* Right: founder note + indie note */}
+            <div className="lg:sticky lg:top-28 space-y-4">
+
+              {/* Founder quote */}
+              <div
+                className="rounded-2xl p-7"
+                style={{ background: '#0d1526', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
+                  style={{ background: 'rgba(0,81,213,0.2)' }}
+                >
+                  <span className="text-xl leading-none" style={{ color: '#6B9EFF' }}>✦</span>
                 </div>
-              ))}
+                <blockquote
+                  className="text-[15px] leading-relaxed italic mb-6"
+                  style={{ color: 'rgba(255,255,255,0.7)' }}
+                >
+                  &ldquo;We realised the gap wasn&apos;t in the quality of the work — it was
+                  in the delivery experience. Clients pay for both. PortalKit is our answer
+                  to that.&rdquo;
+                </blockquote>
+                <div className="pt-5" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="text-sm font-semibold text-white">The PortalKit Team</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Founders · 2026</p>
+                </div>
+              </div>
+
+              {/* Indie note */}
+              <div
+                className="rounded-2xl p-5"
+                style={{ background: 'rgba(0,81,213,0.05)', border: '1px solid rgba(0,81,213,0.14)' }}
+              >
+                <p className="text-[13px] text-gray-600 leading-relaxed">
+                  PortalKit is a small, independent product. No VC funding, no
+                  growth-at-all-costs pressure. We move deliberately and only ship things
+                  that actually solve problems.
+                </p>
+              </div>
+
             </div>
           </div>
         </section>
 
-        {/* ── Values ────────────────────────────────────────────── */}
-        <section className="bg-surface py-20 px-6">
-          <div className="mx-auto max-w-5xl">
-            <div className="text-center mb-14 space-y-3">
-              <p className="text-sm font-semibold uppercase tracking-widest text-ds-secondary">What we believe</p>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-on-surface">
-                The principles behind every decision
+        {/* ══ Stats — dark ══════════════════════════════════════════ */}
+        <section className="relative bg-[#060b18] py-20 px-6 overflow-hidden">
+          <DotGrid />
+          <div className="relative max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-12">
+            {STATS.map(({ value, label }) => (
+              <div key={label} className="flex flex-col items-center text-center gap-2">
+                <span
+                  className="font-extrabold tracking-tight leading-none"
+                  style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', color: '#6B9EFF' }}
+                >
+                  {value}
+                </span>
+                <span className="text-sm" style={{ color: 'rgba(255,255,255,0.42)' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ══ Values — light ════════════════════════════════════════ */}
+        <section className="bg-white py-24 px-6">
+          <div className="max-w-7xl mx-auto">
+
+            <div className="max-w-xl mb-14">
+              <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#0051D5] mb-4">
+                What we believe
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 leading-[1.06]">
+                The principles behind<br />every decision.
               </h2>
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {VALUES.map(({ icon: Icon, title, description }) => (
+              {VALUES.map(({ Icon, title, body }) => (
                 <div
                   key={title}
-                  className="flex gap-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-6"
+                  className="flex gap-5 rounded-2xl bg-white border border-gray-200 p-7"
+                  style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
                 >
-                  <div className="flex items-center justify-center size-10 rounded-lg bg-ds-secondary/10 border border-ds-secondary/20 text-ds-secondary shrink-0">
-                    <Icon size={20} strokeWidth={1.75} />
+                  <div
+                    className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 mt-0.5"
+                    style={{ background: 'rgba(0,81,213,0.08)' }}
+                  >
+                    <Icon size={18} strokeWidth={1.75} style={{ color: '#0051D5' }} />
                   </div>
-                  <div className="space-y-1.5">
-                    <h3 className="text-sm font-semibold text-on-surface">{title}</h3>
-                    <p className="text-sm text-on-surface-variant leading-relaxed">{description}</p>
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-gray-900 mb-2">{title}</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">{body}</p>
                   </div>
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </section>
+
+        {/* ══ What we replaced — dark ═══════════════════════════════ */}
+        <section className="relative bg-[#060b18] py-24 px-6 overflow-hidden">
+          <DotGrid />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 60%, rgba(0,81,213,0.07) 0%, transparent 65%)' }}
+          />
+
+          <div className="relative max-w-7xl mx-auto">
+            <div className="max-w-xl mb-14">
+              <p className="text-[11px] font-semibold tracking-[0.16em] uppercase mb-4" style={{ color: '#6B9EFF' }}>
+                What we set out to fix
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-[1.06]">
+                Five tools.<br />One portal.
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {[
+                { from: 'Email threads',        to: 'Client messaging',    desc: 'Threaded, per-project — no lost context.'  },
+                { from: 'Dropbox / WeTransfer', to: 'File approvals',      desc: 'Versioned, annotated, one-click approved.' },
+                { from: 'FreshBooks / Wave',    to: 'Stripe invoicing',    desc: 'Send, collect, track — in the portal.'     },
+                { from: 'Status update calls',  to: 'Progress tracking',   desc: 'Live milestones, visible 24/7.'            },
+                { from: 'Generic portal',       to: 'White-labeled brand', desc: 'Clients see your brand, not PortalKit.'    },
+              ].map(({ from, to, desc }) => (
+                <div
+                  key={from}
+                  className="rounded-2xl p-5 flex flex-col gap-4"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+                >
+                  <div>
+                    <p
+                      className="text-xs font-mono line-through mb-2"
+                      style={{ color: 'rgba(255,255,255,0.25)', textDecorationColor: 'rgba(255,80,80,0.4)' }}
+                    >
+                      {from}
+                    </p>
+                    <div className="h-px w-full mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                    <p className="text-sm font-semibold text-white">{to}</p>
+                  </div>
+                  <p className="text-[11px] leading-relaxed mt-auto" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                    {desc}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── Dark CTA ──────────────────────────────────────────── */}
-        <section className="relative bg-[#080d1a] py-20 px-6 overflow-hidden">
-          <div aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-          <div className="relative mx-auto max-w-xl text-center space-y-6">
-            <h2 className="text-3xl font-bold tracking-tight text-white">Join us in raising the bar</h2>
-            <p className="text-base leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
+        {/* ══ CTA — blue gradient ═══════════════════════════════════ */}
+        <section
+          className="relative overflow-hidden py-28 px-6"
+          style={{ background: 'linear-gradient(150deg, #002a9e 0%, #0051D5 55%, #1268ff 100%)' }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)',
+              backgroundSize: '28px 28px',
+            }}
+          />
+          <div className="relative max-w-xl mx-auto text-center space-y-6">
+            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white leading-[1.06]">
+              Join us in raising<br />the bar.
+            </h2>
+            <p className="text-lg leading-relaxed" style={{ color: 'rgba(255,255,255,0.62)' }}>
               Your clients deserve a better delivery experience. So do you.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button asChild size="lg" className="w-full sm:w-auto bg-ds-secondary text-on-ds-secondary font-semibold px-8">
-                <Link href="/auth">Start for free</Link>
-              </Button>
-              <Button asChild size="lg" variant="ghost" className="w-full sm:w-auto border border-white/20 bg-white/5 text-white font-semibold px-8 backdrop-blur-sm">
-                <Link href="/help">Talk to us</Link>
-              </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Link
+                href="/auth"
+                className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-8 rounded bg-white text-[#003db5] text-base font-bold hover:brightness-95 transition-all"
+                style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
+              >
+                Start for free
+              </Link>
+              <Link
+                href="/platform"
+                className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-8 rounded text-base font-semibold text-white transition-all hover:bg-white/10"
+                style={{ border: '1px solid rgba(255,255,255,0.28)', background: 'rgba(255,255,255,0.07)' }}
+              >
+                Explore the platform
+              </Link>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-              {['No credit card', 'Setup in 10 min', 'Cancel anytime'].map(item => (
-                <div key={item} className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  <Check size={12} strokeWidth={2.5} className="text-blue-400/70 shrink-0" />
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 pt-2">
+              {['No credit card required', 'Setup in under 10 minutes', 'Cancel anytime'].map(item => (
+                <div key={item} className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.42)' }}>
+                  <Check size={11} strokeWidth={2.5} style={{ color: 'rgba(255,255,255,0.5)' }} className="shrink-0" />
                   {item}
                 </div>
               ))}
