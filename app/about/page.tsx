@@ -68,40 +68,149 @@ export default function AboutPage() {
         {/* ══ Hero ═════════════════════════════════════════════════ */}
         <section className="relative bg-[#060b18] pt-36 pb-28 px-6 overflow-hidden">
           <DotGrid />
+          {/* Glow offset toward the bento cards */}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0"
-            style={{ background: 'radial-gradient(ellipse 65% 55% at 50% 60%, rgba(0,81,213,0.1) 0%, transparent 70%)' }}
+            style={{
+              background:
+                'radial-gradient(ellipse 80% 65% at 68% 42%, rgba(0,81,213,0.11) 0%, transparent 65%)',
+            }}
           />
 
-          <div className="relative max-w-3xl mx-auto text-center space-y-8">
-            <p className="text-[11px] font-semibold tracking-[0.16em] uppercase" style={{ color: '#6B9EFF' }}>
-              Our story
-            </p>
+          <div className="relative max-w-7xl mx-auto grid lg:grid-cols-[1.05fr_0.95fr] gap-12 xl:gap-20 items-center">
 
-            <h1
-              className="font-extrabold tracking-tight text-white leading-[1.06]"
-              style={{ fontSize: 'clamp(2.25rem, 5vw, 3.75rem)' }}
-            >
-              We built the tool we<br />
-              <span style={{ color: 'rgba(255,255,255,0.4)' }}>always wished existed.</span>
-            </h1>
+            {/* ── Left: headline ── */}
+            <div className="space-y-8 max-w-xl">
+              <p
+                className="text-[11px] font-semibold tracking-[0.16em] uppercase"
+                style={{ color: '#6B9EFF' }}
+              >
+                Our story
+              </p>
+              <h1
+                className="font-extrabold tracking-tight text-white leading-[1.03]"
+                style={{ fontSize: 'clamp(2.75rem, 5.5vw, 4.25rem)' }}
+              >
+                We built the tool<br />
+                <span style={{ color: 'rgba(255,255,255,0.38)' }}>we always wished existed.</span>
+              </h1>
+              <p
+                className="text-xl leading-relaxed max-w-md"
+                style={{ color: 'rgba(255,255,255,0.52)' }}
+              >
+                PortalKit started when we realised we were losing clients not because of our
+                work — but because of how we delivered it.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  href="/auth"
+                  className="inline-flex items-center justify-center h-12 px-8 rounded bg-[#0051D5] text-white text-base font-semibold hover:brightness-110 transition-all"
+                  style={{ boxShadow: '0 4px 20px rgba(0,81,213,0.4)' }}
+                >
+                  Start for free
+                </Link>
+                <Link
+                  href="/platform"
+                  className="inline-flex items-center justify-center h-12 px-8 rounded text-base font-semibold text-white transition-all hover:bg-white/8"
+                  style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.05)' }}
+                >
+                  See the platform
+                </Link>
+              </div>
+            </div>
 
-            <p className="text-xl leading-relaxed max-w-xl mx-auto" style={{ color: 'rgba(255,255,255,0.52)' }}>
-              PortalKit started when we realised we were losing clients not because of our
-              work — but because of how we delivered it.
-            </p>
+            {/* ── Right: 2×2 stat bento ── */}
+            <div className="grid grid-cols-2 gap-3">
 
-            <div
-              className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full text-sm"
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.45)',
-              }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#0051D5]" />
-              Founded 2026 &nbsp;·&nbsp; Built by freelancers &nbsp;·&nbsp; For freelancers
+              {/* Founded */}
+              <div
+                className="rounded-2xl p-5 flex flex-col gap-3"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <div>
+                  <p className="text-[10px] font-mono mb-1" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                    founded
+                  </p>
+                  <p className="text-3xl font-extrabold text-white leading-none">2026</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Built by freelancers</p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    For everyone who delivers great work
+                  </p>
+                </div>
+              </div>
+
+              {/* Setup time */}
+              <div
+                className="rounded-2xl p-5 flex flex-col gap-3"
+                style={{ background: 'rgba(0,81,213,0.09)', border: '1px solid rgba(0,81,213,0.24)' }}
+              >
+                <div>
+                  <p className="text-[10px] font-mono mb-1" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                    setup time
+                  </p>
+                  <p className="text-3xl font-extrabold text-white leading-none">&lt; 10 min</p>
+                  <span
+                    className="inline-block mt-2 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80' }}
+                  >
+                    No code required
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">First portal live</p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    From sign-up to sending the link
+                  </p>
+                </div>
+              </div>
+
+              {/* Zero accounts */}
+              <div
+                className="rounded-2xl p-5 flex flex-col gap-3"
+                style={{ background: 'rgba(0,81,213,0.09)', border: '1px solid rgba(0,81,213,0.24)' }}
+              >
+                <div>
+                  <p className="text-[10px] font-mono mb-1" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                    client accounts
+                  </p>
+                  <p className="text-3xl font-extrabold text-white leading-none">Zero</p>
+                  <span
+                    className="inline-block mt-2 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24' }}
+                  >
+                    Magic link access
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">No sign-up friction</p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Clients open a link, not an account
+                  </p>
+                </div>
+              </div>
+
+              {/* One place */}
+              <div
+                className="rounded-2xl p-5 flex flex-col gap-3"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <div>
+                  <p className="text-[10px] font-mono mb-1" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                    home for everything
+                  </p>
+                  <p className="text-3xl font-extrabold text-white leading-none">1 place</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Files, invoices &amp; updates</p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    No more scattered email threads
+                  </p>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
