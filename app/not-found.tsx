@@ -66,7 +66,7 @@ export default function NotFound() {
               {[
                 { label: 'Platform',  href: '/platform'  },
                 { label: 'Pricing',   href: '/pricing'   },
-                { label: 'Docs',      href: '/docs'      },
+                { label: 'Blog',      href: '/blog'      },
                 { label: 'Help',      href: '/help'      },
                 { label: 'About',     href: '/about'    },
               ].map(({ label, href }) => (

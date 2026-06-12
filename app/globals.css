@@ -381,6 +381,158 @@ body {
   background-color: #eff4ff;
 }
 
+/* =============================================================================
+   BLOG POST PROSE STYLES
+   Scoped to [data-blog-content] so they only apply inside blog post bodies.
+   Avoids needing @tailwindcss/typography plugin.
+   ============================================================================= */
+
+[data-blog-content] {
+  color: #1e293b;
+  font-size: 1.0625rem;
+  line-height: 1.8;
+}
+
+[data-blog-content] h1,
+[data-blog-content] h2,
+[data-blog-content] h3,
+[data-blog-content] h4 {
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 2.25em;
+  margin-bottom: 0.75em;
+}
+[data-blog-content] h1 { font-size: 1.875rem; }
+[data-blog-content] h2 { font-size: 1.5rem; }
+[data-blog-content] h3 { font-size: 1.25rem; }
+[data-blog-content] h4 { font-size: 1.0625rem; }
+
+[data-blog-content] p {
+  margin-bottom: 1.5em;
+}
+
+[data-blog-content] a {
+  color: #0051D5;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s;
+}
+[data-blog-content] a:hover { color: #003db5; }
+
+[data-blog-content] ul,
+[data-blog-content] ol {
+  margin-bottom: 1.5em;
+  padding-left: 1.75em;
+}
+[data-blog-content] ul { list-style-type: disc; }
+[data-blog-content] ol { list-style-type: decimal; }
+[data-blog-content] li { margin-bottom: 0.4em; }
+[data-blog-content] li > p { margin-bottom: 0.4em; }
+
+[data-blog-content] blockquote {
+  border-left: 3px solid #0051D5;
+  padding: 0.75em 1.25em;
+  margin: 1.75em 0;
+  background: rgba(0,81,213,0.04);
+  border-radius: 0 8px 8px 0;
+  color: #475569;
+  font-style: italic;
+}
+[data-blog-content] blockquote p:last-child { margin-bottom: 0; }
+
+[data-blog-content] code {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.875em;
+  background: rgba(0,0,0,0.06);
+  color: #0051D5;
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+}
+
+[data-blog-content] pre {
+  background: #0f172a;
+  border-radius: 12px;
+  padding: 1.25em 1.5em;
+  overflow-x: auto;
+  margin: 1.75em 0;
+}
+[data-blog-content] pre code {
+  background: transparent;
+  color: #e2e8f0;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+[data-blog-content] img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 1.75em auto;
+  display: block;
+  border: 1px solid rgba(0,0,0,0.07);
+}
+
+[data-blog-content] hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 2.5em 0;
+}
+
+[data-blog-content] strong { font-weight: 700; color: #0f172a; }
+[data-blog-content] em { font-style: italic; }
+[data-blog-content] s { text-decoration: line-through; color: #94a3b8; }
+
+/* =============================================================================
+   TIPTAP EDITOR INLINE STYLES (inside admin editor)
+   ============================================================================= */
+
+.blog-editor-content h1 { font-size: 1.875rem; font-weight: 700; line-height: 1.25; margin: 1em 0 0.5em; }
+.blog-editor-content h2 { font-size: 1.5rem;   font-weight: 700; line-height: 1.25; margin: 1em 0 0.5em; }
+.blog-editor-content h3 { font-size: 1.25rem;  font-weight: 700; line-height: 1.25; margin: 1em 0 0.5em; }
+.blog-editor-content p  { margin-bottom: 0.875em; }
+.blog-editor-content ul { list-style: disc;    padding-left: 1.5em; margin-bottom: 0.875em; }
+.blog-editor-content ol { list-style: decimal; padding-left: 1.5em; margin-bottom: 0.875em; }
+.blog-editor-content li { margin-bottom: 0.25em; }
+.blog-editor-content blockquote {
+  border-left: 3px solid #0051D5;
+  padding: 0.5em 1em;
+  margin: 1em 0;
+  background: rgba(0,81,213,0.04);
+  border-radius: 0 6px 6px 0;
+  color: #475569;
+  font-style: italic;
+}
+.blog-editor-content pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 1em 1.25em;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.875em;
+}
+.blog-editor-content code:not(pre code) {
+  background: rgba(0,0,0,0.06);
+  color: #0051D5;
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 0.875em;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.blog-editor-content a { color: #0051D5; text-decoration: underline; }
+.blog-editor-content hr { border: none; border-top: 1px solid #e2e8f0; margin: 1.5em 0; }
+.blog-editor-content img { max-width: 100%; border-radius: 8px; margin: 1em 0; }
+.blog-editor-content .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+  height: 0;
+  float: left;
+}
+
 @keyframes marquee {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }

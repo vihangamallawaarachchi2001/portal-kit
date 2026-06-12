@@ -11,7 +11,7 @@ import { logout } from '@/app/auth/action'
 const NAV_LINKS = [
   { label: 'Platform',   href: '/platform'  },
   { label: 'About',      href: '/about'     },
-  { label: 'Developers', href: '/docs'     },
+  { label: 'Blog',        href: '/blog'     },
   { label: 'Pricing',    href: '/pricing'  },
 ] as const
 
