@@ -6,7 +6,7 @@ function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' })
 }
 
-// POST — create Express account (or reuse existing) and return onboarding URL
+// POST — create an Express account (or reuse existing) and return hosted onboarding URL
 // Body: { from?: 'onboarding' | 'settings' } — controls where the return URL redirects
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   try {
     let accountId = profile?.stripe_connect_account_id
 
-    // Create a new Express account if they don't have one
+    // Create a new Express account if they don't have one yet
     if (!accountId) {
       const account = await stripe.accounts.create({ type: 'express' })
       accountId = account.id
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       if (error) return internalError(error.message)
     }
 
-    // Create an account link for onboarding / re-onboarding
+    // Create a hosted Account Link for onboarding / re-onboarding
     const link = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: `${appUrl}/api/billing/stripe-connect`,
