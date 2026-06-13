@@ -1,0 +1,45 @@
+import { NextRequest } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { ok, unauthorized, notFound } from '@/lib/api'
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: invoiceId } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return unauthorized()
+
+  const service = createServiceClient()
+
+  // Verify invoice belongs to this freelancer
+  const { data: invoice } = await service
+    .from('invoices')
+    .select('id')
+    .eq('id', invoiceId)
+    .eq('freelancer_id', user.id)
+    .is('deleted_at', null)
+    .single()
+
+  if (!invoice) return notFound('Invoice not found')
+
+  const { data: receipts } = await service
+    .from('invoice_receipts')
+    .select('id, filename, file_size, mime_type, storage_path, uploaded_at')
+    .eq('invoice_id', invoiceId)
+    .order('uploaded_at', { ascending: false })
+
+  // Generate signed download URLs for each receipt
+  const receiptsWithUrls = await Promise.all(
+    (receipts ?? []).map(async r => {
+      const { data } = await service.storage
+        .from('portalkit_bucket')
+        .createSignedUrl(r.storage_path, 3600)
+      return { ...r, download_url: data?.signedUrl ?? null }
+    })
+  )
+
+  return ok({ receipts: receiptsWithUrls })
+}
