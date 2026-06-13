@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { Check } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 const TRUST = [
   'No credit card required',
@@ -11,89 +10,92 @@ const TRUST = [
 export default function CTABanner() {
   return (
     <section
-      className="relative bg-[#080d1a] overflow-hidden py-28 px-6"
+      className="relative overflow-hidden py-32 px-6"
+      style={{
+        background: 'linear-gradient(150deg, #002a9e 0%, #0051D5 55%, #1268ff 100%)',
+      }}
     >
+
       {/* Dot grid */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)',
           backgroundSize: '28px 28px',
         }}
       />
 
-      {/* Blue radial glow */}
+      {/* Top-right highlight orb */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-hidden flex items-end justify-center"
-      >
+        className="pointer-events-none absolute -top-40 -right-40 w-lg h-lg rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.09) 0%, transparent 65%)' }}
+      />
+
+      {/* Bottom-left depth shadow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-24 -left-24 w-96 h-96 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(0,0,80,0.35) 0%, transparent 70%)' }}
+      />
+
+      <div className="relative max-w-2xl mx-auto text-center space-y-8">
+
+        {/* Eyebrow pill */}
         <div
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium"
           style={{
-            width: '800px',
-            height: '400px',
-            borderRadius: '50%',
-            background: 'radial-gradient(ellipse at center, rgba(37,99,235,0.22) 0%, transparent 70%)',
+            background: 'rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.8)',
+            border: '1px solid rgba(255,255,255,0.18)',
           }}
-        />
-      </div>
-
-      <div className="relative mx-auto max-w-2xl text-center space-y-8">
-
-        {/* Eyebrow */}
-        <div className="inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-sm">
-          <span className="size-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
-          <p className="text-sm font-medium text-white/70">
-            Trusted by 2,000+ freelancers worldwide
-          </p>
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse shrink-0" />
+          Free forever. No credit card required.
         </div>
 
         {/* Headline */}
-        <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]">
-          <span className="text-white">Ready to impress</span>
-          <br />
-          <span className="bg-linear-to-r from-blue-400 via-blue-300 to-sky-400 bg-clip-text text-transparent">
-            your clients?
-          </span>
+        <h2 className="text-5xl sm:text-6xl lg:text-[4.5rem] font-extrabold tracking-tight leading-[1.04] text-white">
+          Ready to impress<br />your clients?
         </h2>
 
         {/* Subtext */}
         <p
-          className="text-lg leading-relaxed max-w-md mx-auto"
-          style={{ color: 'rgba(255,255,255,0.6)' }}
+          className="text-xl leading-relaxed max-w-md mx-auto"
+          style={{ color: 'rgba(255,255,255,0.62)' }}
         >
-          Set up your first client portal in minutes. No code, no complexity,
+          Set up your first portal in minutes. No code, no complexity,
           no long-term commitment.
         </p>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Button
-            asChild
-            size="lg"
-            className="w-full sm:w-auto bg-ds-secondary text-on-ds-secondary font-semibold px-8 text-base h-12"
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link
+            href="/auth"
+            className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-8 rounded bg-white text-[#003db5] text-base font-bold hover:brightness-95 transition-all"
+            style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
           >
-            <Link href="/auth">Start for free</Link>
-          </Button>
-          <Button
-            asChild
-            size="lg"
-            variant="ghost"
-            className="w-full sm:w-auto border border-white/20 bg-white/5 text-white font-semibold px-8 text-base h-12 backdrop-blur-sm"
+            Start for free
+          </Link>
+          <Link
+            href="/demo"
+            className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-8 rounded text-base font-semibold text-white transition-all hover:bg-white/10"
+            style={{ border: '1px solid rgba(255,255,255,0.28)', background: 'rgba(255,255,255,0.07)' }}
           >
-            <Link href="/demo">Book a demo</Link>
-          </Button>
+            Book a demo
+          </Link>
         </div>
 
-        {/* Trust elements */}
-        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
+        {/* Trust signals */}
+        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 pt-2">
           {TRUST.map(item => (
             <div
               key={item}
               className="flex items-center gap-1.5 text-xs"
-              style={{ color: 'rgba(255,255,255,0.4)' }}
+              style={{ color: 'rgba(255,255,255,0.42)' }}
             >
-              <Check size={12} strokeWidth={2.5} className="text-blue-400/70 shrink-0" />
+              <Check size={11} strokeWidth={2.5} style={{ color: 'rgba(255,255,255,0.5)' }} className="shrink-0" />
               {item}
             </div>
           ))}

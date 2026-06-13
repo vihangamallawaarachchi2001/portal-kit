@@ -12,8 +12,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const uid = searchParams.get('uid')
 
+  const from = searchParams.get('from') ?? 'settings'
+
   if (!uid) {
-    return NextResponse.redirect(`${appUrl}/dashboard/settings/billing?stripe_connect=error`)
+    const dest = from === 'onboarding' ? `/onboarding?step=2` : `/dashboard/settings/billing?stripe_connect=error`
+    return NextResponse.redirect(`${appUrl}${dest}`)
   }
 
   const service = createServiceClient()
@@ -38,9 +41,14 @@ export async function GET(req: Request) {
       .update({ stripe_connect_onboarded: onboarded })
       .eq('id', uid)
 
+    if (from === 'onboarding') {
+      return NextResponse.redirect(`${appUrl}/onboarding?step=2`)
+    }
+
     const status = onboarded ? 'success' : 'pending'
     return NextResponse.redirect(`${appUrl}/dashboard/settings/billing?stripe_connect=${status}`)
   } catch {
-    return NextResponse.redirect(`${appUrl}/dashboard/settings/billing?stripe_connect=error`)
+    const dest = from === 'onboarding' ? `/onboarding?step=2` : `/dashboard/settings/billing?stripe_connect=error`
+    return NextResponse.redirect(`${appUrl}${dest}`)
   }
 }

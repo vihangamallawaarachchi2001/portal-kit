@@ -22,7 +22,7 @@ export type GlobalFile = {
   projects: RawProject | null
 }
 
-const FREE_FILE_LIMIT = 3
+const FREE_FILE_LIMIT = 10 // 10 files per portal; enforced server-side per-portal
 
 interface Props { rawFiles: GlobalFile[]; plan?: string }
 
@@ -171,8 +171,8 @@ export function GlobalFilesView({ rawFiles, plan = 'free' }: Props) {
               <Zap className={cn('size-4 shrink-0', rootFileCount >= FREE_FILE_LIMIT ? 'text-red-500' : 'text-amber-500')} />
               <p className={cn('text-sm font-semibold', rootFileCount >= FREE_FILE_LIMIT ? 'text-red-700' : 'text-amber-700')}>
                 {rootFileCount >= FREE_FILE_LIMIT
-                  ? `File limit reached (${FREE_FILE_LIMIT}/${FREE_FILE_LIMIT}) — upgrade to upload more`
-                  : `Free plan: ${rootFileCount} of ${FREE_FILE_LIMIT} files used`}
+                  ? `File limit reached — upgrade to Pro for unlimited uploads`
+                  : `Free plan: ${rootFileCount} of ${FREE_FILE_LIMIT} files used · 500 MB storage`}
               </p>
             </div>
             <Link
@@ -342,7 +342,7 @@ export function GlobalFilesView({ rawFiles, plan = 'free' }: Props) {
                               return next
                             })}
                             className={cn(
-                              'size-7 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center',
+                              'size-7 rounded-lg md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center justify-center',
                               commentExpanded ? 'bg-amber-50 text-amber-600' : 'hover:bg-amber-50 text-on-surface-variant',
                             )}
                             title="Show feedback"
@@ -353,7 +353,7 @@ export function GlobalFilesView({ rawFiles, plan = 'free' }: Props) {
                         <button
                           onClick={() => handleDownload(f.id, f.filename)}
                           disabled={downloadingId === f.id}
-                          className="size-7 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-ds-secondary/8 flex items-center justify-center text-ds-secondary disabled:opacity-50"
+                          className="size-7 rounded-lg md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-ds-secondary/8 flex items-center justify-center text-ds-secondary disabled:opacity-50"
                           title="Download"
                         >
                           {downloadingId === f.id

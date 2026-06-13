@@ -727,8 +727,13 @@ export default function AdminDashboard({ data, adminEmail }: { data: AdminData; 
               <Shield className="size-2.5" /> Admin
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <span className="hidden sm:block text-xs text-on-surface-variant font-mono">{adminEmail}</span>
+            <a
+              href="/admin/blog"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-md border border-outline-variant/60 text-xs font-medium text-on-surface hover:bg-surface-container transition-colors">
+              Blog posts
+            </a>
             <button
               onClick={() => router.push('/dashboard')}
               className="flex items-center gap-1.5 h-8 px-3 rounded-md border border-outline-variant/60 text-xs font-medium text-on-surface hover:bg-surface-container transition-colors">

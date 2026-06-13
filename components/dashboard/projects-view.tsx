@@ -402,7 +402,7 @@ function TableRow({ project: p }: { project: ProjectRow }) {
       <div className="flex items-center justify-end">
         <Link
           href={href}
-          className="h-7 px-2.5 text-[12px] font-semibold text-ds-secondary bg-ds-secondary/8 hover:bg-ds-secondary/15 rounded-md flex items-center gap-1 transition-colors opacity-0 group-hover:opacity-100 whitespace-nowrap"
+          className="h-7 px-2.5 text-[12px] font-semibold text-ds-secondary bg-ds-secondary/8 hover:bg-ds-secondary/15 rounded-md flex items-center gap-1 transition-colors md:opacity-0 md:group-hover:opacity-100 whitespace-nowrap"
         >
           Open <ArrowRight className="size-3" />
         </Link>

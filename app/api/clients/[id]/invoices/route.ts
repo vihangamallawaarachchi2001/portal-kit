@@ -48,30 +48,59 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   if (!client) return notFound('Client not found')
 
-  // Invoices are a Pro+ feature
   const { data: profile } = await supabase
     .from('profiles')
-    .select('plan')
+    .select('plan, free_invoices_month_count, free_invoices_month_reset')
     .eq('id', user.id)
     .single()
 
-  if (profile?.plan === 'free') {
-    return paymentRequired(
-      'Invoicing is available on Pro and Business plans. Upgrade to start sending invoices.',
-      { code: 'invoice_gating' },
-    )
-  }
-
   let body: Record<string, unknown>
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }
+
+  // ── Free plan enforcement ──────────────────────────────────────────────────
+
+  if (profile?.plan === 'free') {
+    // 3 invoices/month cap — reset counter when month rolls over
+    const today = new Date()
+    const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+    const needsReset = !profile.free_invoices_month_reset ||
+      profile.free_invoices_month_reset < monthStart
+
+    let currentCount = needsReset ? 0 : (profile.free_invoices_month_count ?? 0)
+
+    if (needsReset) {
+      await supabase
+        .from('profiles')
+        .update({ free_invoices_month_count: 0, free_invoices_month_reset: monthStart })
+        .eq('id', user.id)
+    }
+
+    if (currentCount >= 3) {
+      return paymentRequired(
+        "You've reached the 3 invoices/month limit on the Free plan.",
+        { code: 'invoice_monthly_limit', limit: 3, current: currentCount },
+      )
+    }
+
+    // Block multi-currency — Free plan is USD only
+    const currency = (body.currency as string | undefined)?.toUpperCase() ?? 'USD'
+    if (currency !== 'USD') {
+      return paymentRequired(
+        'Multi-currency invoices are available on Pro and above. Free plan supports USD only.',
+        { code: 'invoice_multicurrency' },
+      )
+    }
+  }
+
+  // ── Parse and validate ────────────────────────────────────────────────────
 
   let input
   try { input = createInvoiceSchema.parse({ ...body, client_id: id }) } catch (e) { return fromZodError(e as ZodError) }
 
   // Calculate totals
-  const subtotal = input.line_items.reduce((s, item) => s + item.quantity * item.unit_price, 0)
+  const subtotal  = input.line_items.reduce((s, item) => s + item.quantity * item.unit_price, 0)
   const tax_amount = subtotal * (input.tax_rate / 100)
-  const total = subtotal + tax_amount
+  const total     = subtotal + tax_amount
 
   // Generate invoice number
   const { data: numData } = await supabase.rpc('generate_invoice_number', { p_freelancer_id: user.id })
@@ -79,17 +108,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { data, error } = await supabase
     .from('invoices')
-    .insert({
-      ...input,
-      freelancer_id: user.id,
-      invoice_number,
-      subtotal,
-      tax_amount,
-      total,
-    })
+    .insert({ ...input, freelancer_id: user.id, invoice_number, subtotal, tax_amount, total })
     .select()
     .single()
 
   if (error) return internalError(error.message)
+
+  // Increment free plan monthly counter after successful insert
+  if (profile?.plan === 'free') {
+    await supabase
+      .from('profiles')
+      .update({ free_invoices_month_count: (profile.free_invoices_month_count ?? 0) + 1 })
+      .eq('id', user.id)
+  }
+
   return created(data)
 }

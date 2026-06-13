@@ -6,10 +6,13 @@ import { formatCurrency, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   Plus, Trash2, Send, FileText, Loader2, ChevronDown, ChevronUp, X,
-  Receipt, CalendarDays, Percent, FolderOpen, Download, Zap,
+  Receipt, CalendarDays, Percent, FolderOpen, Download, CreditCard,
 } from 'lucide-react'
+import { UpgradePrompt } from '@/components/upgrade-prompt'
+import { CURRENCIES, isStripeSupported } from '@/lib/currencies'
 import { EmptyState } from './empty-state'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -33,18 +36,19 @@ interface InvoiceManagerProps {
   freelancerName: string
   businessName: string
   plan?: string
+  stripeConnected?: boolean
 }
 
 const EMPTY_LINE: LineItem = { description: '', quantity: 1, unit_price: 0 }
 
 export function InvoiceManager({
-  clientId, clientName, invoices, projects, plan = 'free',
+  clientId, clientName, invoices, projects, plan = 'free', stripeConnected = false,
 }: InvoiceManagerProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [modalOpen, setModalOpen] = useState(false)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [invoiceGated, setInvoiceGated] = useState(false)
+  const [modalOpen, setModalOpen]       = useState(false)
+  const [expandedId, setExpandedId]     = useState<string | null>(null)
+  const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null)
 
   // Form state
   const [lineItems, setLineItems] = useState<LineItem[]>([{ ...EMPTY_LINE }])
@@ -96,7 +100,9 @@ export function InvoiceManager({
         setModalOpen(false)
         router.refresh()
       } else if (res.status === 402) {
-        setInvoiceGated(true)
+        const d = await res.json()
+        setModalOpen(false)
+        setUpgradeFeature(d.code ?? 'invoice_monthly_limit')
       } else {
         const d = await res.json()
         toast.error(d.error ?? 'Failed to create invoice')
@@ -147,7 +153,7 @@ export function InvoiceManager({
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-on-surface">Invoices for {clientName}</h2>
         <button
-          onClick={() => { if (plan === 'free') setInvoiceGated(true); setModalOpen(true) }}
+          onClick={() => setModalOpen(true)}
           className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-ds-secondary text-white text-sm font-semibold hover:bg-ds-secondary-container transition-colors"
         >
           <Plus className="size-4" />New invoice
@@ -225,7 +231,7 @@ export function InvoiceManager({
                       </p>
 
                       {/* Actions */}
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         {inv.status === 'draft' && (
                           <button
                             onClick={() => handleSend(inv.id)}
@@ -304,7 +310,7 @@ export function InvoiceManager({
       )}
 
       {/* Create invoice modal */}
-      <Dialog open={modalOpen} onOpenChange={v => { if (!v) { resetForm(); setInvoiceGated(false) } setModalOpen(v) }}>
+      <Dialog open={modalOpen} onOpenChange={v => { if (!v) resetForm(); setModalOpen(v) }}>
         <DialogContent className="sm:max-w-xl p-0 overflow-hidden gap-0 max-h-[92vh] flex flex-col">
           <DialogTitle className="sr-only">New invoice</DialogTitle>
           <DialogDescription className="sr-only">Create a new invoice for this client.</DialogDescription>
@@ -327,38 +333,24 @@ export function InvoiceManager({
             </div>
           </div>
 
-          {/* ── Pro gate ─────────────────────────────── */}
-          {invoiceGated ? (
-            <div className="px-6 py-12 flex flex-col items-center text-center gap-4">
-              <div className="size-14 rounded-2xl bg-amber-50 flex items-center justify-center">
-                <Zap className="size-7 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-base font-bold text-on-surface">Invoicing is a Pro feature</p>
-                <p className="text-sm text-on-surface-variant mt-2 max-w-sm leading-relaxed">
-                  Create and send professional invoices, accept online payments, and download PDFs — available on Pro and Business plans.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 mt-1">
-                <button
-                  type="button"
-                  onClick={() => { setInvoiceGated(false); setModalOpen(false) }}
-                  className="h-9 px-4 rounded-md text-sm font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
-                >
-                  Cancel
-                </button>
-                <a
+          {/* ── Stripe nudge ─────────────────────────── */}
+          {!stripeConnected && (
+            <div className="mx-6 mt-4 flex items-start gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+              <CreditCard className="size-4 text-blue-600 mt-0.5 shrink-0" />
+              <p className="text-xs text-blue-900 leading-snug">
+                Clients can&apos;t pay online until you connect Stripe.{' '}
+                <Link
                   href="/dashboard/settings/billing"
                   onClick={() => setModalOpen(false)}
-                  className="inline-flex items-center gap-1.5 h-9 px-5 rounded-md bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
+                  className="font-semibold underline underline-offset-2 hover:opacity-80"
                 >
-                  <Zap className="size-3.5" />
-                  Upgrade to Pro
-                </a>
-              </div>
+                  Set up payments →
+                </Link>
+              </p>
             </div>
-          ) : (
-          /* ── Scrollable form body ─────────────────── */
+          )}
+
+          {/* ── Scrollable form body ─────────────────── */}
           <form onSubmit={handleCreate} className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
 
@@ -514,6 +506,41 @@ export function InvoiceManager({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Currency — Pro+ only; free plan is locked to USD */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-on-surface">Currency</label>
+                  {plan === 'free' ? (
+                    <div className="h-10 px-3 rounded-md border border-outline-variant bg-surface-container/50 flex items-center justify-between text-sm text-on-surface-variant">
+                      <span className="font-medium text-on-surface">USD</span>
+                      <span className="text-[10px] text-on-surface-variant/60 font-medium uppercase tracking-wide">Pro to unlock</span>
+                    </div>
+                  ) : (
+                    <Select value={currency} onValueChange={setCurrency}>
+                      <SelectTrigger className="h-10 rounded-md border-outline-variant">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        {CURRENCIES.map(c => (
+                          <SelectItem key={c.code} value={c.code} className="rounded-md">
+                            <span className="flex items-center gap-2">
+                              <span className="font-mono text-[11px] font-bold text-on-surface-variant w-8">{c.code}</span>
+                              <span className="text-sm">{c.name}</span>
+                              {!isStripeSupported(c.code) && (
+                                <span className="text-[10px] text-on-surface-variant/50 ml-auto">bank transfer only</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {currency && !isStripeSupported(currency) && plan !== 'free' && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1 leading-snug">
+                      {currency} isn&apos;t supported by Stripe — clients will see your bank transfer details for payment.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -551,9 +578,14 @@ export function InvoiceManager({
               </Button>
             </div>
           </form>
-          )}
         </DialogContent>
       </Dialog>
+
+      <UpgradePrompt
+        open={upgradeFeature !== null}
+        feature={upgradeFeature ?? 'invoice_monthly_limit'}
+        onClose={() => setUpgradeFeature(null)}
+      />
     </div>
   )
 }

@@ -59,13 +59,29 @@ export default async function DashboardPage() {
   const allInvoices = enrichedClients.flatMap(c => c.invoices ?? [])
   const allProjects = enrichedClients.flatMap(c => c.projects)
 
+  function sumByCurrency(invs: { total: number; currency: string }[]): Record<string, number> {
+    return invs.reduce<Record<string, number>>((acc, i) => {
+      acc[i.currency] = (acc[i.currency] ?? 0) + Number(i.total)
+      return acc
+    }, {})
+  }
+
+  const outstandingByCurrency = sumByCurrency(
+    allInvoices.filter((i: { status: string }) => i.status === 'sent') as { total: number; currency: string }[]
+  )
+  const overdueByCurrency = sumByCurrency(
+    allInvoices.filter((i: { status: string }) => i.status === 'overdue') as { total: number; currency: string }[]
+  )
+
   const stats: DashboardStats = {
-    total_outstanding: allInvoices.filter((i: { status: string }) => i.status === 'sent').reduce((s: number, i: { total: number }) => s + Number(i.total), 0),
-    total_overdue:     allInvoices.filter((i: { status: string }) => i.status === 'overdue').reduce((s: number, i: { total: number }) => s + Number(i.total), 0),
-    pending_approvals: enrichedClients.reduce((s, c) => s + c.pending_files_total, 0),
-    unread_messages:   enrichedClients.reduce((s, c) => s + c.unread_messages_total, 0),
-    active_clients:    enrichedClients.length,
-    active_projects:   allProjects.filter((p: { status: string }) => p.status === 'in_progress' || p.status === 'review').length,
+    total_outstanding:      Object.values(outstandingByCurrency).reduce((s, v) => s + v, 0),
+    total_overdue:          Object.values(overdueByCurrency).reduce((s, v) => s + v, 0),
+    outstanding_by_currency: outstandingByCurrency,
+    overdue_by_currency:     overdueByCurrency,
+    pending_approvals:      enrichedClients.reduce((s, c) => s + c.pending_files_total, 0),
+    unread_messages:        enrichedClients.reduce((s, c) => s + c.unread_messages_total, 0),
+    active_clients:         enrichedClients.length,
+    active_projects:        allProjects.filter((p: { status: string }) => p.status === 'in_progress' || p.status === 'review').length,
   }
 
   const profileRow = (await supabase.from('profiles').select('full_name, business_name, avatar_url, plan').eq('id', user.id).single()).data

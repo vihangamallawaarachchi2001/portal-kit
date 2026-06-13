@@ -143,6 +143,17 @@ export const CURRENCIES: Currency[] = [
   { code: 'EEK', name: 'Estonian Kroon',              symbol: 'kr'  },
 ]
 
+// Currencies Stripe supports for online payment collection
+const STRIPE_SUPPORTED = new Set([
+  'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'NZD', 'CHF', 'HKD', 'SGD', 'JPY',
+  'SEK', 'NOK', 'DKK', 'MXN', 'BRL', 'INR', 'AED', 'SAR', 'ZAR', 'THB',
+  'MYR', 'PHP', 'IDR', 'CZK', 'PLN', 'HUF', 'RON', 'BGN', 'TRY',
+])
+
+export function isStripeSupported(currency: string): boolean {
+  return STRIPE_SUPPORTED.has(currency.toUpperCase())
+}
+
 export function getCurrency(code: string): Currency | undefined {
   return CURRENCIES.find(c => c.code === code)
 }

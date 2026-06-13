@@ -103,7 +103,7 @@ export default async function ClientDetailLayout({
             {/* Portal actions */}
             <div className="flex items-center gap-2 shrink-0">
               <CopyPortalLinkButton clientId={id} />
-              <SendPortalLinkButton clientId={id} />
+              <SendPortalLinkButton clientId={id} clientEmail={client.email} />
               <a
                 href={portalUrl}
                 target="_blank"

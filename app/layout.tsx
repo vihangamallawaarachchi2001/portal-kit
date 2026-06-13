@@ -4,6 +4,7 @@ import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import NextTopLoader from "nextjs-toploader";
+import { CookieBanner } from "@/components/cookie-consent";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,6 +18,8 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   display: "swap",
 });
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portalkit.com'
 
 export const metadata: Metadata = {
   title: {
@@ -36,30 +39,31 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "PortalKit" }],
   creator: "PortalKit",
-  metadataBase: new URL("https://portalkit.com"),
+  metadataBase: new URL(APP_URL),
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  manifest: '/manifest.json',
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://portalkit.com",
+    url: APP_URL,
     siteName: "PortalKit",
     title: "PortalKit — Client Portal Software for Freelancers",
     description:
       "Share files, collect approvals, track invoices, and manage projects — all through one branded client portal link.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "PortalKit — Client Portal Software",
-      },
-    ],
+    // og:image is auto-injected from app/opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
     title: "PortalKit — Client Portal Software for Freelancers",
     description:
       "Share files, collect approvals, track invoices, and manage projects — all through one branded client portal link.",
-    images: ["/og-image.png"],
+    // twitter:image is auto-injected from app/opengraph-image.tsx
   },
   robots: {
     index: true,
@@ -98,6 +102,7 @@ export default async function RootLayout({
         <AuthProvider initialUser={user}>
           {children}
         </AuthProvider>
+        <CookieBanner />
       </body>
     </html>
   );

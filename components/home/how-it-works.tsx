@@ -1,128 +1,186 @@
-import { Fragment } from 'react'
-import { FolderPlus, Upload, Link2, ArrowRight, type LucideIcon } from 'lucide-react'
-
-const STEPS: {
-  number: string
-  icon: LucideIcon
-  iconClass: string
-  title: string
-  description: string
-}[] = [
-  {
-    number: '01',
-    icon: FolderPlus,
-    iconClass: 'bg-blue-500/15 border-blue-500/20 text-blue-400',
-    title: 'Create a Project',
-    description:
-      'Set up your workspace in seconds. Name your project, set a deadline, and connect your payment account.',
-  },
-  {
-    number: '02',
-    icon: Upload,
-    iconClass: 'bg-emerald-500/15 border-emerald-500/20 text-emerald-400',
-    title: 'Add Deliverables',
-    description:
-      'Upload files for client review, attach invoices, set milestones, and leave internal notes for your team.',
-  },
-  {
-    number: '03',
-    icon: Link2,
-    iconClass: 'bg-violet-500/15 border-violet-500/20 text-violet-400',
-    title: 'Share One Link',
-    description:
-      'Your client receives a single, branded link — a polished portal with everything they need in one place.',
-  },
-]
-
 export default function HowItWorks() {
   return (
-    <section
-      className="relative bg-[#080d1a] py-24 px-6 overflow-hidden"
-    >
-      {/* Dot grid */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
-      />
+    <section className="bg-[#f8fafc] py-28 px-6">
+      <div className="max-w-7xl mx-auto">
 
-      {/* Subtle blue glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 flex items-center justify-center"
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 50% at 50% 100%, rgba(37,99,235,0.12) 0%, transparent 70%)',
-        }}
-      />
-
-      <div className="relative mx-auto max-w-5xl">
-
-        {/* Header */}
-        <div className="text-center mb-16 space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-widest text-blue-400">
+        {/* ── Heading ── */}
+        <div className="max-w-xl mx-auto text-center mb-14">
+          <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-ds-secondary mb-4">
             How it works
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white leading-snug">
-            From signup to first impression
-            <br className="hidden sm:block" /> in under 10 minutes
+          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-on-surface leading-[1.06] mb-5">
+            Up and running before<br className="hidden sm:block" /> your next client call.
           </h2>
-          <p className="max-w-md mx-auto text-base leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            Three steps to replace the email chaos with a portal your clients
-            will actually enjoy using.
+          <p className="text-lg text-on-surface-variant leading-relaxed">
+            Four steps to replace email chaos with a portal<br className="hidden sm:block" /> your clients will actually enjoy.
           </p>
         </div>
 
-        {/* Steps */}
-        <div className="flex flex-col md:flex-row items-stretch gap-3 md:gap-0">
-          {STEPS.map(({ number, icon: Icon, iconClass, title, description }, i) => (
-            <Fragment key={number}>
-              <div className="flex-1 rounded-2xl border border-white/8 bg-white/4 p-6 flex flex-col gap-5 backdrop-blur-sm">
+        {/* ── 2×2 Bento grid ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-                {/* Top row: step number + icon */}
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center rounded-md border border-blue-400/25 bg-blue-400/10 px-2.5 py-1 text-xs font-mono font-bold text-blue-400">
-                    {number}
+          {/* ① Create your portal — white */}
+          <div className="flex flex-col rounded-3xl border border-gray-200 bg-white p-7 shadow-sm overflow-hidden min-h-80">
+            <span className="inline-block mb-5 px-2.5 py-1 rounded-md bg-gray-100 text-[10px] font-mono font-bold text-gray-500 tracking-widest w-fit">
+              01
+            </span>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Create your portal</h3>
+            <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
+              Set up your branded workspace in minutes — your subdomain, your logo, your colors.
+            </p>
+            {/* Illustration */}
+            <div className="mt-auto pt-6">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-center gap-2 mb-3.5">
+                  <div className="w-5 h-5 rounded-md bg-[#0051D5]" />
+                  <span className="font-mono text-[10px] text-gray-400 truncate">acme.portalkit.com</span>
+                  <span className="ml-auto shrink-0 text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
+                    Live
                   </span>
-                  <div
-                    className={`flex items-center justify-center size-11 rounded-xl border ${iconClass}`}
-                  >
-                    <Icon size={20} strokeWidth={1.75} />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="h-1.5 bg-gray-200 rounded-full w-4/5" />
+                  <div className="h-1.5 bg-gray-200 rounded-full w-3/5" />
+                  <div className="flex gap-2 pt-3">
+                    <div className="h-7 bg-gray-200 rounded-lg flex-1" />
+                    <div className="h-7 rounded-lg w-16" style={{ background: '#0051D5' }} />
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
 
-                {/* Text */}
-                <div className="space-y-2">
-                  <h3 className="text-base font-semibold text-white">{title}</h3>
-                  <p
-                    className="text-sm leading-relaxed"
-                    style={{ color: 'rgba(255,255,255,0.55)' }}
+          {/* ② Invite your client — dark */}
+          <div
+            className="flex flex-col rounded-3xl p-7 overflow-hidden min-h-80"
+            style={{ background: '#0d1526', border: '1px solid rgba(255,255,255,0.07)' }}
+          >
+            <span
+              className="inline-block mb-5 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold tracking-widest w-fit"
+              style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.4)' }}
+            >
+              02
+            </span>
+            <h3 className="text-xl font-bold text-white mb-2">Invite your client</h3>
+            <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              One magic link. No passwords, no account creation. Clients land straight in.
+            </p>
+            {/* Illustration */}
+            <div className="mt-auto pt-6">
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-white"
+                    style={{ background: 'rgba(99,130,255,0.3)' }}
                   >
-                    {description}
-                  </p>
+                    JD
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold text-white leading-none truncate">
+                      jane@acmecreative.co
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      Portal link sent · just now
+                    </p>
+                  </div>
+                  <span
+                    className="shrink-0 text-[9px] font-bold px-2 py-1 rounded-full"
+                    style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80' }}
+                  >
+                    Sent
+                  </span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Connector arrow between cards on desktop */}
-              {i < STEPS.length - 1 && (
-                <div
-                  className="hidden md:flex items-center justify-center px-3 shrink-0"
-                  aria-hidden
-                >
-                  <ArrowRight
-                    size={18}
-                    strokeWidth={1.75}
-                    style={{ color: 'rgba(255,255,255,0.2)' }}
-                  />
+          {/* ③ Clients review & approve — brand blue */}
+          <div
+            className="flex flex-col rounded-3xl p-7 overflow-hidden min-h-80"
+            style={{ background: '#0051D5' }}
+          >
+            <span
+              className="inline-block mb-5 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold tracking-widest w-fit"
+              style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)' }}
+            >
+              03
+            </span>
+            <h3 className="text-xl font-bold text-white mb-2">Clients review & approve</h3>
+            <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.65)' }}>
+              Files, milestones, and invoices — all visible and actionable in one place.
+            </p>
+            {/* Illustration */}
+            <div className="mt-auto pt-6">
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}
+              >
+                <div className="flex items-center gap-2.5 mb-3.5">
+                  <div
+                    className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.15)' }}
+                  >
+                    <svg width="10" height="12" viewBox="0 0 10 12" fill="none" aria-hidden>
+                      <rect width="10" height="12" rx="1.5" fill="rgba(255,255,255,0.35)" />
+                      <rect x="2" y="3" width="6" height="1.2" rx="0.5" fill="rgba(255,255,255,0.65)" />
+                      <rect x="2" y="5.5" width="4" height="1.2" rx="0.5" fill="rgba(255,255,255,0.45)" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                    Homepage_v3.fig
+                  </span>
                 </div>
-              )}
-            </Fragment>
-          ))}
-        </div>
+                <div className="flex gap-2">
+                  <div
+                    className="flex-1 py-2 rounded-lg text-center text-[10px] font-semibold"
+                    style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)' }}
+                  >
+                    Request changes
+                  </div>
+                  <div
+                    className="flex-1 py-2 rounded-lg text-center text-[10px] font-bold"
+                    style={{ background: 'white', color: '#0051D5' }}
+                  >
+                    ✓ Approve
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
+          {/* ④ Stay notified — muted light */}
+          <div className="flex flex-col rounded-3xl border border-gray-200/60 bg-white p-7 overflow-hidden min-h-80">
+            <span className="inline-block mb-5 px-2.5 py-1 rounded-md bg-gray-100 text-[10px] font-mono font-bold text-gray-500 tracking-widest w-fit">
+              04
+            </span>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Stay notified, automatically</h3>
+            <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
+              Real-time pings when clients view, approve, or pay. No more chasing.
+            </p>
+            {/* Illustration — notification list */}
+            <div className="mt-auto pt-6 space-y-2">
+              {[
+                { dot: '#22c55e', label: 'Invoice Paid',  meta: '$3,200 · just now'        },
+                { dot: '#0051D5', label: 'File Approved', meta: 'Homepage_v3.fig · 5m ago' },
+                { dot: '#f59e0b', label: 'New Message',   meta: 'Sarah K. · 12m ago'       },
+              ].map(({ dot, label, meta }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-2.5 rounded-xl bg-[#f8fafc] border border-gray-200/70 px-3.5 py-2.5"
+                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: dot }} />
+                  <span className="text-[11px] font-semibold text-gray-800">{label}</span>
+                  <span className="ml-auto text-[10px] text-gray-400 whitespace-nowrap">{meta}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
       </div>
     </section>
   )

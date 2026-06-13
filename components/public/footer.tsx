@@ -2,19 +2,17 @@ import Link from 'next/link'
 import { Layers } from 'lucide-react'
 
 const LINKS = {
-  PRODUCT: [
-    { label: 'Features',  href: '/features' },
+  Product: [
+    { label: 'Platform',  href: '/platform' },
     { label: 'Pricing',   href: '/pricing'  },
     { label: 'Security',  href: '/security' },
   ],
-  COMPANY: [
-    { label: 'About',    href: '/about'   },
-    { label: 'Blog',     href: '/blog'    },
-    { label: 'Careers',  href: '/careers' },
+  Company: [
+    { label: 'About', href: '/about' },
+    { label: 'Blog',  href: '/blog'  },
   ],
-  SUPPORT: [
-    { label: 'Documentation', href: '/docs' },
-    { label: 'Help Center',   href: '/help' },
+  Support: [
+    { label: 'Contact', href: '/contact' },
   ],
 } as const
 
@@ -26,26 +24,22 @@ const LEGAL = [
 
 export default function Footer() {
   return (
-    <footer className="bg-ds-primary-container border-t border-on-ds-primary/10 px-6 pt-12 pb-8">
-      <div className="mx-auto max-w-5xl">
+    <footer className="bg-white border-t border-gray-200 px-6 pt-14 pb-8">
+      <div className="max-w-7xl mx-auto">
 
-        {/* ── Main row ─────────────────────────────────────────────── */}
-        <div className="flex flex-col md:flex-row gap-12">
+        {/* ── Main row ── */}
+        <div className="flex flex-col md:flex-row gap-12 pb-12 border-b border-gray-100">
 
           {/* Logo + tagline */}
-          <div className="space-y-4 md:max-w-55">
-            <Link href="/" className="flex items-center gap-2.5">
-              <span className="flex items-center justify-center size-8 rounded-md bg-on-ds-primary shrink-0">
-                <Layers className="size-4 text-ds-primary-container" strokeWidth={1.75} />
+          <div className="shrink-0 space-y-4 md:w-56">
+            <Link href="/" className="inline-flex items-center gap-2.5">
+              <span className="flex items-center justify-center size-8 rounded-md bg-blue-600 shrink-0">
+                <Layers className="size-4.5 text-white" strokeWidth={1.75} />
               </span>
-              <span className="font-bold text-lg text-on-ds-primary tracking-tight">
-                PortalKit
-              </span>
+              <span className="font-bold text-lg text-gray-900 tracking-tight">PortalKit</span>
             </Link>
-            <p className="text-sm text-on-ds-primary-container leading-relaxed">
-              The modern standard for{' '}
-              <span className="text-ds-secondary">client collaboration</span>{' '}
-              and project delivery.
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Built for freelancers.<br />Loved by clients.
             </p>
           </div>
 
@@ -54,7 +48,7 @@ export default function Footer() {
             {(Object.entries(LINKS) as [string, readonly { label: string; href: string }[]][]).map(
               ([category, links]) => (
                 <div key={category}>
-                  <h4 className="text-xs font-bold tracking-widest text-on-ds-primary-container uppercase mb-4">
+                  <h4 className="text-[11px] font-bold tracking-[0.12em] uppercase text-gray-400 mb-4">
                     {category}
                   </h4>
                   <ul className="space-y-3">
@@ -62,7 +56,7 @@ export default function Footer() {
                       <li key={label}>
                         <Link
                           href={href}
-                          className="text-sm text-on-ds-primary-container transition-colors"
+                          className="text-sm text-gray-500 hover:text-gray-900 transition-colors duration-150"
                         >
                           {label}
                         </Link>
@@ -76,17 +70,17 @@ export default function Footer() {
 
         </div>
 
-        {/* ── Bottom bar ───────────────────────────────────────────── */}
-        <div className="mt-12 pt-6 border-t border-on-ds-primary/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-on-ds-primary-container">
-            © 2024 PortalKit. All rights reserved.
+        {/* ── Bottom bar ── */}
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-gray-400">
+            © {new Date().getFullYear()} PortalKit. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             {LEGAL.map(({ label, href }) => (
               <Link
                 key={label}
                 href={href}
-                className="text-xs text-on-ds-primary-container"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors duration-150"
               >
                 {label}
               </Link>

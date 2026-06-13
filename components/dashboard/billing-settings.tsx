@@ -72,8 +72,13 @@ export function BillingSettings({
   function handleConnectStripe() {
     startConnect(async () => {
       const res = await fetch('/api/billing/stripe-connect', { method: 'POST' })
-      if (res.ok) { const { url } = await res.json(); window.location.href = url }
-      else toast.error('Failed to start Stripe Connect. Please try again.')
+      if (res.ok) {
+        const { url } = await res.json()
+        window.location.href = url
+      } else {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error ?? 'Failed to start Stripe Connect. Please try again.')
+      }
     })
   }
 
@@ -106,8 +111,14 @@ export function BillingSettings({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planId, billing }),
       })
-      if (res.ok) { const { url } = await res.json(); window.location.href = url }
-      else { toast.error('Failed to start checkout'); setLoadingPlan(null) }
+      if (res.ok) {
+        const { url } = await res.json()
+        window.location.href = url
+      } else {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error ?? 'Failed to start checkout. Please try again.')
+        setLoadingPlan(null)
+      }
     })
   }
 

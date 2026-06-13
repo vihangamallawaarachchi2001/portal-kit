@@ -61,12 +61,12 @@ export async function PATCH(req: Request) {
     updates.custom_domain_verified = false
   }
 
-  // White-label branding — Business only
+  // Remove branding — Pro+ feature (Free plan only restriction)
   if (hide_branding !== undefined) {
-    if (profile?.plan !== 'business') {
+    if (profile?.plan === 'free') {
       return paymentRequired(
-        'White-label branding removal is available on the Business plan.',
-        { code: 'whitelabel_gating' },
+        'Removing PortalKit branding is available on Pro and above.',
+        { code: 'remove_branding' },
       )
     }
     updates.hide_branding = hide_branding

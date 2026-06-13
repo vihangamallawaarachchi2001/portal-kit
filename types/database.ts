@@ -30,7 +30,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   messages: true,
   file_review: true,
   invoice_paid: true,
-  status_change: false,
+  status_change: true,
   weekly_digest: false,
   milestone_reminders: true,
   milestone_client_notify: true,
@@ -50,12 +50,15 @@ export interface Profile {
   subscription_status: SubscriptionStatus | null
   stripe_connect_account_id: string | null
   stripe_connect_onboarded: boolean
+  stripe_onboarding_skipped: boolean
   bank_details: BankDetails | null
   notification_preferences: NotificationPreferences
   custom_domain: string | null
   custom_domain_verified: boolean
   hide_branding: boolean
   onboarding_completed: boolean
+  free_invoices_month_count: number
+  free_invoices_month_reset: string | null
   created_at: string
   updated_at: string
 }
@@ -227,6 +230,8 @@ export interface MessageWithSender extends Message {
 export interface DashboardStats {
   total_outstanding: number
   total_overdue: number
+  outstanding_by_currency: Record<string, number>
+  overdue_by_currency: Record<string, number>
   pending_approvals: number
   unread_messages: number
   active_clients: number

@@ -74,10 +74,13 @@ export function ClientsView({ clients, plan = 'free' }: ClientsViewProps) {
   }, [clients, search, filter])
 
   function handleSendMagicLink(clientId: string) {
+    const email = clients.find(c => c.id === clientId)?.email
     startTransition(async () => {
       const res = await fetch(`/api/clients/${clientId}/magic-link`, { method: 'POST' })
-      if (res.ok) toast.success('Magic link sent')
-      else        toast.error('Failed to send magic link')
+      if (res.ok) toast.success(email
+        ? `Access link sent to ${email}. You'll be notified when they open their portal.`
+        : 'Access link sent to client.')
+      else toast.error('Failed to send access link')
     })
   }
 
@@ -470,7 +473,7 @@ function ClientTableRow({
       >
         <Link
           href={`/dashboard/clients/${c.id}`}
-          className="h-7 px-2.5 text-[12px] font-semibold text-ds-secondary bg-ds-secondary/8 hover:bg-ds-secondary/15 rounded-md flex items-center gap-1 transition-colors opacity-0 group-hover:opacity-100 whitespace-nowrap"
+          className="hidden md:flex h-7 px-2.5 text-[12px] font-semibold text-ds-secondary bg-ds-secondary/8 hover:bg-ds-secondary/15 rounded-md items-center gap-1 transition-colors md:opacity-0 md:group-hover:opacity-100 whitespace-nowrap"
         >
           Open <ArrowRight className="size-3" />
         </Link>
@@ -479,7 +482,7 @@ function ClientTableRow({
             <Button
               variant="ghost"
               size="icon"
-              className="size-7 opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant/50 hover:text-on-surface hover:bg-surface-container"
+              className="size-7 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-on-surface-variant/50 hover:text-on-surface hover:bg-surface-container"
             >
               <MoreHorizontal className="size-3.5" />
             </Button>

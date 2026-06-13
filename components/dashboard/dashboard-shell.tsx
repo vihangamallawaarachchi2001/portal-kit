@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { DashboardHeader } from './dashboard-header'
 import { UpgradeNudge } from './upgrade-nudge'
+import { ProfileNudges } from './profile-nudges'
 import { Toaster } from '@/components/ui/sonner'
 import { Profile } from '@/types/database'
 
@@ -82,7 +83,17 @@ export function DashboardShell({ profile, unreadCount, clientCount, children }: 
           sidebarWidth={contentMargin}
           onMobileMenuClick={isMobile ? toggle : undefined}
         />
-        <main className="flex-1 pt-14 min-h-screen">{children}</main>
+        <main className="flex-1 pt-14 min-h-screen">
+          {profile && (
+            <ProfileNudges
+              businessName={profile.business_name}
+              avatarUrl={profile.avatar_url}
+              stripeConnected={profile.stripe_connect_onboarded}
+              stripeSkipped={profile.stripe_onboarding_skipped ?? false}
+            />
+          )}
+          {children}
+        </main>
       </div>
 
       {profile?.plan === 'free' && <UpgradeNudge />}
