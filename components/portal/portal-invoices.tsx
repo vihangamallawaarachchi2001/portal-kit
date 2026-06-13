@@ -6,8 +6,9 @@ import { formatCurrency, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
-  CheckCircle, Clock, AlertTriangle, FileText, CreditCard, Loader2, ChevronDown, ChevronUp, Banknote,
+  CheckCircle, Clock, AlertTriangle, FileText, CreditCard, Loader2, ChevronDown, ChevronUp, Banknote, MessageCircle,
 } from 'lucide-react'
+import Link from 'next/link'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { isStripeSupported } from '@/lib/currencies'
 
@@ -19,15 +20,19 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
 
 interface LineItem { description: string; quantity: number; unit_price: number }
 
-export function PortalInvoices({ invoices, slug, justPaid, bankDetails }: {
+export function PortalInvoices({ invoices, slug, justPaid, bankDetails, supportedCurrencies }: {
   invoices: Invoice[]
   slug: string
   justPaid?: boolean
   bankDetails?: BankDetails | null
+  supportedCurrencies?: string[]
 }) {
   const [isPending, startTransition] = useTransition()
   const [payingId, setPayingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const dynamicSet = supportedCurrencies ? new Set(supportedCurrencies) : undefined
+  const isSupportedCurrency = (code: string) => isStripeSupported(code, dynamicSet)
 
   useEffect(() => {
     if (justPaid) toast.success('Payment received! Thank you.')
@@ -93,7 +98,7 @@ export function PortalInvoices({ invoices, slug, justPaid, bankDetails }: {
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        {isStripeSupported(inv.currency) ? (
+                        {isSupportedCurrency(inv.currency) ? (
                           <button
                             onClick={() => handlePay(inv.id)}
                             disabled={isPending}
@@ -140,7 +145,7 @@ export function PortalInvoices({ invoices, slug, justPaid, bankDetails }: {
                           {inv.notes && <p className="text-xs text-on-surface-variant mt-1 italic">{inv.notes}</p>}
 
                           {/* Bank transfer details for non-Stripe currencies */}
-                          {!isStripeSupported(inv.currency) && (
+                          {!isSupportedCurrency(inv.currency) && (
                             <div className="mt-3 pt-3 border-t border-outline-variant">
                               <p className="text-xs font-semibold text-on-surface mb-2 flex items-center gap-1.5">
                                 <Banknote className="size-3.5" />Bank transfer details
@@ -164,9 +169,18 @@ export function PortalInvoices({ invoices, slug, justPaid, bankDetails }: {
                                   )}
                                 </div>
                               ) : (
-                                <p className="text-xs text-on-surface-variant">
-                                  Contact your freelancer for payment instructions.
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <MessageCircle className="size-3.5 text-on-surface-variant shrink-0" />
+                                  <p className="text-xs text-on-surface-variant">
+                                    Payment details not available.{' '}
+                                    <Link
+                                      href={`/p/${slug}/messages`}
+                                      className="text-ds-secondary underline font-medium hover:text-ds-secondary-container"
+                                    >
+                                      Message your freelancer →
+                                    </Link>
+                                  </p>
+                                </div>
                               )}
                             </div>
                           )}

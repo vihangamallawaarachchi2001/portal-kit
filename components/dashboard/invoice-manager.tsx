@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { Invoice, Project, LineItem } from '@/types/database'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -37,18 +37,27 @@ interface InvoiceManagerProps {
   businessName: string
   plan?: string
   stripeConnected?: boolean
+  hasBankDetails?: boolean
 }
 
 const EMPTY_LINE: LineItem = { description: '', quantity: 1, unit_price: 0 }
 
 export function InvoiceManager({
-  clientId, clientName, invoices, projects, plan = 'free', stripeConnected = false,
+  clientId, clientName, invoices, projects, plan = 'free', stripeConnected = false, hasBankDetails = false,
 }: InvoiceManagerProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [modalOpen, setModalOpen]       = useState(false)
   const [expandedId, setExpandedId]     = useState<string | null>(null)
   const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null)
+  const [stripeSet, setStripeSet] = useState<Set<string> | null>(null)
+
+  useEffect(() => {
+    fetch('/api/billing/stripe-currencies')
+      .then(r => r.json())
+      .then((d: { currencies: string[] }) => setStripeSet(new Set(d.currencies)))
+      .catch(() => {})
+  }, [])
 
   // Form state
   const [lineItems, setLineItems] = useState<LineItem[]>([{ ...EMPTY_LINE }])
@@ -491,7 +500,7 @@ export function InvoiceManager({
                         <SelectValue placeholder="None" />
                       )}
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[200]">
                       <SelectItem value="__none__" className="rounded-md">
                         <span className="text-on-surface-variant">None</span>
                       </SelectItem>
@@ -503,6 +512,11 @@ export function InvoiceManager({
                           </span>
                         </SelectItem>
                       ))}
+                      {projects.length === 0 && (
+                        <div className="px-3 py-2 text-xs text-on-surface-variant italic">
+                          No projects for this client yet
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -520,13 +534,13 @@ export function InvoiceManager({
                       <SelectTrigger className="h-10 rounded-md border-outline-variant">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="max-h-60">
+                      <SelectContent className="max-h-60 z-[200]">
                         {CURRENCIES.map(c => (
                           <SelectItem key={c.code} value={c.code} className="rounded-md">
                             <span className="flex items-center gap-2">
                               <span className="font-mono text-[11px] font-bold text-on-surface-variant w-8">{c.code}</span>
                               <span className="text-sm">{c.name}</span>
-                              {!isStripeSupported(c.code) && (
+                              {!isStripeSupported(c.code, stripeSet ?? undefined) && (
                                 <span className="text-[10px] text-on-surface-variant/50 ml-auto">bank transfer only</span>
                               )}
                             </span>
@@ -535,10 +549,21 @@ export function InvoiceManager({
                       </SelectContent>
                     </Select>
                   )}
-                  {currency && !isStripeSupported(currency) && plan !== 'free' && (
-                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1 leading-snug">
-                      {currency} isn&apos;t supported by Stripe — clients will see your bank transfer details for payment.
-                    </p>
+                  {currency && !isStripeSupported(currency, stripeSet ?? undefined) && plan !== 'free' && (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1 leading-snug">
+                        {currency} isn&apos;t supported by Stripe — clients will pay via bank transfer.
+                      </p>
+                      {!hasBankDetails && (
+                        <p className="text-[11px] text-on-surface-variant px-1">
+                          No bank details on file.{' '}
+                          <Link href="/dashboard/settings?tab=bank" className="text-ds-secondary underline font-medium">
+                            Add bank details →
+                          </Link>
+                          {' '}so clients know how to pay.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

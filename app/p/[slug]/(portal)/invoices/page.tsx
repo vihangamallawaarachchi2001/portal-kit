@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { PortalInvoices } from '@/components/portal/portal-invoices'
 import { Invoice, BankDetails } from '@/types/database'
+import { getStripeSupportedCurrencies } from '@/lib/currencies-server'
 
 export default async function PortalInvoicesPage({
   params,
@@ -39,6 +40,15 @@ export default async function PortalInvoicesPage({
     .single()
 
   const bankDetails = (freelancerProfile?.bank_details as BankDetails | null) ?? null
+  const supportedCurrencies = await getStripeSupportedCurrencies().catch(() => null)
 
-  return <PortalInvoices invoices={invoices} slug={slug} justPaid={paid === 'true'} bankDetails={bankDetails} />
+  return (
+    <PortalInvoices
+      invoices={invoices}
+      slug={slug}
+      justPaid={paid === 'true'}
+      bankDetails={bankDetails}
+      supportedCurrencies={supportedCurrencies ?? undefined}
+    />
+  )
 }

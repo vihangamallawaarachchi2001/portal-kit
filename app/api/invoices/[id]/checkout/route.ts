@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { ok, badRequest, unauthorized, notFound, internalError, paymentRequired } from '@/lib/api'
-import { isStripeSupported } from '@/lib/currencies'
+import { isStripeSupportedServer } from '@/lib/currencies-server'
 import Stripe from 'stripe'
 import { cookies } from 'next/headers'
 
@@ -49,7 +49,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   // Currency must be on Stripe's supported list
-  if (!isStripeSupported(invoice.currency)) {
+  if (!await isStripeSupportedServer(invoice.currency)) {
     return badRequest(
       `${invoice.currency} is not supported for online payment via Stripe.`,
       { code: 'currency_not_supported' },
