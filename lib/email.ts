@@ -20,12 +20,24 @@ async function send(opts: SendOptions) {
     html: opts.html,
     ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
   })
-  if (error) console.error('[email]', error)
+  if (error) {
+    console.error('[email]', error)
+    throw new Error((error as { message?: string }).message ?? 'Email send failed')
+  }
 }
+
+const BUTTON_STYLE = 'display:inline-block;background-color:#0051d5;background:#0051d5;color:#ffffff !important;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin:8px 0;border:2px solid #0051d5;mso-padding-alt:10px 22px;'
 
 // ── Email templates ──────────────────────────────────────────────────────────
 
-function baseTemplate(content: string) {
+function baseTemplate(content: string, opts: { hideBranding?: boolean; fromName?: string } = {}) {
+  const { hideBranding = false, fromName = 'PortalKit' } = opts
+  const headerTitle    = hideBranding ? fromName : 'PortalKit'
+  const headerSubtitle = hideBranding ? '' : '<p>Your client collaboration workspace</p>'
+  const footerText     = hideBranding
+    ? `You're receiving this from <strong>${fromName}</strong>.`
+    : "You're receiving this because you're connected on PortalKit."
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -40,7 +52,7 @@ function baseTemplate(content: string) {
     .body { padding: 32px; }
     .body p { color: #0b1c30; font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
     .body p.muted { color: #45464d; font-size: 13px; }
-    .button { display: inline-block; background: #0051d5; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin: 8px 0; }
+    .button { display: inline-block; background-color: #0051d5; background: #0051d5; color: #ffffff !important; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin: 8px 0; border: 2px solid #0051d5; }
     .divider { border: none; border-top: 1px solid #e5eeff; margin: 24px 0; }
     .footer { background: #f8f9ff; padding: 20px 32px; border-top: 1px solid #e5eeff; }
     .footer p { color: #76777d; font-size: 12px; margin: 0; }
@@ -55,12 +67,12 @@ function baseTemplate(content: string) {
 <body>
   <div class="container">
     <div class="header">
-      <h1>PortalKit</h1>
-      <p>Your client collaboration workspace</p>
+      <h1>${headerTitle}</h1>
+      ${headerSubtitle}
     </div>
     <div class="body">${content}</div>
     <div class="footer">
-      <p>You're receiving this because you're connected on PortalKit. <a href="${APP_URL}" style="color:#0051d5;">Manage preferences</a></p>
+      <p>${footerText}</p>
     </div>
   </div>
 </body>
@@ -74,12 +86,14 @@ export async function sendPortalMagicLink({
   freelancerName,
   businessName,
   portalUrl,
+  hideBranding,
 }: {
   to: string
   clientName: string
   freelancerName: string
   businessName: string
   portalUrl: string
+  hideBranding?: boolean
 }) {
   await send({
     to,
@@ -88,10 +102,10 @@ export async function sendPortalMagicLink({
       <p>Hi ${clientName},</p>
       <p><strong>${businessName}</strong> (${freelancerName}) has set up a private portal for you to review project updates, files, and invoices.</p>
       <p>Click the button below to access your portal — no account or password needed.</p>
-      <a href="${portalUrl}" class="button">Open My Portal →</a>
+      <a href="${portalUrl}" style="${BUTTON_STYLE}">Open My Portal →</a>
       <hr class="divider" />
       <p class="muted">This link is valid for 24 hours. If it expires, you can request a new one from ${freelancerName}.</p>
-    `),
+    `, { hideBranding, fromName: businessName }),
   })
 }
 
@@ -109,7 +123,7 @@ export async function sendFreelancerMagicLink({
     html: baseTemplate(`
       <p>Here is your sign-in link for PortalKit.</p>
       <p>Click the button below — it's valid for 24 hours and can only be used once.</p>
-      <a href="${loginUrl}" class="button">Sign In to PortalKit →</a>
+      <a href="${loginUrl}" style="${BUTTON_STYLE}">Sign In to PortalKit →</a>
       <hr class="divider" />
       <p class="muted">If you didn't request this, you can safely ignore this email.</p>
     `),
@@ -125,6 +139,7 @@ export async function sendFileUploadedEmail({
   projectTitle,
   filename,
   portalUrl,
+  hideBranding,
 }: {
   to: string
   clientName: string
@@ -133,6 +148,7 @@ export async function sendFileUploadedEmail({
   projectTitle: string
   filename: string
   portalUrl: string
+  hideBranding?: boolean
 }) {
   await send({
     to,
@@ -142,10 +158,10 @@ export async function sendFileUploadedEmail({
       <p><strong>${businessName}</strong> has uploaded a new file for your review on the <strong>${projectTitle}</strong> project.</p>
       <p><strong>File:</strong> ${filename}</p>
       <p>Open your portal to review it and leave feedback.</p>
-      <a href="${portalUrl}/files" class="button">Review File →</a>
+      <a href="${portalUrl}/files" style="${BUTTON_STYLE}">Review File →</a>
       <hr class="divider" />
-      <p class="muted">Sent by ${freelancerName} via PortalKit.</p>
-    `),
+      <p class="muted">Sent by ${freelancerName}${hideBranding ? '.' : ' via PortalKit.'}</p>
+    `, { hideBranding, fromName: businessName }),
   })
 }
 
@@ -180,7 +196,7 @@ export async function sendFileReviewedEmail({
       <p><strong>${clientName}</strong> has reviewed <strong>${filename}</strong> on the <strong>${projectTitle}</strong> project.</p>
       <p>Status: <span class="status-badge ${statusClass}">${statusLabel}</span></p>
       ${comment ? `<p><strong>Comment:</strong> "${comment}"</p>` : ''}
-      <a href="${dashboardUrl}" class="button">View in Dashboard →</a>
+      <a href="${dashboardUrl}" style="${BUTTON_STYLE}">View in Dashboard →</a>
     `),
   })
 }
@@ -196,6 +212,7 @@ export async function sendInvoiceSentEmail({
   currency,
   dueDate,
   portalUrl,
+  hideBranding,
 }: {
   to: string
   clientName: string
@@ -206,6 +223,7 @@ export async function sendInvoiceSentEmail({
   currency: string
   dueDate: string | null
   portalUrl: string
+  hideBranding?: boolean
 }) {
   const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(total)
   const due = dueDate ? new Date(dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Upon receipt'
@@ -221,10 +239,10 @@ export async function sendInvoiceSentEmail({
         <tr><td style="padding:8px 0;color:#45464d;font-size:14px;">Amount due</td><td style="padding:8px 0;font-weight:700;font-size:18px;color:#0051d5;text-align:right;">${formatted}</td></tr>
         <tr><td style="padding:8px 0;color:#45464d;font-size:14px;">Due date</td><td style="padding:8px 0;font-weight:600;text-align:right;">${due}</td></tr>
       </table>
-      <a href="${portalUrl}/invoices" class="button">Pay Invoice →</a>
+      <a href="${portalUrl}/invoices" style="${BUTTON_STYLE}">Pay Invoice →</a>
       <hr class="divider" />
-      <p class="muted">Payment is processed securely by Stripe. Sent by ${freelancerName} via PortalKit.</p>
-    `),
+      <p class="muted">Payment is processed securely by Stripe. Sent by ${freelancerName}${hideBranding ? '.' : ' via PortalKit.'}</p>
+    `, { hideBranding, fromName: businessName }),
   })
 }
 
@@ -256,7 +274,7 @@ export async function sendInvoicePaidEmail({
       <p>Great news — <strong>${clientName}</strong> has paid invoice <strong>${invoiceNumber}</strong>.</p>
       <p style="font-size:24px;font-weight:700;color:#15803d;">${formatted} received</p>
       <p class="muted">Stripe will process your payout according to your normal payout schedule.</p>
-      <a href="${dashboardUrl}" class="button">View Dashboard →</a>
+      <a href="${dashboardUrl}" style="${BUTTON_STYLE}">View Dashboard →</a>
     `),
   })
 }
@@ -269,6 +287,7 @@ export async function sendMilestoneCompletedEmail({
   milestoneTitle,
   projectTitle,
   portalUrl,
+  hideBranding,
 }: {
   to: string
   clientName: string
@@ -276,6 +295,7 @@ export async function sendMilestoneCompletedEmail({
   milestoneTitle: string
   projectTitle: string
   portalUrl: string
+  hideBranding?: boolean
 }) {
   await send({
     to,
@@ -284,8 +304,8 @@ export async function sendMilestoneCompletedEmail({
       <p>Hi ${clientName},</p>
       <p><strong>${freelancerName}</strong> has marked the milestone <strong>"${milestoneTitle}"</strong> as complete on the project <strong>${projectTitle}</strong>.</p>
       <p>View the update in your portal.</p>
-      <a href="${portalUrl}" class="button">Open Portal →</a>
-    `),
+      <a href="${portalUrl}" style="${BUTTON_STYLE}">Open Portal →</a>
+    `, { hideBranding, fromName: freelancerName }),
   })
 }
 
@@ -314,7 +334,7 @@ export async function sendMilestoneReminderEmail({
     html: baseTemplate(`
       <p>Hi ${freelancerName},</p>
       <p>The milestone <strong>"${milestoneTitle}"</strong> for project <strong>${projectTitle}</strong> is due on ${dueDate} (${daysAway} days).</p>
-      <a href="${dashboardUrl}" class="button">View Project →</a>
+      <a href="${dashboardUrl}" style="${BUTTON_STYLE}">View Project →</a>
     `),
   })
 }
@@ -327,6 +347,8 @@ export async function sendMilestoneClientUpcomingEmail({
   dueDate,
   daysAway,
   portalUrl,
+  hideBranding,
+  freelancerName,
 }: {
   to: string
   clientName: string
@@ -335,6 +357,8 @@ export async function sendMilestoneClientUpcomingEmail({
   dueDate: string
   daysAway: number
   portalUrl: string
+  hideBranding?: boolean
+  freelancerName?: string
 }) {
   await send({
     to,
@@ -342,8 +366,8 @@ export async function sendMilestoneClientUpcomingEmail({
     html: baseTemplate(`
       <p>Hi ${clientName},</p>
       <p>An upcoming milestone <strong>"${milestoneTitle}"</strong> is scheduled for ${dueDate} on your project <strong>${projectTitle}</strong>.</p>
-      <a href="${portalUrl}" class="button">Open Portal →</a>
-    `),
+      <a href="${portalUrl}" style="${BUTTON_STYLE}">Open Portal →</a>
+    `, { hideBranding, fromName: freelancerName }),
   })
 }
 
@@ -356,6 +380,7 @@ export async function sendStatusChangedEmail({
   projectTitle,
   newStatus,
   portalUrl,
+  hideBranding,
 }: {
   to: string
   clientName: string
@@ -364,6 +389,7 @@ export async function sendStatusChangedEmail({
   projectTitle: string
   newStatus: string
   portalUrl: string
+  hideBranding?: boolean
 }) {
   const labels: Record<string, string> = {
     briefing: 'Briefing',
@@ -380,10 +406,10 @@ export async function sendStatusChangedEmail({
       <p>Hi ${clientName},</p>
       <p><strong>${businessName}</strong> has updated the status of <strong>${projectTitle}</strong>.</p>
       <p>New status: <strong>${label}</strong></p>
-      <a href="${portalUrl}" class="button">View Portal →</a>
+      <a href="${portalUrl}" style="${BUTTON_STYLE}">View Portal →</a>
       <hr class="divider" />
-      <p class="muted">Sent by ${freelancerName} via PortalKit.</p>
-    `),
+      <p class="muted">Sent by ${freelancerName}${hideBranding ? '.' : ' via PortalKit.'}</p>
+    `, { hideBranding, fromName: businessName }),
   })
 }
 
@@ -396,6 +422,7 @@ export async function sendNewMessageEmail({
   projectTitle,
   messagePreview,
   portalUrl,
+  hideBranding,
 }: {
   to: string
   recipientName: string
@@ -404,6 +431,7 @@ export async function sendNewMessageEmail({
   projectTitle: string
   messagePreview: string
   portalUrl: string
+  hideBranding?: boolean
 }) {
   const preview = messagePreview.length > 200 ? messagePreview.slice(0, 200) + '…' : messagePreview
 
@@ -416,8 +444,8 @@ export async function sendNewMessageEmail({
       <blockquote style="border-left:3px solid #0051d5;margin:16px 0;padding:12px 16px;background:#eff4ff;border-radius:0 8px 8px 0;color:#0b1c30;font-size:14px;line-height:1.6;">
         ${preview}
       </blockquote>
-      <a href="${portalUrl}/messages" class="button">Reply →</a>
-    `),
+      <a href="${portalUrl}/messages" style="${BUTTON_STYLE}">Reply →</a>
+    `, { hideBranding, fromName: senderBusiness }),
   })
 }
 
@@ -461,7 +489,7 @@ export async function sendWeeklyDigest({
           <td style="padding:12px 16px;font-weight:700;text-align:right;font-size:16px;">${unreadMessages}</td>
         </tr>
       </table>
-      <a href="${dashboardUrl}" class="button">Open Dashboard →</a>
+      <a href="${dashboardUrl}" style="${BUTTON_STYLE}">Open Dashboard →</a>
     `),
   })
 }
@@ -477,6 +505,7 @@ export async function sendPaymentReceiptEmail({
   paidAt,
   lineItems,
   portalUrl,
+  hideBranding,
 }: {
   to: string
   clientName: string
@@ -487,6 +516,7 @@ export async function sendPaymentReceiptEmail({
   paidAt: string
   lineItems: { description: string; quantity: number; unit_price: number }[]
   portalUrl: string
+  hideBranding?: boolean
 }) {
   const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(total)
   const fmtItem   = (amt: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amt)
@@ -533,10 +563,10 @@ export async function sendPaymentReceiptEmail({
       </table>
 
       <p>You can view this invoice at any time from your portal.</p>
-      <a href="${portalUrl}/invoices" class="button">View in Portal →</a>
+      <a href="${portalUrl}/invoices" style="${BUTTON_STYLE}">View in Portal →</a>
       <hr class="divider" />
       <p class="muted">Payment processed securely by Stripe. This is your receipt — please keep it for your records.</p>
-    `),
+    `, { hideBranding, fromName: businessName }),
   })
 }
 
@@ -548,6 +578,7 @@ export async function sendMeetingInviteEmail({
   scheduledAt,
   durationMins,
   meetLink,
+  hideBranding,
 }: {
   to: string
   clientName: string
@@ -556,6 +587,7 @@ export async function sendMeetingInviteEmail({
   scheduledAt: string
   durationMins: number
   meetLink: string
+  hideBranding?: boolean
 }) {
   const when = new Date(scheduledAt).toLocaleString()
   await send({
@@ -565,8 +597,8 @@ export async function sendMeetingInviteEmail({
       <p>Hi ${clientName},</p>
       <p><strong>${freelancerName}</strong> has scheduled a meeting: <strong>${title}</strong></p>
       <p>${when} · ${durationMins} minutes</p>
-      <a href="${meetLink}" class="button">Join Meeting →</a>
-    `),
+      <a href="${meetLink}" style="${BUTTON_STYLE}">Join Meeting →</a>
+    `, { hideBranding, fromName: freelancerName }),
   })
 }
 
@@ -592,7 +624,7 @@ export async function sendMeetingInviteConfirmEmail({
     html: baseTemplate(`
       <p>Hi ${freelancerName},</p>
       <p>Your meeting with <strong>${clientName}</strong> is scheduled for ${when}.</p>
-      <a href="${meetLink}" class="button">Open Meeting →</a>
+      <a href="${meetLink}" style="${BUTTON_STYLE}">Open Meeting →</a>
     `),
   })
 }
@@ -616,7 +648,7 @@ export async function sendMeetingReminderEmail({
     html: baseTemplate(`
       <p>Hi ${recipientName},</p>
       <p>Your meeting <strong>${title}</strong> is coming up (${timeframe}).</p>
-      <a href="${meetLink}" class="button">Join Meeting →</a>
+      <a href="${meetLink}" style="${BUTTON_STYLE}">Join Meeting →</a>
     `),
   })
 }
@@ -657,7 +689,7 @@ export async function sendDripDay1Email({ to, name }: { to: string; name: string
         <li><strong>Upload a file or create a project</strong> — they'll see it immediately.</li>
       </ol>
       <p>That's it. Your client gets a professional, branded workspace without signing up for anything.</p>
-      <a href="${APP_URL}/dashboard" class="button">Go to your dashboard →</a>
+      <a href="${APP_URL}/dashboard" style="${BUTTON_STYLE}">Go to your dashboard →</a>
       <hr class="divider" />
       <p class="muted">Reply to this email if you have any questions — we read every one.</p>
     `),
@@ -680,7 +712,7 @@ export async function sendDripDay3Email({ to, name }: { to: string; name: string
         <li>You get notified. The approval is on record. No inbox archaeology.</li>
       </ul>
       <p>Every file has a clear status: <strong>pending review</strong>, <strong>approved</strong>, or <strong>changes requested</strong>. No ambiguity.</p>
-      <a href="${APP_URL}/dashboard" class="button">Upload your first file →</a>
+      <a href="${APP_URL}/dashboard" style="${BUTTON_STYLE}">Upload your first file →</a>
       <hr class="divider" />
       <p class="muted">Questions? Just reply.</p>
     `),
@@ -702,7 +734,7 @@ export async function sendDripDay5Email({ to, name }: { to: string; name: string
         <li>Click <strong>"Send portal link"</strong> — they'll get an email with a magic link. No password needed.</li>
       </ol>
       <p>The first time a client opens their portal is usually when it clicks for them. It's worth 30 seconds.</p>
-      <a href="${APP_URL}/dashboard/clients" class="button">Send a portal link now →</a>
+      <a href="${APP_URL}/dashboard/clients" style="${BUTTON_STYLE}">Send a portal link now →</a>
       <hr class="divider" />
       <p class="muted">If you're already using PortalKit with clients, ignore this — you're ahead of the game.</p>
     `),
@@ -731,7 +763,7 @@ export async function sendDripDay7Email({
       <hr class="divider" />
       <p><strong>One more thing — founding member pricing</strong></p>
       <p>We're offering 20 freelancers the chance to lock in <strong>40% off PortalKit, forever</strong>. If you're planning to upgrade at any point, this is the best time to do it.</p>
-      <a href="${foundingMemberUrl}" class="button">See founding member details →</a>
+      <a href="${foundingMemberUrl}" style="${BUTTON_STYLE}">See founding member details →</a>
       <hr class="divider" />
       <p class="muted">You're receiving this because you signed up for PortalKit. Reply any time — I read every message.</p>
     `),
@@ -797,7 +829,7 @@ export async function sendTeamInviteEmail({
       <p>Hi there,</p>
       <p><strong>${ownerName}</strong> has invited you to join their PortalKit workspace as a <strong>${role}</strong>.</p>
       <p>PortalKit is a client portal platform for freelancers and agencies. As a team member, you'll be able to manage clients, projects, files, and invoices together.</p>
-      <a href="${acceptUrl}" class="button">Accept invitation →</a>
+      <a href="${acceptUrl}" style="${BUTTON_STYLE}">Accept invitation →</a>
       <hr class="divider" />
       <p class="muted">This invitation expires in 7 days. If you didn't expect this, you can safely ignore this email.</p>
     `),
