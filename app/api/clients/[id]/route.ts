@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ok, noContent, unauthorized, forbidden, notFound, badRequest, conflict, internalError, fromZodError } from '@/lib/api'
 import { updateClientSchema } from '@/lib/validations'
 import { ZodError } from 'zod'
+import { getWorkspaceContext, allowedClientIds } from '@/lib/workspace'
 
 async function getClientOrForbid(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, clientId: string) {
   const { data, error } = await supabase
@@ -21,16 +22,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
-  const client = await getClientOrForbid(supabase, user.id, id)
+  const client = await getClientOrForbid(supabase, ownerId, id)
   if (!client) return notFound('Client not found')
+
+  const ids = allowedClientIds(ctx)
+  if (ids !== null && !ids.includes(client.id)) return notFound('Client not found')
 
   // Fetch with projects — limit nested collections to prevent runaway row counts
   const { data, error } = await supabase
     .from('clients')
     .select(`*, projects ( *, files ( id, status ), messages ( id, sender_type, read_at ) )`)
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .limit(100, { referencedTable: 'projects' })
     .limit(200, { referencedTable: 'files' })
@@ -46,9 +52,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
-  const client = await getClientOrForbid(supabase, user.id, id)
+  const client = await getClientOrForbid(supabase, ownerId, id)
   if (!client) return notFound('Client not found')
+
+  const ids = allowedClientIds(ctx)
+  if (ids !== null && !ids.includes(client.id)) return notFound('Client not found')
 
   let body: unknown
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }
@@ -72,7 +83,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .from('clients')
     .update({ ...input, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .select()
     .single()
 
@@ -85,15 +96,20 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
-  const client = await getClientOrForbid(supabase, user.id, id)
+  const client = await getClientOrForbid(supabase, ownerId, id)
   if (!client) return notFound('Client not found')
+
+  const ids = allowedClientIds(ctx)
+  if (ids !== null && !ids.includes(client.id)) return notFound('Client not found')
 
   const { error } = await supabase
     .from('clients')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
 
   if (error) return internalError(error.message)
   return noContent()
