@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { ok, unauthorized, notFound } from '@/lib/api'
+import { ok, unauthorized, notFound, forbidden } from '@/lib/api'
+import { getWorkspaceContext, canAccessSub } from '@/lib/workspace'
 
 export async function GET(
   _request: NextRequest,
@@ -11,19 +12,23 @@ export async function GET(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
   const service = createServiceClient()
 
   // Verify invoice belongs to this freelancer
   const { data: invoice } = await service
     .from('invoices')
-    .select('id')
+    .select('id, client_id')
     .eq('id', invoiceId)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
   if (!invoice) return notFound('Invoice not found')
+
+  if (!canAccessSub(ctx, 'canViewInvoices', invoice.client_id)) return forbidden()
 
   const { data: receipts } = await service
     .from('invoice_receipts')
