@@ -57,7 +57,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  const successUrl = `${appUrl}/p/${client?.portal_slug}/invoices?paid=true`
+  // Route success through our confirmation endpoint so we can verify + mark paid server-side
+  // before the client lands on the portal. Stripe substitutes {CHECKOUT_SESSION_ID} automatically.
+  const successUrl = `${appUrl}/api/portal/invoices/payment-confirm?session_id={CHECKOUT_SESSION_ID}&slug=${client?.portal_slug}`
   const cancelUrl  = `${appUrl}/p/${client?.portal_slug}/invoices`
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = (invoice.line_items ?? []).map(
