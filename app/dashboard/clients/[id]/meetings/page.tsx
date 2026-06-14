@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { ClientMeetingsView } from '@/components/dashboard/client-meetings-view'
+import { getWorkspaceContext } from '@/lib/workspace'
 
 export const revalidate = 0
 
@@ -10,11 +11,14 @@ export default async function ClientMeetingsPage({ params }: { params: Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
+
   const { data: client } = await supabase
     .from('clients')
     .select('id')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
@@ -24,7 +28,7 @@ export default async function ClientMeetingsPage({ params }: { params: Promise<{
     .from('projects')
     .select('id, title')
     .eq('client_id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
 
