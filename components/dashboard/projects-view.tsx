@@ -55,6 +55,10 @@ export function ProjectsView({ projects, clients }: ProjectsViewProps) {
   const [search, setSearch]         = useState('')
   const [statusFilter, setStatus]   = useState('all')
 
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 767px)').matches) setView('cards')
+  }, [])
+
   const active   = projects.filter(p => p.status !== 'done')
   const done     = projects.filter(p => p.status === 'done')
   const inReview = projects.filter(p => p.status === 'review')
