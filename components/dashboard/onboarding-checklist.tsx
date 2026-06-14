@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, X } from 'lucide-react'
+import { ArrowRight, X, BookOpen, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { AddClientModal } from './add-client-modal'
 import { CreateProjectModal } from './create-project-modal'
@@ -88,66 +88,110 @@ export function OnboardingChecklist({ completed }: OnboardingChecklistProps) {
 
   return (
     <>
-      <div className="bg-white rounded-md shadow-sm overflow-hidden">
-        {/* Progress bar */}
-        <div className="h-1 w-full bg-outline-variant/20">
-          <div className="h-full bg-ds-secondary transition-all duration-500" style={{ width: `${pct}%` }} />
+      <div className="flex flex-col gap-4 max-w-7xl">
+        {/* Section header */}
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-base font-bold text-on-surface">Getting Started</h2>
+          <span className="text-sm text-on-surface-variant">{doneCount}/{total} complete</span>
         </div>
 
-        {/* Header row with dismiss */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-2">
-          <div className="flex items-center gap-2.5">
-            <p className="text-xs font-bold text-on-surface uppercase tracking-wider">Getting Started</p>
-            <span className="text-[11px] font-semibold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
-              {doneCount}/{total}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={handleDismiss}
-            title="Dismiss checklist"
-            className="flex items-center gap-1 text-[11px] text-on-surface-variant hover:text-on-surface transition-colors group"
-          >
-            <X className="size-3" />
-            <span className="hidden group-hover:inline">Dismiss</span>
-          </button>
-        </div>
+        {/* Two-column grid: checklist left, action cards right */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-3 items-start">
+          {/* Checklist card */}
+          <div className="bg-white rounded-md shadow-sm overflow-hidden">
+            <div className="h-1 w-full bg-outline-variant/20">
+              <div className="h-full bg-ds-secondary transition-all duration-500" style={{ width: `${pct}%` }} />
+            </div>
 
-        <div className="divide-y divide-outline-variant/30 pb-1">
-          {STEPS.map((step, i) => {
-            const done = completed[i]
-
-            if (done) {
-              return (
-                <div key={i} className="flex items-center gap-4 px-5 py-3.5 opacity-40">
-                  <div className="size-5 rounded-full flex items-center justify-center shrink-0 bg-ds-secondary">
-                    <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
-                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                  <p className="text-sm text-on-surface-variant line-through">{step.label}</p>
-                </div>
-              )
-            }
-
-            return (
+            <div className="flex items-center justify-between px-5 pt-4 pb-2">
+              <div className="flex items-center gap-2.5">
+                <p className="text-xs font-bold text-on-surface uppercase tracking-wider">Checklist</p>
+                <span className="text-[11px] font-semibold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
+                  {doneCount}/{total}
+                </span>
+              </div>
               <button
-                key={i}
                 type="button"
-                onClick={() => handleStepClick(step)}
-                className="w-full flex items-center gap-4 px-5 py-3.5 text-left hover:bg-surface-container/50 transition-colors group cursor-pointer"
+                onClick={handleDismiss}
+                title="Dismiss checklist"
+                className="flex items-center gap-1 text-[11px] text-on-surface-variant hover:text-on-surface transition-colors group"
               >
-                <div className="size-5 rounded-full flex items-center justify-center shrink-0 border-2 border-outline-variant/50 text-[10px] font-bold text-on-surface-variant group-hover:border-ds-secondary group-hover:text-ds-secondary transition-colors">
-                  {i + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-on-surface leading-tight">{step.label}</p>
-                  <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">{step.description}</p>
-                </div>
-                <ArrowRight className="size-3.5 text-on-surface-variant/30 group-hover:text-ds-secondary group-hover:translate-x-0.5 transition-all shrink-0" />
+                <X className="size-3" />
+                <span className="hidden group-hover:inline">Dismiss</span>
               </button>
-            )
-          })}
+            </div>
+
+            <div className="divide-y divide-outline-variant/30 pb-1">
+              {STEPS.map((step, i) => {
+                const done = completed[i]
+                if (done) {
+                  return (
+                    <div key={i} className="flex items-center gap-4 px-5 py-3.5 opacity-40">
+                      <div className="size-5 rounded-full flex items-center justify-center shrink-0 bg-ds-secondary">
+                        <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-on-surface-variant line-through">{step.label}</p>
+                    </div>
+                  )
+                }
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleStepClick(step)}
+                    className="w-full flex items-center gap-4 px-5 py-3.5 text-left hover:bg-surface-container/50 transition-colors group cursor-pointer"
+                  >
+                    <div className="size-5 rounded-full flex items-center justify-center shrink-0 border-2 border-outline-variant/50 text-[10px] font-bold text-on-surface-variant group-hover:border-ds-secondary group-hover:text-ds-secondary transition-colors">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-on-surface leading-tight">{step.label}</p>
+                      <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">{step.description}</p>
+                    </div>
+                    <ArrowRight className="size-3.5 text-on-surface-variant/30 group-hover:text-ds-secondary group-hover:translate-x-0.5 transition-all shrink-0" />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Action cards */}
+          <div className="flex flex-col gap-3 max-w-xl">
+            <a
+              href="https://docs.portalkit.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group bg-white rounded-md shadow-sm hover:shadow-md transition-shadow p-4 flex items-start gap-3"
+            >
+              <div className="size-9 rounded-md bg-ds-secondary/10 flex items-center justify-center shrink-0">
+                <BookOpen className="size-4 text-ds-secondary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-on-surface">Read the Guide</p>
+                <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">Step-by-step setup for PortalKit.</p>
+                <span className="flex items-center gap-1 mt-1.5 text-xs font-semibold text-ds-secondary group-hover:gap-1.5 transition-all">
+                  View guide <ArrowRight className="size-3" />
+                </span>
+              </div>
+            </a>
+            <a
+              href="mailto:support@portalkit.io"
+              className="group bg-white rounded-md shadow-sm hover:shadow-md transition-shadow p-4 flex items-start gap-3"
+            >
+              <div className="size-9 rounded-md bg-surface-container flex items-center justify-center shrink-0">
+                <MessageCircle className="size-4 text-on-surface-variant" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-on-surface">Need help?</p>
+                <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">We typically respond within a few hours.</p>
+                <span className="flex items-center gap-1 mt-1.5 text-xs font-semibold text-ds-secondary group-hover:gap-1.5 transition-all">
+                  Contact support <ArrowRight className="size-3" />
+                </span>
+              </div>
+            </a>
+          </div>
         </div>
       </div>
 

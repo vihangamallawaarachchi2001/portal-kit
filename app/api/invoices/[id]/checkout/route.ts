@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { ok, badRequest, unauthorized, notFound, internalError, paymentRequired } from '@/lib/api'
-import { isStripeSupported } from '@/lib/currencies'
+import { isStripeSupportedServer } from '@/lib/currencies-server'
 import Stripe from 'stripe'
 import { cookies } from 'next/headers'
 
@@ -49,7 +49,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   // Currency must be on Stripe's supported list
-  if (!isStripeSupported(invoice.currency)) {
+  if (!await isStripeSupportedServer(invoice.currency)) {
     return badRequest(
       `${invoice.currency} is not supported for online payment via Stripe.`,
       { code: 'currency_not_supported' },
@@ -57,7 +57,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  const successUrl = `${appUrl}/p/${client?.portal_slug}/invoices?paid=true`
+  // Route success through our confirmation endpoint so we can verify + mark paid server-side
+  // before the client lands on the portal. Stripe substitutes {CHECKOUT_SESSION_ID} automatically.
+  const successUrl = `${appUrl}/api/portal/invoices/payment-confirm?session_id={CHECKOUT_SESSION_ID}&slug=${client?.portal_slug}`
   const cancelUrl  = `${appUrl}/p/${client?.portal_slug}/invoices`
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = (invoice.line_items ?? []).map(

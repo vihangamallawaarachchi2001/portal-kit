@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ok, unauthorized, badRequest, paymentRequired, forbidden, internalError, fromZodError } from '@/lib/api'
 import { requestUploadSchema, MAX_FILE_SIZE } from '@/lib/validations'
 import { ZodError } from 'zod'
+import { getWorkspaceContext, allowedClientIds, canAccessSub } from '@/lib/workspace'
 
 const FREE_FILES_PER_PORTAL = 10
 const FREE_STORAGE_BYTES    = 500 * 1024 * 1024 // 500 MB
@@ -10,6 +11,9 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
   let body: unknown
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }
@@ -21,12 +25,49 @@ export async function POST(req: Request) {
     return badRequest(`File size exceeds the 50 MB limit.`)
   }
 
-  // Verify project belongs to this freelancer
+  // ── Workspace grant check ─────────────────────────────────────────────────
+  // Determine which client this upload is scoped to, then enforce data grants.
+
+  const clientIdFromInput = (input as Record<string, unknown>).client_id as string | undefined
+  const projectIdFromInput = input.project_id as string | undefined
+
+  if (clientIdFromInput) {
+    // Direct client_id in request — check grants immediately
+    const allowed = allowedClientIds(ctx)
+    if (allowed !== null && !allowed.includes(clientIdFromInput)) {
+      return forbidden('Access denied to this client')
+    }
+    if (!canAccessSub(ctx, 'canViewFiles', clientIdFromInput)) {
+      return forbidden('File access not granted for this client')
+    }
+  } else if (projectIdFromInput) {
+    // Fetch the project first to resolve client_id, then check grants
+    const { data: projectForGrant } = await supabase
+      .from('projects')
+      .select('id, client_id')
+      .eq('id', projectIdFromInput)
+      .eq('freelancer_id', ownerId)
+      .is('deleted_at', null)
+      .single()
+
+    if (!projectForGrant) return forbidden('Project not found or access denied')
+
+    const allowed = allowedClientIds(ctx)
+    if (allowed !== null && !allowed.includes(projectForGrant.client_id)) {
+      return forbidden('Access denied to this client')
+    }
+    if (!canAccessSub(ctx, 'canViewFiles', projectForGrant.client_id, projectForGrant.id)) {
+      return forbidden('File access not granted for this project')
+    }
+  }
+  // If neither client_id nor project_id is present in the request, skip grant check.
+
+  // Verify project belongs to this freelancer (ownership check — always required)
   const { data: project } = await supabase
     .from('projects')
     .select('id, client_id')
     .eq('id', input.project_id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
@@ -37,7 +78,7 @@ export async function POST(req: Request) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('plan')
-    .eq('id', user.id)
+    .eq('id', ownerId)
     .single()
 
   if (profile?.plan === 'free') {
@@ -46,7 +87,7 @@ export async function POST(req: Request) {
       .from('projects')
       .select('id')
       .eq('client_id', project.client_id)
-      .eq('freelancer_id', user.id)
+      .eq('freelancer_id', ownerId)
       .is('deleted_at', null)
 
     const projectIds = portalProjects?.map(p => p.id) ?? []
@@ -56,7 +97,7 @@ export async function POST(req: Request) {
         .from('files')
         .select('id', { count: 'exact', head: true })
         .in('project_id', projectIds)
-        .eq('freelancer_id', user.id)
+        .eq('freelancer_id', ownerId)
         .is('deleted_at', null)
 
       if ((portalFileCount ?? 0) >= FREE_FILES_PER_PORTAL) {
@@ -71,7 +112,7 @@ export async function POST(req: Request) {
     const { data: allFiles } = await supabase
       .from('files')
       .select('file_size')
-      .eq('freelancer_id', user.id)
+      .eq('freelancer_id', ownerId)
       .is('deleted_at', null)
 
     const usedBytes = allFiles?.reduce((s, f) => s + (f.file_size ?? 0), 0) ?? 0

@@ -4,28 +4,35 @@ import { registerFileSchema } from '@/lib/validations'
 import { sendFileUploadedEmail } from '@/lib/email'
 import { sendPushToSubscriber } from '@/lib/web-push'
 import { ZodError } from 'zod'
+import { getWorkspaceContext, allowedClientIds, allowedProjectIds, canAccessSub } from '@/lib/workspace'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
   const { data: project } = await supabase
     .from('projects')
-    .select('id')
+    .select('id, client_id')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
   if (!project) return notFound('Project not found')
 
+  const clientIds = allowedClientIds(ctx)
+  if (clientIds !== null && project.client_id && !clientIds.includes(project.client_id)) return notFound()
+  if (!canAccessSub(ctx, 'canViewFiles', project.client_id, id)) return unauthorized()
+
   const { data, error } = await supabase
     .from('files')
     .select('id, filename, status, file_size, mime_type, version, client_comment, reviewed_at, created_at, storage_path, parent_file_id')
     .eq('project_id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(500)
@@ -39,6 +46,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
   let body: Record<string, unknown>
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }
@@ -48,17 +57,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { data: project } = await supabase
     .from('projects')
-    .select('id, title, clients(id, name, email, portal_slug)')
+    .select('id, client_id, title, clients(id, name, email, portal_slug)')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
   if (!project) return notFound('Project not found')
 
+  const clientIds = allowedClientIds(ctx)
+  if (clientIds !== null && project.client_id && !clientIds.includes(project.client_id)) return notFound()
+
   const { data, error } = await supabase
     .from('files')
-    .insert({ ...input, freelancer_id: user.id })
+    .insert({ ...input, freelancer_id: ownerId })
     .select()
     .single()
 
@@ -69,10 +81,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (client?.email) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name, business_name')
+      .select('full_name, business_name, plan, hide_branding')
       .eq('id', user.id)
       .single()
 
+    const hideBranding = profile?.plan !== 'free' && (profile?.hide_branding ?? false)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
     await sendFileUploadedEmail({
       to: client.email,
@@ -82,6 +95,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       projectTitle: project.title,
       filename: input.filename,
       portalUrl: `${appUrl}/p/${client.portal_slug}`,
+      hideBranding,
     }).catch((err) => console.error('[email] file-uploaded notification failed', err))
 
     // Push notification to client

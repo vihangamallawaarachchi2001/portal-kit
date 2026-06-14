@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { ok, unauthorized, notFound, badRequest, internalError, tooManyRequests } from '@/lib/api'
 import { sendInvoiceSentEmail } from '@/lib/email'
+import { getWorkspaceContext, canAccessSub } from '@/lib/workspace'
 
 // Resend an invoice email — unlike /send, this allows sent and overdue statuses
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -8,16 +9,22 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
   const { data: invoice } = await supabase
     .from('invoices')
     .select('*, clients(id, name, email, portal_slug)')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
   if (!invoice) return notFound('Invoice not found')
+
+  const client = Array.isArray(invoice.clients) ? (invoice.clients[0] ?? null) : invoice.clients
+  if (!canAccessSub(ctx, 'canViewInvoices', client.id)) return unauthorized()
+
   if (invoice.status === 'paid') return badRequest('Cannot resend a paid invoice')
   if (invoice.status === 'draft') return badRequest('Send the invoice first before resending')
 
@@ -32,14 +39,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   // Send email notification
-  const client = Array.isArray(invoice.clients) ? (invoice.clients[0] ?? null) : invoice.clients
   if (client?.email) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name, business_name')
+      .select('full_name, business_name, plan, hide_branding')
       .eq('id', user.id)
       .single()
 
+    const hideBranding = profile?.plan !== 'free' && (profile?.hide_branding ?? false)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
     const sent = await sendInvoiceSentEmail({
       to: client.email,
@@ -51,9 +58,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       currency: invoice.currency,
       dueDate: invoice.due_date,
       portalUrl: `${appUrl}/p/${client.portal_slug}`,
+      hideBranding,
     }).catch(() => null)
 
-    if (!sent) return internalError('Failed to send email')
+    if (sent === null) return internalError('Failed to send email')
   }
 
   // Record resend timestamp for cooldown enforcement
@@ -61,7 +69,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .from('invoices')
     .update({ last_resent_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
 
   return ok({ resent: true })
 }

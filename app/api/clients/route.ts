@@ -2,17 +2,25 @@ import { createClient } from '@/lib/supabase/server'
 import { ok, created, unauthorized, badRequest, conflict, paymentRequired, internalError, fromZodError } from '@/lib/api'
 import { createClientSchema } from '@/lib/validations'
 import { ZodError } from 'zod'
+import { getWorkspaceContext, allowedClientIds } from '@/lib/workspace'
 
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('clients')
     .select('id, name, email, portal_slug, status, created_at, updated_at')
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
+
+  const ids = allowedClientIds(ctx)
+  if (ids !== null) query = query.in('id', ids)
+
+  const { data, error } = await query
     .order('updated_at', { ascending: false })
     .limit(200)
 
@@ -24,6 +32,7 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const { ownerId } = await getWorkspaceContext(user.id, user.email ?? '')
 
   let body: unknown
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }
@@ -42,7 +51,7 @@ export async function POST(req: Request) {
     const { count } = await supabase
       .from('clients')
       .select('id', { count: 'exact', head: true })
-      .eq('freelancer_id', user.id)
+      .eq('freelancer_id', ownerId)
       .eq('status', 'active')
       .is('deleted_at', null)
 
@@ -62,7 +71,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await supabase
     .from('clients')
-    .insert({ ...input, freelancer_id: user.id })
+    .insert({ ...input, freelancer_id: ownerId })
     .select()
     .single()
 

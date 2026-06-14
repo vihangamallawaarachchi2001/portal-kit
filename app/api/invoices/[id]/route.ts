@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { ok, noContent, unauthorized, notFound, badRequest, internalError, fromZodError } from '@/lib/api'
+import { ok, noContent, unauthorized, notFound, badRequest, internalError, forbidden, fromZodError } from '@/lib/api'
 import { updateInvoiceSchema } from '@/lib/validations'
 import { ZodError } from 'zod'
+import { getWorkspaceContext, allowedClientIds, canAccessSub } from '@/lib/workspace'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -9,16 +10,33 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
-  const { data, error } = await supabase
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
+
+  // Fetch the invoice scoped to this workspace (freelancer_id = ownerId)
+  const { data: invoice, error } = await supabase
     .from('invoices')
     .select('*, clients(id, name, email, portal_slug)')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
-  if (error || !data) return notFound('Invoice not found')
-  return ok(data)
+  if (error || !invoice) return notFound('Invoice not found')
+
+  // If the invoice is linked to a client, enforce sub-member access controls.
+  // Invoices without a client_id are owner-level records — no grant check needed.
+  if (invoice.client_id) {
+    const allowed = allowedClientIds(ctx)
+    if (allowed !== null && !allowed.includes(invoice.client_id)) {
+      return forbidden('Access denied')
+    }
+    if (!canAccessSub(ctx, 'canViewInvoices', invoice.client_id)) {
+      return forbidden('Access denied')
+    }
+  }
+
+  return ok(invoice)
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -26,12 +44,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const { ownerId } = await getWorkspaceContext(user.id, user.email ?? '')
 
   const { data: existing } = await supabase
     .from('invoices')
     .select('id, status')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
@@ -57,7 +76,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .from('invoices')
     .update(updates)
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .select()
     .single()
 
@@ -70,12 +89,13 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const { ownerId } = await getWorkspaceContext(user.id, user.email ?? '')
 
   const { data: existing } = await supabase
     .from('invoices')
     .select('id, status')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
@@ -86,7 +106,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     .from('invoices')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
 
   if (error) return internalError(error.message)
   return noContent()

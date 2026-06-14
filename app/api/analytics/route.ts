@@ -1,15 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { ok, unauthorized, paymentRequired } from '@/lib/api'
+import { getWorkspaceContext } from '@/lib/workspace'
 
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const { ownerId } = await getWorkspaceContext(user.id, user.email ?? '')
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('plan')
-    .eq('id', user.id)
+    .eq('id', ownerId)
     .single()
 
   if (profile?.plan !== 'business') {
@@ -41,20 +43,20 @@ export async function GET() {
   ] = await Promise.all([
     // Revenue per month: SUM(total) GROUP BY month
     supabase.rpc('analytics_revenue_by_month', {
-      p_freelancer_id: user.id,
+      p_freelancer_id: ownerId,
       p_since:         sixMonthsAgo,
     }),
     // Invoice status breakdown: COUNT + SUM per status
-    supabase.rpc('analytics_invoice_breakdown', { p_freelancer_id: user.id }),
+    supabase.rpc('analytics_invoice_breakdown', { p_freelancer_id: ownerId }),
     // New clients per month: COUNT GROUP BY month
     supabase.rpc('analytics_clients_by_month', {
-      p_freelancer_id: user.id,
+      p_freelancer_id: ownerId,
       p_since:         sixMonthsAgo,
     }),
     // File approval stats: COUNT per review status
-    supabase.rpc('analytics_file_stats', { p_freelancer_id: user.id }),
+    supabase.rpc('analytics_file_stats', { p_freelancer_id: ownerId }),
     // Project status distribution: COUNT per status
-    supabase.rpc('analytics_project_distribution', { p_freelancer_id: user.id }),
+    supabase.rpc('analytics_project_distribution', { p_freelancer_id: ownerId }),
   ])
 
   // Map SQL results onto the month buckets

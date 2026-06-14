@@ -19,6 +19,7 @@ export type GlobalFile = {
   id: string; filename: string; file_size: number; mime_type: string
   status: string; version: number; storage_path: string
   created_at: string; client_comment: string | null; parent_file_id: string | null
+  uploaded_by_client?: boolean
   projects: RawProject | null
 }
 
@@ -117,7 +118,7 @@ export function GlobalFilesView({ rawFiles, plan = 'free' }: Props) {
   }, [rootFiles, search, statusFilter, clientFilter])
 
   const isFiltering  = search !== '' || statusFilter !== 'all' || clientFilter !== 'all'
-  const pendingCount = rootFiles.filter(f => f.status === 'pending').length
+  const pendingCount = rootFiles.filter(f => f.status === 'pending' && !f.uploaded_by_client).length
 
   /* ── Empty state ─────────────────────────────── */
   if (rootFiles.length === 0) {

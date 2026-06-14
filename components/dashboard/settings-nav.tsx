@@ -8,22 +8,30 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/format'
 
 const NAV = [
-  { href: '/dashboard/settings',              label: 'Profile',       icon: User,       exact: true,  badge: null        },
-  { href: '/dashboard/settings/billing',       label: 'Billing',       icon: CreditCard, exact: false, badge: null        },
-  { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell,       exact: false, badge: null        },
-  { href: '/dashboard/settings/portal',        label: 'Portal',        icon: Globe,      exact: false, badge: 'Pro'       },
-  { href: '/dashboard/settings/team',          label: 'Team',          icon: Users,      exact: false, badge: 'Business'  },
-  { href: '/dashboard/settings/account',       label: 'Account',       icon: Shield,     exact: false, badge: null        },
+  { href: '/dashboard/settings',              label: 'Profile',       icon: User,       exact: true,  badge: null,       ownerOnly: false },
+  { href: '/dashboard/settings/billing',       label: 'Billing',       icon: CreditCard, exact: false, badge: null,       ownerOnly: true  },
+  { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell,       exact: false, badge: null,       ownerOnly: false },
+  { href: '/dashboard/settings/portal',        label: 'Portal',        icon: Globe,      exact: false, badge: 'Pro',      ownerOnly: true  },
+  { href: '/dashboard/settings/team',          label: 'Team',          icon: Users,      exact: false, badge: 'Business', ownerOnly: true  },
+  { href: '/dashboard/settings/account',       label: 'Account',       icon: Shield,     exact: false, badge: null,       ownerOnly: false },
 ]
 
 interface SettingsNavProps {
   displayName: string
   avatarUrl: string | null
   plan: string
+  isOwner?: boolean
 }
 
-export function SettingsNav({ displayName, avatarUrl, plan }: SettingsNavProps) {
+function isPlanUnlocked(badge: string, plan: string): boolean {
+  if (plan === 'business') return true
+  if (plan === 'pro' && badge === 'Pro') return true
+  return false
+}
+
+export function SettingsNav({ displayName, avatarUrl, plan, isOwner = true }: SettingsNavProps) {
   const pathname = usePathname()
+  const visibleNav = NAV.filter(item => !item.ownerOnly || isOwner)
 
   return (
     <aside className="w-52 shrink-0 flex flex-col py-8 px-4 gap-0.5">
@@ -54,7 +62,7 @@ export function SettingsNav({ displayName, avatarUrl, plan }: SettingsNavProps) 
       <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest px-3 mb-1.5">
         Account
       </p>
-      {NAV.map(item => {
+      {visibleNav.map(item => {
         const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
         return (
           <Link
@@ -69,7 +77,7 @@ export function SettingsNav({ displayName, avatarUrl, plan }: SettingsNavProps) 
           >
             <item.icon className={cn('size-4 shrink-0', active ? 'text-ds-secondary' : 'text-on-surface-variant')} />
             <span className="flex-1">{item.label}</span>
-            {item.badge && (
+            {item.badge && !isPlanUnlocked(item.badge, plan) && (
               <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">
                 {item.badge}
               </span>

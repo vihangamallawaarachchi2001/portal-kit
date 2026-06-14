@@ -19,15 +19,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     .from('clients')
     .select(`
       id, name, email, portal_slug,
-      profiles:freelancer_id ( full_name, business_name )
+      profiles:freelancer_id ( full_name, business_name, plan, hide_branding )
     `)
     .eq('portal_slug', slug)
     .ilike('email', email.trim())
     .is('deleted_at', null)
     .single()
 
-  // Always return success to avoid email enumeration
-  if (!client) return ok({ sent: true })
+  if (!client) return badRequest('No portal account found for that email address. Please check with your freelancer.')
 
   // Rate limit: max 3 magic links per client per hour to prevent Resend quota abuse
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
@@ -39,6 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   if ((count ?? 0) >= 3) return ok({ sent: true })
 
   const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
+  const hideBranding = profile?.plan !== 'free' && (profile?.hide_branding ?? false)
 
   const rawToken = randomBytes(32).toString('hex')
   const tokenHash = createHash('sha256').update(rawToken).digest('hex')
@@ -64,6 +64,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     freelancerName: profile?.full_name ?? 'Your freelancer',
     businessName: profile?.business_name || profile?.full_name || 'PortalKit',
     portalUrl,
+    hideBranding,
   }).catch(err => console.error('[email] request-access', err))
 
   return ok({ sent: true })

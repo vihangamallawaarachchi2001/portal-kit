@@ -47,47 +47,58 @@ export async function POST(req: Request) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
-  // Create or retrieve Stripe customer
-  let customerId = profile?.stripe_customer_id
-  if (!customerId) {
-    const customer = await getStripe().customers.create({
-      email: user.email,
-      name: profile?.full_name ?? undefined,
-      metadata: { supabase_user_id: user.id },
-    })
-    customerId = customer.id
-    await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id)
+  try {
+    // Create or retrieve Stripe customer
+    let customerId = profile?.stripe_customer_id
+    if (!customerId) {
+      const customer = await getStripe().customers.create({
+        email: user.email,
+        name: profile?.full_name ?? undefined,
+        metadata: { supabase_user_id: user.id },
+      })
+      customerId = customer.id
+      await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id)
+    }
+
+    // Check if this user is a founding member — auto-apply coupon if so
+    const foundingMemberCouponId = process.env.STRIPE_FOUNDING_MEMBER_COUPON_ID
+    let isFoundingMember = false
+    if (foundingMemberCouponId && user.email) {
+      const service = createServiceClient()
+      const { data: waitlistEntry } = await service
+        .from('waitlist')
+        .select('is_founding_member')
+        .eq('email', user.email.toLowerCase())
+        .maybeSingle()
+      isFoundingMember = waitlistEntry?.is_founding_member === true
+    }
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode: 'subscription',
+      customer: customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl?.startsWith('/')
+        ? `${appUrl}${successUrl}`
+        : `${appUrl}/dashboard/settings/billing?upgraded=true`,
+      cancel_url: successUrl?.startsWith('/')
+        ? `${appUrl}${successUrl}`
+        : `${appUrl}/dashboard/settings/billing`,
+      subscription_data: { metadata: { supabase_user_id: user.id } },
+      ...(isFoundingMember && foundingMemberCouponId
+        ? { discounts: [{ coupon: foundingMemberCouponId }] }
+        : { allow_promotion_codes: true }),
+    }
+
+    const session = await getStripe().checkout.sessions.create(sessionParams)
+
+    if (!session.url) return internalError('Failed to create Stripe session')
+    return ok({ url: session.url })
+  } catch (err) {
+    console.error('[checkout] Stripe error:', err)
+    return internalError(
+      process.env.NODE_ENV === 'development'
+        ? `Stripe error: ${(err as Error).message}`
+        : 'Unable to start checkout. Please check your Stripe configuration or contact support.'
+    )
   }
-
-  // Check if this user is a founding member — auto-apply coupon if so
-  const foundingMemberCouponId = process.env.STRIPE_FOUNDING_MEMBER_COUPON_ID
-  let isFoundingMember = false
-  if (foundingMemberCouponId && user.email) {
-    const service = createServiceClient()
-    const { data: waitlistEntry } = await service
-      .from('waitlist')
-      .select('is_founding_member')
-      .eq('email', user.email.toLowerCase())
-      .maybeSingle()
-    isFoundingMember = waitlistEntry?.is_founding_member === true
-  }
-
-  const sessionParams: Stripe.Checkout.SessionCreateParams = {
-    mode: 'subscription',
-    customer: customerId,
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: successUrl?.startsWith('/')
-      ? `${appUrl}${successUrl}`
-      : `${appUrl}/dashboard/settings/billing?upgraded=true`,
-    cancel_url: `${appUrl}/dashboard/settings/billing`,
-    subscription_data: { metadata: { supabase_user_id: user.id } },
-    ...(isFoundingMember && foundingMemberCouponId
-      ? { discounts: [{ coupon: foundingMemberCouponId }] }
-      : { allow_promotion_codes: true }),
-  }
-
-  const session = await getStripe().checkout.sessions.create(sessionParams)
-
-  if (!session.url) return internalError('Failed to create Stripe session')
-  return ok({ url: session.url })
 }

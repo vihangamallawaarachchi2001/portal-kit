@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { Invoice, Project, LineItem } from '@/types/database'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -9,10 +9,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Plus, Trash2, Send, FileText, Loader2, ChevronDown, ChevronUp, X,
-  Receipt, CalendarDays, Percent, FolderOpen, Download, CreditCard,
+  Receipt, CalendarDays, Percent, FolderOpen, Download, CreditCard, Paperclip, CheckCircle2,
 } from 'lucide-react'
 import { UpgradePrompt } from '@/components/upgrade-prompt'
 import { CURRENCIES, isStripeSupported } from '@/lib/currencies'
+import { effectiveInvoiceStatus } from '@/lib/format'
 import { EmptyState } from './empty-state'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -27,6 +28,14 @@ const STATUS_CONFIG: Record<Invoice['status'], { label: string; className: strin
   overdue: { label: 'Overdue', className: 'bg-red-50 text-red-600 border-red-200' },
 }
 
+interface InvoiceReceipt {
+  id: string
+  filename: string
+  file_size: number
+  uploaded_at: string
+  download_url?: string | null
+}
+
 interface InvoiceManagerProps {
   clientId: string
   clientName: string
@@ -37,18 +46,28 @@ interface InvoiceManagerProps {
   businessName: string
   plan?: string
   stripeConnected?: boolean
+  hasBankDetails?: boolean
+  receiptsByInvoice?: Record<string, InvoiceReceipt[]>
 }
 
 const EMPTY_LINE: LineItem = { description: '', quantity: 1, unit_price: 0 }
 
 export function InvoiceManager({
-  clientId, clientName, invoices, projects, plan = 'free', stripeConnected = false,
+  clientId, clientName, invoices, projects, plan = 'free', stripeConnected = false, hasBankDetails = false, receiptsByInvoice = {},
 }: InvoiceManagerProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [modalOpen, setModalOpen]       = useState(false)
   const [expandedId, setExpandedId]     = useState<string | null>(null)
   const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null)
+  const [stripeSet, setStripeSet] = useState<Set<string> | null>(null)
+
+  useEffect(() => {
+    fetch('/api/billing/stripe-currencies')
+      .then(r => r.json())
+      .then((d: { currencies: string[] }) => setStripeSet(new Set(d.currencies)))
+      .catch(() => {})
+  }, [])
 
   // Form state
   const [lineItems, setLineItems] = useState<LineItem[]>([{ ...EMPTY_LINE }])
@@ -146,6 +165,19 @@ export function InvoiceManager({
     })
   }
 
+  function handleMarkPaid(invoiceId: string) {
+    startTransition(async () => {
+      const res = await fetch(`/api/invoices/${invoiceId}/mark-paid`, { method: 'POST' })
+      if (res.ok) {
+        toast.success('Invoice marked as paid')
+        router.refresh()
+      } else {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error ?? 'Failed to mark invoice as paid')
+      }
+    })
+  }
+
   const INV_COL = 'grid-cols-[minmax(0,1fr)_110px_130px_120px_100px]'
 
   return (
@@ -166,22 +198,27 @@ export function InvoiceManager({
           title="No invoices yet"
           description="Create an invoice for this client and send it directly through their portal."
         />
-      ) : (
-        <div className="overflow-x-auto">
-          <div className="min-w-150 bg-white rounded-lg border border-outline-variant/20 shadow-sm overflow-hidden">
-            {/* Table header */}
-            <div className={cn('grid px-5 py-2.5 bg-surface-container/50 border-b border-outline-variant/15', INV_COL)}>
-              {['Invoice', 'Status', 'Amount', 'Due Date', ''].map((h, i) => (
-                <p key={i} className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{h}</p>
-              ))}
-            </div>
-            {/* Rows */}
-            <div className="divide-y divide-outline-variant/10">
-              {invoices.map(inv => {
-                const cfg      = STATUS_CONFIG[inv.status]
+      ) : (() => {
+        const tableHeader = (
+          <div className={cn('grid px-5 py-2.5 bg-surface-container/50 border-b border-outline-variant/15', INV_COL)}>
+            {['Invoice', 'Status', 'Amount', 'Due Date', ''].map((h, i) => (
+              <p key={i} className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{h}</p>
+            ))}
+          </div>
+        )
+        const unpaid = invoices.filter(inv => {
+          const eff = effectiveInvoiceStatus(inv.status, inv.due_date)
+          return eff !== 'paid'
+        })
+        const paid = invoices.filter(inv => inv.status === 'paid')
+
+        const renderRow = (inv: Invoice) => {
+                const effStatus = effectiveInvoiceStatus(inv.status, inv.due_date)
+                const cfg      = STATUS_CONFIG[effStatus as Invoice['status']] ?? STATUS_CONFIG.sent
                 const expanded = expandedId === inv.id
-                const isOverdue = inv.status === 'overdue'
-                const isPaid    = inv.status === 'paid'
+                const isOverdue = effStatus === 'overdue'
+                const isPaid    = effStatus === 'paid'
+                const receipts  = receiptsByInvoice[inv.id] ?? []
 
                 return (
                   <div key={inv.id} className="group">
@@ -204,8 +241,13 @@ export function InvoiceManager({
                         >
                           {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
                         </button>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex items-center gap-2">
                           <p className="text-sm font-bold text-on-surface truncate">{inv.invoice_number}</p>
+                          {receipts.length > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                              <Paperclip className="size-2.5" />{receipts.length}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -241,15 +283,25 @@ export function InvoiceManager({
                             <Send className="size-3" />Send
                           </button>
                         )}
-                        {(inv.status === 'sent' || inv.status === 'overdue') && (
-                          <button
-                            onClick={() => handleResend(inv.id)}
-                            disabled={isPending}
-                            title="Resend invoice email to client"
-                            className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-semibold text-ds-secondary bg-ds-secondary/8 hover:bg-ds-secondary/15 transition-colors"
-                          >
-                            <Send className="size-3" />Resend
-                          </button>
+                        {(effStatus === 'sent' || effStatus === 'overdue') && (
+                          <>
+                            <button
+                              onClick={() => handleMarkPaid(inv.id)}
+                              disabled={isPending}
+                              title="Mark as paid"
+                              className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors border border-emerald-200"
+                            >
+                              <CheckCircle2 className="size-3" />Mark paid
+                            </button>
+                            <button
+                              onClick={() => handleResend(inv.id)}
+                              disabled={isPending}
+                              title="Resend invoice email to client"
+                              className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-semibold text-ds-secondary bg-ds-secondary/8 hover:bg-ds-secondary/15 transition-colors"
+                            >
+                              <Send className="size-3" />Resend
+                            </button>
+                          </>
                         )}
                         <a
                           href={`/api/invoices/${inv.id}/pdf`}
@@ -298,16 +350,90 @@ export function InvoiceManager({
                           {inv.notes && (
                             <p className="text-xs text-on-surface-variant mt-1 italic">Note: {inv.notes}</p>
                           )}
+                          {receipts.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-outline-variant/30">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-[11px] font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                                  <Paperclip className="size-3" />Payment receipts from client
+                                </p>
+                                {(effStatus === 'sent' || effStatus === 'overdue') && (
+                                  <button
+                                    onClick={() => handleMarkPaid(inv.id)}
+                                    disabled={isPending}
+                                    className="flex items-center gap-1.5 h-7 px-3 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors border border-emerald-200"
+                                  >
+                                    {isPending ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />}
+                                    Mark as paid
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                {receipts.map(r => (
+                                  <div key={r.id} className="flex items-center gap-2 text-xs">
+                                    <Paperclip className="size-3 text-on-surface-variant shrink-0" />
+                                    {r.download_url ? (
+                                      <a
+                                        href={r.download_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-ds-secondary underline truncate flex-1"
+                                      >
+                                        {r.filename}
+                                      </a>
+                                    ) : (
+                                      <span className="text-on-surface truncate flex-1">{r.filename}</span>
+                                    )}
+                                    <span className="text-on-surface-variant shrink-0">
+                                      {new Date(r.uploaded_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
                 )
-              })}
-            </div>
+        }
+
+        return (
+          <div className="flex flex-col gap-4">
+            {/* Unpaid: overdue + outstanding + drafts */}
+            {unpaid.length > 0 && (
+              <div className="overflow-x-auto">
+                <div className="min-w-150 bg-white rounded-lg border border-outline-variant/20 shadow-sm overflow-hidden">
+                  {tableHeader}
+                  <div className="divide-y divide-outline-variant/10">
+                    {unpaid.map(inv => renderRow(inv))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Paid: separate visually muted card */}
+            {paid.length > 0 && (
+              <div className="overflow-x-auto">
+                <div className="min-w-150 bg-white rounded-lg border border-emerald-100 shadow-sm overflow-hidden opacity-75">
+                  <div className={cn('grid px-5 py-2.5 bg-emerald-50/60 border-b border-emerald-100', INV_COL)}>
+                    {['Invoice', 'Status', 'Amount', 'Paid Date', ''].map((h, i) => (
+                      <p key={i} className="text-[10px] font-bold uppercase tracking-wider text-emerald-700/60">{h}</p>
+                    ))}
+                  </div>
+                  <div className="px-5 py-1.5 bg-emerald-50/40 border-b border-emerald-100/50 flex items-center gap-2">
+                    <CheckCircle2 className="size-3 text-emerald-600/50" />
+                    <span className="text-[10px] font-bold text-emerald-700/60 uppercase tracking-wider">Paid · {paid.length}</span>
+                  </div>
+                  <div className="divide-y divide-emerald-50">
+                    {paid.map(inv => renderRow(inv))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Create invoice modal */}
       <Dialog open={modalOpen} onOpenChange={v => { if (!v) resetForm(); setModalOpen(v) }}>
@@ -333,20 +459,33 @@ export function InvoiceManager({
             </div>
           </div>
 
-          {/* ── Stripe nudge ─────────────────────────── */}
+          {/* ── Payment setup nudges ─────────────────────── */}
           {!stripeConnected && (
-            <div className="mx-6 mt-4 flex items-start gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
-              <CreditCard className="size-4 text-blue-600 mt-0.5 shrink-0" />
-              <p className="text-xs text-blue-900 leading-snug">
-                Clients can&apos;t pay online until you connect Stripe.{' '}
-                <Link
-                  href="/dashboard/settings/billing"
-                  onClick={() => setModalOpen(false)}
-                  className="font-semibold underline underline-offset-2 hover:opacity-80"
-                >
-                  Set up payments →
-                </Link>
-              </p>
+            <div className="mx-6 mt-4 flex flex-col gap-2">
+              <div className="flex items-start gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+                <CreditCard className="size-4 text-blue-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-blue-900 leading-snug">
+                  {hasBankDetails
+                    ? <>Clients will pay via bank transfer. <Link href="/dashboard/settings/billing" onClick={() => setModalOpen(false)} className="font-semibold underline underline-offset-2 hover:opacity-80">Connect Stripe for easier online payments →</Link></>
+                    : <>Connect Stripe so clients can pay online instantly. <Link href="/dashboard/settings/billing" onClick={() => setModalOpen(false)} className="font-semibold underline underline-offset-2 hover:opacity-80">Set up payments →</Link></>
+                  }
+                </p>
+              </div>
+              {!hasBankDetails && (
+                <div className="flex items-start gap-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+                  <CreditCard className="size-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-900 leading-snug">
+                    No bank details on file — clients have no way to pay until you add them.{' '}
+                    <Link
+                      href="/dashboard/settings?tab=bank"
+                      onClick={() => setModalOpen(false)}
+                      className="font-semibold underline underline-offset-2 hover:opacity-80"
+                    >
+                      Add bank details →
+                    </Link>
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -491,7 +630,7 @@ export function InvoiceManager({
                         <SelectValue placeholder="None" />
                       )}
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[200]">
                       <SelectItem value="__none__" className="rounded-md">
                         <span className="text-on-surface-variant">None</span>
                       </SelectItem>
@@ -503,6 +642,11 @@ export function InvoiceManager({
                           </span>
                         </SelectItem>
                       ))}
+                      {projects.length === 0 && (
+                        <div className="px-3 py-2 text-xs text-on-surface-variant italic">
+                          No projects for this client yet
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -520,13 +664,13 @@ export function InvoiceManager({
                       <SelectTrigger className="h-10 rounded-md border-outline-variant">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="max-h-60">
+                      <SelectContent className="max-h-60 z-[200]">
                         {CURRENCIES.map(c => (
                           <SelectItem key={c.code} value={c.code} className="rounded-md">
                             <span className="flex items-center gap-2">
                               <span className="font-mono text-[11px] font-bold text-on-surface-variant w-8">{c.code}</span>
                               <span className="text-sm">{c.name}</span>
-                              {!isStripeSupported(c.code) && (
+                              {!isStripeSupported(c.code, stripeSet ?? undefined) && (
                                 <span className="text-[10px] text-on-surface-variant/50 ml-auto">bank transfer only</span>
                               )}
                             </span>
@@ -535,10 +679,21 @@ export function InvoiceManager({
                       </SelectContent>
                     </Select>
                   )}
-                  {currency && !isStripeSupported(currency) && plan !== 'free' && (
-                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1 leading-snug">
-                      {currency} isn&apos;t supported by Stripe — clients will see your bank transfer details for payment.
-                    </p>
+                  {currency && !isStripeSupported(currency, stripeSet ?? undefined) && plan !== 'free' && (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1 leading-snug">
+                        {currency} isn&apos;t supported by Stripe — clients will pay via bank transfer.
+                      </p>
+                      {!hasBankDetails && (
+                        <p className="text-[11px] text-on-surface-variant px-1">
+                          No bank details on file.{' '}
+                          <Link href="/dashboard/settings?tab=bank" className="text-ds-secondary underline font-medium">
+                            Add bank details →
+                          </Link>
+                          {' '}so clients know how to pay.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

@@ -75,6 +75,15 @@ export interface TeamInvite {
   token: string
   invited_at: string
   accepted_at: string | null
+  permissions?: {
+    clients: boolean
+    projects: boolean
+    invoices: boolean
+    files: boolean
+    messages: boolean
+    settings: boolean
+    billing: boolean
+  }
 }
 
 export interface Client {

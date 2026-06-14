@@ -119,10 +119,10 @@ export function DashboardHeader({ profile, unreadCount = 0, sidebarWidth = 240, 
           {/* ── Create dropdown ─────────────────────── */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-ds-secondary text-white text-[13px] font-semibold hover:bg-ds-secondary-container transition-colors shadow-sm">
+              <button className="flex items-center gap-1.5 h-8 px-2.5 sm:px-3.5 rounded-md bg-ds-secondary text-white text-[13px] font-semibold hover:bg-ds-secondary-container transition-colors shadow-sm">
                 <Plus className="size-3.5" strokeWidth={2.5} />
-                <span>Create</span>
-                <ChevronDown className="size-3 opacity-60" />
+                <span className="hidden sm:inline">Create</span>
+                <ChevronDown className="hidden sm:inline size-3 opacity-60" />
               </button>
             </DropdownMenuTrigger>
 

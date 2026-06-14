@@ -33,9 +33,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, business_name')
+    .select('full_name, business_name, plan, hide_branding')
     .eq('id', user.id)
     .single()
+
+  const hideBranding = profile?.plan !== 'free' && (profile?.hide_branding ?? false)
 
   // Generate a random token + hash it for storage
   const rawToken = randomBytes(32).toString('hex')
@@ -59,6 +61,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     freelancerName: profile?.full_name ?? 'Your freelancer',
     businessName: profile?.business_name || profile?.full_name || 'PortalKit',
     portalUrl,
+    hideBranding,
   }).catch(err => console.error('[email] magic-link', err))
 
   return ok({ sent: true, portalUrl })

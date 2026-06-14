@@ -73,8 +73,11 @@ export function PortalFileReview({ projects }: { projects: ProjectWithFiles[] })
     }
   }
 
-  const pending = rootFiles.filter(f => f.status === 'pending')
-  const reviewed = rootFiles.filter(f => f.status !== 'pending')
+  // Client-uploaded files are reference attachments — they should not appear in the review queue
+  const clientUploads = rootFiles.filter(f => (f as FileType & { uploaded_by_client?: boolean }).uploaded_by_client)
+  const freelancerFiles = rootFiles.filter(f => !(f as FileType & { uploaded_by_client?: boolean }).uploaded_by_client)
+  const pending = freelancerFiles.filter(f => f.status === 'pending')
+  const reviewed = freelancerFiles.filter(f => f.status !== 'pending')
 
   async function handleDownload(fileId: string, filename: string) {
     setDownloadingId(fileId)
@@ -452,6 +455,44 @@ export function PortalFileReview({ projects }: { projects: ProjectWithFiles[] })
                       )}
                     </div>
                   )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Your uploads — client reference files, no review flow */}
+      {clientUploads.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-bold text-on-surface-variant">
+            Your uploads ({clientUploads.length})
+          </h2>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+            {clientUploads.map(file => {
+              const Icon = fileIcon(file.mime_type)
+              const accent = fileAccent(file.mime_type)
+              const isDownloading = downloadingId === file.id
+              return (
+                <div key={file.id} className="relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background: accent }} />
+                  <div className="ml-2 px-5 py-4 flex items-center gap-4">
+                    <div className="size-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: accent + '12' }}>
+                      <Icon className="size-4" style={{ color: accent }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-on-surface truncate">{file.filename}</p>
+                      <p className="text-xs text-on-surface-variant">{file.projectTitle} · {formatRelativeTime(file.created_at)}</p>
+                    </div>
+                    <button
+                      onClick={() => handleDownload(file.id, file.filename)}
+                      disabled={isDownloading}
+                      className="flex items-center gap-1 h-8 px-3 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50 shrink-0"
+                    >
+                      {isDownloading ? <Loader2 className="size-3 animate-spin" /> : <Download className="size-3" />}
+                      <span className="hidden sm:inline ml-1">{isDownloading ? 'Downloading…' : 'Download'}</span>
+                    </button>
+                  </div>
                 </div>
               )
             })}

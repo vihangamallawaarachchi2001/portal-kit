@@ -4,9 +4,10 @@ import { KpiCards } from '@/components/dashboard/kpi-cards'
 import { DashboardClientList } from '@/components/dashboard/dashboard-client-list'
 import { DashboardHeroActions } from '@/components/dashboard/dashboard-hero-actions'
 import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist'
+import { DashboardProgressPill } from '@/components/dashboard/dashboard-progress-pill'
 import { DashboardStats } from '@/types/database'
-import Link from 'next/link'
-import { ArrowRight, BookOpen, MessageCircle } from 'lucide-react'
+import { effectiveInvoiceStatus } from '@/lib/format'
+import { getWorkspaceContext, allowedClientIds } from '@/lib/workspace'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -16,29 +17,43 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
-  const { data: clients } = await supabase
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
+
+  const allowed = allowedClientIds(ctx)
+
+  let clientsQuery = supabase
     .from('clients')
     .select(`
       *,
       projects (
         id, title, status, due_date, updated_at,
-        files ( id, status ),
+        files ( id, status, uploaded_by_client ),
         messages ( id, sender_type, read_at )
       ),
-      invoices ( id, total, status, currency )
+      invoices ( id, total, status, currency, due_date )
     `)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .eq('status', 'active')
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
 
+  if (allowed !== null) {
+    clientsQuery = clientsQuery.in('id', allowed)
+  }
+
+  const { data: clients } = await clientsQuery
+
   const enrichedClients = (clients ?? []).map(c => {
     const projects = (c.projects ?? []).filter((p: { deleted_at: string | null }) => !p.deleted_at)
     const outstanding = (c.invoices ?? [])
-      .filter((i: { status: string }) => i.status === 'sent' || i.status === 'overdue')
+      .filter((i: { status: string; due_date?: string | null }) => {
+        const eff = effectiveInvoiceStatus(i.status, i.due_date)
+        return eff === 'sent' || eff === 'overdue'
+      })
       .reduce((sum: number, i: { total: number }) => sum + Number(i.total), 0)
-    const pending_files_total = projects.reduce((sum: number, p: { files: { status: string }[] }) =>
-      sum + (p.files ?? []).filter((f: { status: string }) => f.status === 'pending').length, 0)
+    const pending_files_total = projects.reduce((sum: number, p: { files: { status: string; uploaded_by_client?: boolean }[] }) =>
+      sum + (p.files ?? []).filter((f: { status: string; uploaded_by_client?: boolean }) => f.status === 'pending' && !f.uploaded_by_client).length, 0)
     const unread_messages_total = projects.reduce((sum: number, p: { messages: { sender_type: string; read_at: string | null }[] }) =>
       sum + (p.messages ?? []).filter((m: { sender_type: string; read_at: string | null }) => m.sender_type === 'client' && !m.read_at).length, 0)
     return {
@@ -48,7 +63,7 @@ export default async function DashboardPage() {
         files: { status: string }[]; messages: { sender_type: string; read_at: string | null }[]
       }) => ({
         ...p,
-        pending_files: (p.files ?? []).filter((f: { status: string }) => f.status === 'pending').length,
+        pending_files: (p.files ?? []).filter((f: { status: string; uploaded_by_client?: boolean }) => f.status === 'pending' && !f.uploaded_by_client).length,
         unread_messages: (p.messages ?? []).filter((m: { sender_type: string; read_at: string | null }) =>
           m.sender_type === 'client' && !m.read_at).length,
       })),
@@ -67,10 +82,15 @@ export default async function DashboardPage() {
   }
 
   const outstandingByCurrency = sumByCurrency(
-    allInvoices.filter((i: { status: string }) => i.status === 'sent') as { total: number; currency: string }[]
+    allInvoices.filter((i: { status: string; due_date?: string | null }) => {
+      const eff = effectiveInvoiceStatus(i.status, (i as { due_date?: string | null }).due_date)
+      return eff === 'sent' || eff === 'overdue'
+    }) as { total: number; currency: string }[]
   )
   const overdueByCurrency = sumByCurrency(
-    allInvoices.filter((i: { status: string }) => i.status === 'overdue') as { total: number; currency: string }[]
+    allInvoices.filter((i: { status: string; due_date?: string | null }) =>
+      effectiveInvoiceStatus(i.status, (i as { due_date?: string | null }).due_date) === 'overdue'
+    ) as { total: number; currency: string }[]
   )
 
   const stats: DashboardStats = {
@@ -84,7 +104,7 @@ export default async function DashboardPage() {
     active_projects:        allProjects.filter((p: { status: string }) => p.status === 'in_progress' || p.status === 'review').length,
   }
 
-  const profileRow = (await supabase.from('profiles').select('full_name, business_name, avatar_url, plan').eq('id', user.id).single()).data
+  const profileRow = (await supabase.from('profiles').select('full_name, business_name, avatar_url, plan').eq('id', ownerId).single()).data
   const firstName   = profileRow?.full_name?.split(' ')[0] ?? null
 
   // Derive setup completion for the Getting Started widget
@@ -129,19 +149,9 @@ export default async function DashboardPage() {
                   : 'Add your first client to start delivering work professionally.'}
               </p>
 
-              {/* Progress pill — only when setup incomplete */}
+              {/* Progress pill — only when setup incomplete; hidden by client component when dismissed */}
               {showOnboarding && (
-                <div className="mt-4 flex items-center gap-3">
-                  <div className="flex-1 max-w-48 h-1.5 rounded-full bg-outline-variant/40 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-ds-secondary transition-all"
-                      style={{ width: `${(completedCount / completedSteps.length) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-semibold text-on-surface-variant shrink-0">
-                    {completedCount}/{completedSteps.length} setup complete
-                  </span>
-                </div>
+                <DashboardProgressPill completedCount={completedCount} total={completedSteps.length} />
               )}
             </div>
 
@@ -156,61 +166,8 @@ export default async function DashboardPage() {
         {/* KPI row */}
         <KpiCards stats={stats} />
 
-        {/* Getting Started — side-by-side layout */}
-        {showOnboarding && (
-          <section className="flex flex-col gap-4 max-w-7xl">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-base font-bold text-on-surface">Getting Started</h2>
-              <span className="text-sm text-on-surface-variant">
-                {completedSteps.filter(Boolean).length}/{completedSteps.length} complete
-              </span>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-3 items-start">
-              {/* Checklist — left */}
-              <OnboardingChecklist completed={completedSteps} />
-
-              {/* Action cards — right */}
-              <div className="flex flex-col gap-3 max-w-xl">
-                <a
-                  href="https://docs.portalkit.io"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group bg-white rounded-md shadow-sm hover:shadow-md transition-shadow p-4 flex items-start gap-3"
-                >
-                  <div className="size-9 rounded-md bg-ds-secondary/10 flex items-center justify-center shrink-0">
-                    <BookOpen className="size-4 text-ds-secondary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-on-surface">Read the Guide</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
-                      Step-by-step setup for PortalKit.
-                    </p>
-                    <span className="flex items-center gap-1 mt-1.5 text-xs font-semibold text-ds-secondary group-hover:gap-1.5 transition-all">
-                      View guide <ArrowRight className="size-3" />
-                    </span>
-                  </div>
-                </a>
-                <a
-                  href="mailto:support@portalkit.io"
-                  className="group bg-white rounded-md shadow-sm hover:shadow-md transition-shadow p-4 flex items-start gap-3"
-                >
-                  <div className="size-9 rounded-md bg-surface-container flex items-center justify-center shrink-0">
-                    <MessageCircle className="size-4 text-on-surface-variant" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-on-surface">Need help?</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
-                      We typically respond within a few hours.
-                    </p>
-                    <span className="flex items-center gap-1 mt-1.5 text-xs font-semibold text-ds-secondary group-hover:gap-1.5 transition-all">
-                      Contact support <ArrowRight className="size-3" />
-                    </span>
-                  </div>
-                </a>
-              </div>
-            </div>
-          </section>
-        )}
+        {/* Getting Started — all managed by the client component (handles dismiss) */}
+        {showOnboarding && <OnboardingChecklist completed={completedSteps} />}
 
         {/* Client section */}
         <section className="flex flex-col gap-4">
@@ -232,5 +189,3 @@ export default async function DashboardPage() {
     </div>
   )
 }
-
-

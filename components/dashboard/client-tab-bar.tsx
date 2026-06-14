@@ -3,14 +3,15 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { LayoutGrid, Paperclip, FileText, CalendarDays, CalendarCheck } from 'lucide-react'
+import { LayoutGrid, Paperclip, FileText, CalendarDays, CalendarCheck, SlidersHorizontal } from 'lucide-react'
 
 const TABS = [
-  { suffix: '',            label: 'Overview',   Icon: LayoutGrid },
-  { suffix: '/files',      label: 'Files',      Icon: Paperclip },
-  { suffix: '/invoices',   label: 'Invoices',   Icon: FileText },
-  { suffix: '/milestones', label: 'Milestones', Icon: CalendarCheck },
-  { suffix: '/meetings',   label: 'Meetings',   Icon: CalendarDays },
+  { suffix: '',                 label: 'Overview',        Icon: LayoutGrid },
+  { suffix: '/files',           label: 'Files',           Icon: Paperclip },
+  { suffix: '/invoices',        label: 'Invoices',        Icon: FileText },
+  { suffix: '/milestones',      label: 'Milestones',      Icon: CalendarCheck },
+  { suffix: '/meetings',        label: 'Meetings',        Icon: CalendarDays },
+  { suffix: '/portal-settings', label: 'Portal Settings', Icon: SlidersHorizontal },
 ]
 
 export function ClientTabBar({

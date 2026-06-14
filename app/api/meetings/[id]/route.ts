@@ -1,16 +1,26 @@
 import { createClient } from '@/lib/supabase/server'
 import { ok, badRequest, unauthorized, notFound, internalError } from '@/lib/api'
 import { sendMeetingCancelledEmail } from '@/lib/email'
+import { getWorkspaceContext, canAccessSub } from '@/lib/workspace'
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
 
   const { data: meeting } = await supabase.from('meetings').select('*').eq('id', id).single()
   if (!meeting) return notFound('Meeting not found')
-  if (meeting.freelancer_id !== user.id) return unauthorized()
+
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id, title, client_id')
+    .eq('id', meeting.project_id)
+    .single()
+  if (!project) return notFound('Project not found')
+
+  if (!canAccessSub(ctx, 'canViewMilestones', project.client_id, meeting.project_id)) return unauthorized()
 
   let body: unknown
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }
@@ -22,9 +32,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   // If cancelled, notify client
   if (updates.status === 'cancelled') {
     try {
-      const { data: project } = await supabase.from('projects').select('id, title, client_id').eq('id', meeting.project_id).single()
-      if (!project) throw new Error('Project not found')
-      const { data: client } = await supabase.from('clients').select('id, name, email, portal_slug').eq('id', project.client_id).single()
+      const { data: client } = await supabase
+        .from('clients')
+        .select('id, name, email, portal_slug')
+        .eq('id', project.client_id)
+        .single()
       if (client?.email) {
         sendMeetingCancelledEmail({
           to: client.email,
@@ -45,10 +57,19 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
 
   const { data: meeting } = await supabase.from('meetings').select('*').eq('id', id).single()
   if (!meeting) return notFound('Meeting not found')
-  if (meeting.freelancer_id !== user.id) return unauthorized()
+
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id, title, client_id')
+    .eq('id', meeting.project_id)
+    .single()
+  if (!project) return notFound('Project not found')
+
+  if (!canAccessSub(ctx, 'canViewMilestones', project.client_id, meeting.project_id)) return unauthorized()
 
   // Only allow hard delete if invite not yet sent
   if (meeting.invite_sent_at) return badRequest('Cannot delete invited meeting')

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { MessageThread } from '@/components/dashboard/message-thread'
+import { getWorkspaceContext } from '@/lib/workspace'
 
 export const revalidate = 0
 
@@ -10,11 +11,14 @@ export default async function ClientMessagesPage({ params }: { params: Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
+
   const { data: client } = await supabase
     .from('clients')
     .select('id, name')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
@@ -30,7 +34,7 @@ export default async function ClientMessagesPage({ params }: { params: Promise<{
       )
     `)
     .eq('client_id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 

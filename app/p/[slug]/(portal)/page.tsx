@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
@@ -29,11 +31,11 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
   const { data: client } = await service
     .from('clients')
     .select(`
-      id, name, portal_slug,
+      id, name, portal_slug, portal_features,
       profiles:freelancer_id ( full_name, business_name, avatar_url ),
       projects (
         id, title, description, status, due_date, updated_at,
-        files ( id, status ),
+        files ( id, status, uploaded_by_client, parent_file_id ),
         messages ( id, sender_type, read_at )
       ),
       invoices ( id, total, currency, status )
@@ -44,6 +46,12 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
     .single()
 
   if (!client) redirect(`/p/${slug}/access`)
+
+  const portalFeatures = {
+    files: true, invoices: true, messages: true, milestones: true, meetings: true,
+    ...(typeof client.portal_features === 'object' && client.portal_features !== null
+      ? client.portal_features as object : {}),
+  } as Record<string, boolean>
 
   const clientProjectIds = ((client.projects ?? []) as { id: string }[]).map(p => p.id)
 
@@ -68,8 +76,9 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
   const projects = ((client.projects ?? []) as any[]).filter(p => !p.deleted_at)
   const activeProjects = projects.filter((p: Project) => p.status !== 'done')
   const doneProjects = projects.filter((p: Project) => p.status === 'done')
-  const pendingFiles = projects.reduce((s: number, p: { files: { status: string }[] }) =>
-    s + (p.files ?? []).filter((f: { status: string }) => f.status === 'pending').length, 0)
+  const pendingFiles = projects.reduce((s: number, p: { files: { status: string; uploaded_by_client?: boolean; parent_file_id?: string | null }[] }) =>
+    s + (p.files ?? []).filter((f: { status: string; uploaded_by_client?: boolean; parent_file_id?: string | null }) =>
+      f.status === 'pending' && !f.uploaded_by_client && !f.parent_file_id).length, 0)
   const unreadMessages = projects.reduce((s: number, p: { messages: { sender_type: string; read_at: string | null }[] }) =>
     s + (p.messages ?? []).filter((m: { sender_type: string; read_at: string | null }) => m.sender_type === 'freelancer' && !m.read_at).length, 0)
   const outstanding = (client.invoices ?? [])
@@ -100,9 +109,9 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-slate-100 border-t border-slate-100">
           {[
             { label: 'Active projects',  value: activeProjects.length,                        icon: Layers,        color: '#0051d5', href: null },
-            { label: 'Files to review',  value: pendingFiles,                                 icon: Paperclip,     color: '#f59e0b', href: pendingFiles > 0   ? `/p/${slug}/files`    : null },
-            { label: 'Unread messages',  value: unreadMessages,                               icon: MessageSquare, color: '#0051d5', href: unreadMessages > 0 ? `/p/${slug}/messages` : null },
-            { label: 'Outstanding',      value: outstanding > 0 ? formatCurrency(outstanding) : '—', icon: FileText, color: overdueInvoices > 0 ? '#ef4444' : '#64748b', href: outstanding > 0 ? `/p/${slug}/invoices` : null },
+            { label: 'Files to review',  value: pendingFiles,                                 icon: Paperclip,     color: '#f59e0b', href: pendingFiles > 0 && portalFeatures.files    ? `/p/${slug}/files`    : null },
+            { label: 'Unread messages',  value: unreadMessages,                               icon: MessageSquare, color: '#0051d5', href: unreadMessages > 0 && portalFeatures.messages ? `/p/${slug}/messages` : null },
+            { label: 'Outstanding',      value: outstanding > 0 ? formatCurrency(outstanding) : '—', icon: FileText, color: overdueInvoices > 0 ? '#ef4444' : '#64748b', href: outstanding > 0 && portalFeatures.invoices ? `/p/${slug}/invoices` : null },
           ].map(stat => {
             const El = stat.href ? Link : 'div'
             return (
@@ -127,9 +136,9 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
       </div>
 
       {/* Action alerts */}
-      {(pendingFiles > 0 || unreadMessages > 0 || overdueInvoices > 0) && (
+      {((pendingFiles > 0 && portalFeatures.files) || (unreadMessages > 0 && portalFeatures.messages) || (overdueInvoices > 0 && portalFeatures.invoices)) && (
         <div className="flex flex-col gap-2">
-          {pendingFiles > 0 && (
+          {pendingFiles > 0 && portalFeatures.files && (
             <Link href={`/p/${slug}/files`} className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3.5 hover:bg-amber-100 transition-colors group shadow-sm">
               <div className="size-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0"><Paperclip className="size-4 text-amber-700" /></div>
               <div className="flex-1">
@@ -139,7 +148,7 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
               <ChevronRight className="size-4 text-amber-400 group-hover:text-amber-700 transition-colors" />
             </Link>
           )}
-          {overdueInvoices > 0 && (
+          {overdueInvoices > 0 && portalFeatures.invoices && (
             <Link href={`/p/${slug}/invoices`} className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-5 py-3.5 hover:bg-red-100 transition-colors group shadow-sm">
               <div className="size-8 rounded-lg bg-red-100 flex items-center justify-center shrink-0"><AlertTriangle className="size-4 text-red-600" /></div>
               <div className="flex-1">
@@ -149,7 +158,7 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
               <ChevronRight className="size-4 text-red-400 group-hover:text-red-600 transition-colors" />
             </Link>
           )}
-          {unreadMessages > 0 && (
+          {unreadMessages > 0 && portalFeatures.messages && (
             <Link href={`/p/${slug}/messages`} className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3.5 hover:bg-blue-100 transition-colors group shadow-sm">
               <div className="size-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0"><MessageSquare className="size-4 text-blue-600" /></div>
               <div className="flex-1">
@@ -186,9 +195,9 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {(projects as (Project & { files: { status: string }[]; messages: { sender_type: string; read_at: string | null }[] })[]).map(project => {
+            {(projects as (Project & { files: { status: string; uploaded_by_client?: boolean; parent_file_id?: string | null }[]; messages: { sender_type: string; read_at: string | null }[] })[]).map(project => {
               const cfg = STATUS_CONFIG[project.status]
-              const pending = (project.files ?? []).filter(f => f.status === 'pending').length
+              const pending = (project.files ?? []).filter(f => f.status === 'pending' && !f.uploaded_by_client && !f.parent_file_id).length
               const unread = (project.messages ?? []).filter(m => m.sender_type === 'freelancer' && !m.read_at).length
 
               return (
@@ -213,15 +222,15 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
                     <p className="text-xs text-on-surface-variant italic">{cfg.description}</p>
 
                     {/* Alerts for this project */}
-                    {(pending > 0 || unread > 0) && (
+                    {((pending > 0 && portalFeatures.files) || (unread > 0 && portalFeatures.messages)) && (
                       <div className="flex flex-col gap-1.5">
-                        {pending > 0 && (
+                        {pending > 0 && portalFeatures.files && (
                           <Link href={`/p/${slug}/files`} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100 hover:bg-amber-100 transition-colors">
                             <Paperclip className="size-3.5 text-amber-600 shrink-0" />
                             <span className="text-xs font-semibold text-amber-700">{pending} file{pending > 1 ? 's' : ''} awaiting review →</span>
                           </Link>
                         )}
-                        {unread > 0 && (
+                        {unread > 0 && portalFeatures.messages && (
                           <Link href={`/p/${slug}/messages`} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors">
                             <MessageSquare className="size-3.5 text-blue-600 shrink-0" />
                             <span className="text-xs font-semibold text-blue-700">{unread} new message{unread > 1 ? 's' : ''} →</span>
@@ -250,12 +259,12 @@ export default async function PortalOverviewPage({ params }: { params: Promise<{
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {([
-          { href: `/p/${slug}/files`,       icon: Paperclip,     label: 'Review Files',    desc: 'Download and approve deliverables',   accent: '#f59e0b', badge: pendingFiles > 0   ? pendingFiles   : null },
-          { href: `/p/${slug}/invoices`,    icon: FileText,      label: 'Invoices',        desc: 'View and pay outstanding invoices',   accent: '#0051d5', badge: null },
-          { href: `/p/${slug}/milestones`,  icon: CalendarCheck, label: 'Milestones',      desc: 'See progress milestones and due dates', accent: '#0f766e', badge: milestoneCount ?? 0 ? milestoneCount : null },
-          { href: `/p/${slug}/meetings`,    icon: CalendarDays,  label: 'Meetings',        desc: 'Open scheduled client meetings',        accent: '#9333ea', badge: meetingCount ?? 0 ? meetingCount : null },
-          { href: `/p/${slug}/messages`,    icon: MessageSquare, label: 'Messages',        desc: `Chat directly with ${businessName}`,  accent: '#0051d5', badge: unreadMessages > 0 ? unreadMessages : null },
-        ] as const).map(link => (
+          { key: 'files',      href: `/p/${slug}/files`,       icon: Paperclip,     label: 'Review Files',    desc: 'Download and approve deliverables',   accent: '#f59e0b', badge: pendingFiles > 0   ? pendingFiles   : null },
+          { key: 'invoices',   href: `/p/${slug}/invoices`,    icon: FileText,      label: 'Invoices',        desc: 'View and pay outstanding invoices',   accent: '#0051d5', badge: null },
+          { key: 'milestones', href: `/p/${slug}/milestones`,  icon: CalendarCheck, label: 'Milestones',      desc: 'See progress milestones and due dates', accent: '#0f766e', badge: milestoneCount ?? 0 ? milestoneCount : null },
+          { key: 'meetings',   href: `/p/${slug}/meetings`,    icon: CalendarDays,  label: 'Meetings',        desc: 'Open scheduled client meetings',        accent: '#9333ea', badge: meetingCount ?? 0 ? meetingCount : null },
+          { key: 'messages',   href: `/p/${slug}/messages`,    icon: MessageSquare, label: 'Messages',        desc: `Chat directly with ${businessName}`,  accent: '#0051d5', badge: unreadMessages > 0 ? unreadMessages : null },
+        ] as const).filter(link => portalFeatures[link.key] !== false).map(link => (
           <Link
             key={link.href}
             href={link.href}

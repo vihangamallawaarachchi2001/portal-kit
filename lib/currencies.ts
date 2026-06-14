@@ -143,15 +143,18 @@ export const CURRENCIES: Currency[] = [
   { code: 'EEK', name: 'Estonian Kroon',              symbol: 'kr'  },
 ]
 
-// Currencies Stripe supports for online payment collection
-const STRIPE_SUPPORTED = new Set([
+// Static fallback list — used when STRIPE_SECRET_KEY is unavailable or while dynamic list is loading
+export const STRIPE_SUPPORTED_FALLBACK = new Set([
   'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'NZD', 'CHF', 'HKD', 'SGD', 'JPY',
   'SEK', 'NOK', 'DKK', 'MXN', 'BRL', 'INR', 'AED', 'SAR', 'ZAR', 'THB',
   'MYR', 'PHP', 'IDR', 'CZK', 'PLN', 'HUF', 'RON', 'BGN', 'TRY',
 ])
 
-export function isStripeSupported(currency: string): boolean {
-  return STRIPE_SUPPORTED.has(currency.toUpperCase())
+// Pass a dynamic set (from /api/billing/stripe-currencies) for authoritative checks;
+// falls back to the static list when not provided.
+export function isStripeSupported(currency: string, dynamicSet?: Set<string>): boolean {
+  const set = dynamicSet ?? STRIPE_SUPPORTED_FALLBACK
+  return set.has(currency.toUpperCase())
 }
 
 export function getCurrency(code: string): Currency | undefined {

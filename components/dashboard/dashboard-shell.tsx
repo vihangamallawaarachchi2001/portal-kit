@@ -7,6 +7,7 @@ import { UpgradeNudge } from './upgrade-nudge'
 import { ProfileNudges } from './profile-nudges'
 import { Toaster } from '@/components/ui/sonner'
 import { Profile } from '@/types/database'
+import { WorkspacePermissions, WorkspaceSummary } from '@/lib/workspace'
 
 const W_EXPANDED = 240
 const W_COLLAPSED = 64
@@ -16,9 +17,19 @@ interface DashboardShellProps {
   unreadCount: number
   clientCount: number
   children: React.ReactNode
+  isOwner: boolean
+  permissions: WorkspacePermissions
+  workspaceName: string | null
+  effectivePlan: string
+  currentWorkspaceId: string
+  availableWorkspaces: (WorkspaceSummary & { isPersonal: boolean })[]
 }
 
-export function DashboardShell({ profile, unreadCount, clientCount, children }: DashboardShellProps) {
+export function DashboardShell({
+  profile, unreadCount, clientCount, children,
+  isOwner, permissions, workspaceName, effectivePlan,
+  currentWorkspaceId, availableWorkspaces,
+}: DashboardShellProps) {
   const [collapsed, setCollapsed] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -54,7 +65,6 @@ export function DashboardShell({ profile, unreadCount, clientCount, children }: 
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30"
@@ -71,6 +81,11 @@ export function DashboardShell({ profile, unreadCount, clientCount, children }: 
         isMobile={isMobile}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
+        isOwner={isOwner}
+        permissions={permissions}
+        workspaceName={workspaceName}
+        currentWorkspaceId={currentWorkspaceId}
+        availableWorkspaces={availableWorkspaces}
       />
 
       <div
@@ -84,7 +99,7 @@ export function DashboardShell({ profile, unreadCount, clientCount, children }: 
           onMobileMenuClick={isMobile ? toggle : undefined}
         />
         <main className="flex-1 pt-14 min-h-screen">
-          {profile && (
+          {profile && isOwner && (
             <ProfileNudges
               businessName={profile.business_name}
               avatarUrl={profile.avatar_url}
@@ -96,7 +111,7 @@ export function DashboardShell({ profile, unreadCount, clientCount, children }: 
         </main>
       </div>
 
-      {profile?.plan === 'free' && <UpgradeNudge />}
+      {effectivePlan === 'free' && isOwner && <UpgradeNudge />}
       <Toaster position="bottom-right" richColors />
     </div>
   )

@@ -14,16 +14,18 @@ import { getInitials } from '@/lib/format'
 import { Profile } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { WorkspacePermissions, WorkspaceSummary } from '@/lib/workspace'
+import { WorkspaceSwitcher } from './workspace-switcher'
 
 const NAV = [
-  { href: '/dashboard',          label: 'Dashboard', icon: LayoutDashboard, exact: true,  badge: false },
-  { href: '/dashboard/projects', label: 'Projects',  icon: FolderOpen,      exact: false, badge: false },
-  { href: '/dashboard/clients',  label: 'Clients',   icon: Users,           exact: false, badge: false },
-  { href: '/dashboard/chats',    label: 'Messages',  icon: MessageSquare,   exact: false, badge: true  },
-  { href: '/dashboard/invoices', label: 'Invoices',  icon: FileText,        exact: false, badge: false },
-  { href: '/dashboard/files',     label: 'Files',     icon: Paperclip,  exact: false, badge: false },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart2,  exact: false, badge: false },
-]
+  { href: '/dashboard',           label: 'Dashboard', icon: LayoutDashboard, exact: true,  badge: false, permKey: null        },
+  { href: '/dashboard/projects',  label: 'Projects',  icon: FolderOpen,      exact: false, badge: false, permKey: 'projects'  },
+  { href: '/dashboard/clients',   label: 'Clients',   icon: Users,           exact: false, badge: false, permKey: 'clients'   },
+  { href: '/dashboard/chats',     label: 'Messages',  icon: MessageSquare,   exact: false, badge: true,  permKey: 'messages'  },
+  { href: '/dashboard/invoices',  label: 'Invoices',  icon: FileText,        exact: false, badge: false, permKey: 'invoices'  },
+  { href: '/dashboard/files',     label: 'Files',     icon: Paperclip,       exact: false, badge: false, permKey: 'files'     },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart2,       exact: false, badge: false, permKey: 'owner'     },
+] as const
 
 interface SidebarProps {
   profile: Profile | null
@@ -34,6 +36,11 @@ interface SidebarProps {
   isMobile?: boolean
   mobileOpen?: boolean
   onMobileClose?: () => void
+  isOwner?: boolean
+  permissions?: WorkspacePermissions
+  workspaceName?: string | null
+  currentWorkspaceId?: string
+  availableWorkspaces?: (WorkspaceSummary & { isPersonal: boolean })[]
 }
 
 /* Animated label — clips to 0 width when collapsed */
@@ -58,6 +65,8 @@ function Label({ collapsed, children }: { collapsed: boolean; children: React.Re
 export function Sidebar({
   profile, unreadCount = 0, clientCount = 0, collapsed = true, onToggle,
   isMobile = false, mobileOpen = false, onMobileClose,
+  isOwner = true, permissions, workspaceName,
+  currentWorkspaceId = 'own', availableWorkspaces = [],
 }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -152,6 +161,17 @@ export function Sidebar({
 
         {/* ── Main nav ──────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto py-5 px-3 flex flex-col gap-0.5">
+          {/* Workspace switcher — only shown when user has team workspaces */}
+          {availableWorkspaces.length > 1 && (
+            <div className="mb-2">
+              <WorkspaceSwitcher
+                currentWorkspaceId={currentWorkspaceId}
+                workspaces={availableWorkspaces}
+                collapsed={collapsed}
+              />
+            </div>
+          )}
+
           {!collapsed && (
             <p
               className="text-[10px] font-semibold uppercase tracking-[0.12em] px-3 mb-2.5 whitespace-nowrap"
@@ -162,6 +182,10 @@ export function Sidebar({
           )}
 
           {NAV.map(item => {
+            // Filter items the team member doesn't have access to
+            if (item.permKey === 'owner' && !isOwner) return null
+            if (item.permKey && item.permKey !== 'owner' && permissions && !permissions[item.permKey as keyof WorkspacePermissions]) return null
+
             const active = isActive(item.href, item.exact)
             const showBadge = item.badge && unreadCount > 0
             return (
@@ -222,22 +246,17 @@ export function Sidebar({
             </p>
           )}
 
-          {[
-            { href: '/dashboard/settings', icon: Settings, label: 'Settings', isLink: true },
-          ].map(item => (
-            <Tooltip key={item.label}>
+          {(isOwner || permissions?.settings) && (
+            <Tooltip>
               <TooltipTrigger asChild>
-                <Link
-                  href={item.href}
-                  className={itemCls(isActive(item.href, false))}
-                >
-                  <item.icon className={cn('shrink-0', collapsed ? 'size-4.5' : 'size-4')} />
-                  <Label collapsed={collapsed}>{item.label}</Label>
+                <Link href="/dashboard/settings" className={itemCls(isActive('/dashboard/settings', false))}>
+                  <Settings className={cn('shrink-0', collapsed ? 'size-4.5' : 'size-4')} />
+                  <Label collapsed={collapsed}>Settings</Label>
                 </Link>
               </TooltipTrigger>
-              {collapsed && <TooltipContent side="right" sideOffset={14}>{item.label}</TooltipContent>}
+              {collapsed && <TooltipContent side="right" sideOffset={14}>Settings</TooltipContent>}
             </Tooltip>
-          ))}
+          )}
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -273,8 +292,8 @@ export function Sidebar({
             {collapsed && <TooltipContent side="right" sideOffset={14}>Help Center</TooltipContent>}
           </Tooltip>
 
-          {/* Upgrade — free plan */}
-          {plan === 'free' && (
+          {/* Upgrade — free plan, owner only */}
+          {isOwner && plan === 'free' && (
             collapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild>

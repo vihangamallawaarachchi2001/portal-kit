@@ -67,6 +67,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       mime_type: mimeType,
       status: 'pending',
       version: 1,
+      uploaded_by_client: !parentFileId, // top-level portal uploads are client files; review attachments are not
       ...(parentFileId ? { parent_file_id: parentFileId } : {}),
     })
     .select()

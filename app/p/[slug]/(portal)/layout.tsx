@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { getInitials } from '@/lib/format'
 import { Toaster } from '@/components/ui/sonner'
 import { PortalTabBar } from '@/components/portal/portal-tab-bar'
+import { DEFAULT_PORTAL_FEATURES } from '@/lib/validations'
 import { PortalPushSetup } from '@/components/portal/portal-push-setup'
 import { PortalRequestAccessScreen } from '@/components/portal/portal-request-access'
 import { Layers } from 'lucide-react'
@@ -45,7 +46,7 @@ export default async function PortalLayout({
   const { data: client } = await service
     .from('clients')
     .select(`
-      id, name, portal_slug,
+      id, name, portal_slug, portal_features, portal_closed,
       profiles:freelancer_id ( full_name, business_name, avatar_url, tagline, plan, hide_branding )
     `)
     .eq('portal_slug', slug)
@@ -58,10 +59,33 @@ export default async function PortalLayout({
     return <PortalRequestAccessScreen slug={slug} branding={branding} staleCookie />
   }
 
+  if ((client as { portal_closed?: boolean }).portal_closed) {
+    const branding = await fetchBranding(slug)
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 px-6" style={{ background: 'linear-gradient(135deg, #0a1f44 0%, #0051d5 100%)' }}>
+        <div className="size-16 rounded-2xl bg-white/10 flex items-center justify-center">
+          <Layers className="size-8 text-white/60" />
+        </div>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white">{branding.businessName}</h1>
+          <p className="text-white/70 mt-2">This portal is currently closed.</p>
+          <p className="text-white/50 text-sm mt-1">Please contact your freelancer for more information.</p>
+        </div>
+      </div>
+    )
+  }
+
   const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
   const businessName = profile?.business_name || profile?.full_name || 'Your Portal'
   const isPro        = profile?.plan !== 'free'
   const hideBranding = isPro && (profile?.hide_branding ?? false)
+
+  const portalFeatures = {
+    ...DEFAULT_PORTAL_FEATURES,
+    ...(typeof client.portal_features === 'object' && client.portal_features !== null
+      ? client.portal_features as object
+      : {}),
+  }
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#f0f2f7' }}>
@@ -94,7 +118,7 @@ export default async function PortalLayout({
                 <p className="text-xs font-semibold text-white/90 leading-tight">{client.name}</p>
                 <p className="text-[11px] text-white/50">Client portal</p>
               </div>
-              {!isPro && !hideBranding && (
+              {!hideBranding && (
                 <Link
                   href="https://portalkit.app"
                   target="_blank"
@@ -112,7 +136,7 @@ export default async function PortalLayout({
         {/* Tab bar */}
         <div className="border-t border-white/10">
           <div className="max-w-6xl mx-auto px-4 sm:px-8">
-            <PortalTabBar slug={slug} dark />
+            <PortalTabBar slug={slug} dark features={portalFeatures} />
           </div>
         </div>
       </header>
@@ -121,6 +145,21 @@ export default async function PortalLayout({
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-8 py-8">
         {children}
       </main>
+
+      {/* ── Footer branding ─────────────────────────── */}
+      {!hideBranding && (
+        <footer className="py-5 text-center border-t border-black/5">
+          <Link
+            href="https://portalkit.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[11px] text-on-surface-variant/40 hover:text-on-surface-variant/70 transition-colors"
+          >
+            <Layers className="size-3" />
+            Secured by PortalKit
+          </Link>
+        </footer>
+      )}
 
       <Toaster position="bottom-right" richColors />
       <PortalPushSetup />
