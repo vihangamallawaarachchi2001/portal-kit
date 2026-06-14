@@ -2,28 +2,35 @@ import { createClient } from '@/lib/supabase/server'
 import { ok, created, unauthorized, notFound, badRequest, internalError, paymentRequired, fromZodError } from '@/lib/api'
 import { createInvoiceSchema } from '@/lib/validations'
 import { ZodError } from 'zod'
+import { getWorkspaceContext, allowedClientIds, canAccessSub } from '@/lib/workspace'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
   const { data: client } = await supabase
     .from('clients')
     .select('id')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
   if (!client) return notFound('Client not found')
 
+  const clientIds = allowedClientIds(ctx)
+  if (clientIds !== null && !clientIds.includes(id)) return notFound('Client not found')
+  if (!canAccessSub(ctx, 'canViewInvoices', id)) return unauthorized()
+
   const { data, error } = await supabase
     .from('invoices')
     .select('id, invoice_number, status, subtotal, tax_rate, tax_amount, total, currency, due_date, paid_at, created_at, updated_at, client_id, project_id, notes')
     .eq('client_id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(500)
@@ -37,12 +44,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
 
   const { data: client } = await supabase
     .from('clients')
     .select('id')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
@@ -103,12 +112,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const total     = subtotal + tax_amount
 
   // Generate invoice number
-  const { data: numData } = await supabase.rpc('generate_invoice_number', { p_freelancer_id: user.id })
+  const { data: numData } = await supabase.rpc('generate_invoice_number', { p_freelancer_id: ownerId })
   const invoice_number = numData ?? 'INV-0001'
 
   const { data, error } = await supabase
     .from('invoices')
-    .insert({ ...input, freelancer_id: user.id, invoice_number, subtotal, tax_amount, total })
+    .insert({ ...input, freelancer_id: ownerId, invoice_number, subtotal, tax_amount, total })
     .select()
     .single()
 
