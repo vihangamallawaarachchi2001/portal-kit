@@ -12,7 +12,24 @@ export const createClientSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase letters, numbers, and hyphens only'),
 })
 
-export const updateClientSchema = createClientSchema.partial()
+export const portalFeaturesSchema = z.object({
+  files:      z.boolean(),
+  invoices:   z.boolean(),
+  messages:   z.boolean(),
+  milestones: z.boolean(),
+  meetings:   z.boolean(),
+}).partial()
+
+export const updateClientSchema = createClientSchema.partial().extend({
+  status:          z.enum(['active', 'archived']).optional(),
+  portal_features: portalFeaturesSchema.optional(),
+  portal_closed:   z.boolean().optional(),
+})
+
+export type PortalFeatures = z.infer<typeof portalFeaturesSchema>
+export const DEFAULT_PORTAL_FEATURES: Required<z.infer<typeof portalFeaturesSchema>> = {
+  files: true, invoices: true, messages: true, milestones: true, meetings: true,
+}
 
 export type CreateClientInput = z.infer<typeof createClientSchema>
 export type UpdateClientInput = z.infer<typeof updateClientSchema>
