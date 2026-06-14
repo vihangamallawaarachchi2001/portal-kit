@@ -9,10 +9,15 @@ export async function saveFullName(fullName: string) {
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) throw new Error('Not authenticated')
 
+  // Upsert instead of update — creates the profile row if the handle_new_user
+  // trigger failed to run (e.g. trigger not applied before user signed up).
   const { error } = await supabase
     .from('profiles')
-    .update({ full_name: fullName.trim() || null, updated_at: new Date().toISOString() })
-    .eq('id', user.id)
+    .upsert({
+      id: user.id,
+      full_name: fullName.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
 
   if (error) throw new Error(error.message)
   return { success: true }

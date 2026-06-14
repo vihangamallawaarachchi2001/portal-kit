@@ -34,6 +34,10 @@ export async function POST(req: Request) {
   if (!user) return unauthorized()
   const { ownerId } = await getWorkspaceContext(user.id, user.email ?? '')
 
+  // Ensure the owner's profile row exists before inserting (guards against
+  // the handle_new_user trigger not having run for this account).
+  await supabase.from('profiles').upsert({ id: ownerId, updated_at: new Date().toISOString() })
+
   let body: unknown
   try { body = await req.json() } catch { return badRequest('Invalid JSON') }
 
