@@ -20,11 +20,14 @@ export default function PortalAccessPage() {
   const token = searchParams.get('token')
 
   const [, startTransition] = useTransition()
-  const [tokenStatus, setTokenStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle')
+  const [tokenStatus, setTokenStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>(
+    token ? 'verifying' : 'idle'
+  )
   const [tokenError, setTokenError] = useState('')
 
   const [email, setEmail] = useState('')
-  const [requestStatus, setRequestStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const [requestStatus, setRequestStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [requestError, setRequestError] = useState('')
 
   const [branding, setBranding] = useState<Branding | null>(null)
 
@@ -61,13 +64,20 @@ export default function PortalAccessPage() {
     e.preventDefault()
     if (!email || requestStatus === 'sending') return
     setRequestStatus('sending')
+    setRequestError('')
     startTransition(async () => {
-      await fetch(`/api/portal/${slug}/request-access`, {
+      const res = await fetch(`/api/portal/${slug}/request-access`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      setRequestStatus('sent')
+      if (res.ok) {
+        setRequestStatus('sent')
+      } else {
+        const d = await res.json().catch(() => ({}))
+        setRequestError(d.error ?? 'Something went wrong. Please try again.')
+        setRequestStatus('error')
+      }
     })
   }
 
@@ -201,12 +211,18 @@ export default function PortalAccessPage() {
                         id="portal-email"
                         type="email"
                         value={email}
-                        onChange={e => setEmail(e.target.value)}
+                        onChange={e => { setEmail(e.target.value); if (requestStatus === 'error') setRequestStatus('idle') }}
                         placeholder="you@example.com"
                         required
                         className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-ds-secondary/30 focus:border-ds-secondary"
                       />
                     </div>
+
+                    {requestStatus === 'error' && requestError && (
+                      <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                        {requestError}
+                      </p>
+                    )}
 
                     <button
                       type="submit"
