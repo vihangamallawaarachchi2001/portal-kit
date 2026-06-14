@@ -15,7 +15,7 @@ export default async function PortalFilesPage({ params }: { params: Promise<{ sl
   const { data: client } = await service
     .from('clients')
     .select(`
-      id,
+      id, portal_features,
       projects (
         id, title, status,
         files ( * )
@@ -27,6 +27,8 @@ export default async function PortalFilesPage({ params }: { params: Promise<{ sl
     .single()
 
   if (!client) redirect(`/p/${slug}/access`)
+  const features = client.portal_features as Record<string, boolean> | null
+  if (features && features.files === false) redirect(`/p/${slug}`)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const projects = ((client.projects ?? []) as any[]).filter(p => !p.deleted_at)
