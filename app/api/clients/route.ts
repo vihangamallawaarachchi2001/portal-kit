@@ -40,11 +40,11 @@ export async function POST(req: Request) {
   let input
   try { input = createClientSchema.parse(body) } catch (e) { return fromZodError(e as ZodError) }
 
-  // Enforce free tier: 1 active client max
+  // Enforce free tier: 1 active client max (use owner's plan for team workspaces)
   const { data: profile } = await supabase
     .from('profiles')
     .select('plan')
-    .eq('id', user.id)
+    .eq('id', ownerId)
     .single()
 
   if (profile?.plan === 'free') {
