@@ -47,6 +47,15 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+export function effectiveInvoiceStatus(status: string, dueDate?: string | null): string {
+  if (status === 'sent' && dueDate) {
+    const due = new Date(dueDate)
+    due.setHours(23, 59, 59, 999)
+    if (due < new Date()) return 'overdue'
+  }
+  return status
+}
+
 export function getInitials(name: string | null | undefined): string {
   if (!name) return '?'
   return name
