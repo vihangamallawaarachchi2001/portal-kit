@@ -1,10 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { unauthorized, internalError } from '@/lib/api'
-import type { ArchiverOptions, Archiver } from 'archiver'
-// archiver uses CommonJS export = syntax
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const createArchive: (format: string, opts?: ArchiverOptions) => Archiver = require('archiver')
+import { ZipArchive } from 'archiver'
+import { getWorkspaceContext } from '@/lib/workspace'
 
 export const runtime = 'nodejs'
 
@@ -18,6 +16,7 @@ export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
+  const { ownerId } = await getWorkspaceContext(user.id, user.email ?? '')
 
   const service = createServiceClient()
 
@@ -33,35 +32,35 @@ export async function GET() {
     service
       .from('profiles')
       .select('id, full_name, business_name, avatar_url, plan, onboarding_completed, created_at, updated_at')
-      .eq('id', user.id)
+      .eq('id', ownerId)
       .single(),
 
     service
       .from('clients')
       .select('id, name, email, portal_slug, status, created_at, updated_at')
-      .eq('freelancer_id', user.id)
+      .eq('freelancer_id', ownerId)
       .is('deleted_at', null),
 
     service
       .from('projects')
       .select('id, client_id, title, description, status, due_date, created_at, updated_at')
-      .eq('freelancer_id', user.id)
+      .eq('freelancer_id', ownerId)
       .is('deleted_at', null),
 
     service
       .from('invoices')
       .select('id, client_id, project_id, title, status, subtotal, tax_rate, total, currency, due_date, notes, created_at, updated_at')
-      .eq('freelancer_id', user.id),
+      .eq('freelancer_id', ownerId),
 
     service
       .from('milestones')
       .select('id, project_id, title, description, due_date, completed_at, created_at, updated_at')
-      .eq('freelancer_id', user.id),
+      .eq('freelancer_id', ownerId),
 
     service
       .from('meetings')
       .select('id, project_id, client_id, title, description, scheduled_at, duration_mins, status, created_at, updated_at')
-      .eq('freelancer_id', user.id),
+      .eq('freelancer_id', ownerId),
   ])
 
   // ── 2. Fetch messages via project IDs ───────────────────────────────────────
@@ -87,7 +86,7 @@ export async function GET() {
     { name: 'meetings.json',   data: meetingsResult.data   ?? [] },
   ]
 
-  const archive = createArchive('zip', { zlib: { level: 6 } })
+  const archive = new ZipArchive({ zlib: { level: 6 } })
   const chunks: Buffer[] = []
 
   const zipBuffer = await new Promise<Buffer>((resolve, reject) => {
