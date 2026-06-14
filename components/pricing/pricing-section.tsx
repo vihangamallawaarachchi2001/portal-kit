@@ -60,10 +60,9 @@ const PLANS = [
       'PDF invoice export',
       'Multi-currency invoices',
       'Custom domain',
-      'Remove branding',
       'Priority support',
     ],
-    excluded: ['Team members', 'Advanced analytics'],
+    excluded: ['Team members', 'Advanced analytics','Remove branding',],
   },
   {
     name: 'Business',
