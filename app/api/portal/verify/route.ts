@@ -23,42 +23,52 @@ export async function POST(req: Request) {
 
   if (!client) return notFound('Portal not found')
 
-  // Atomically mark the session as used — the WHERE conditions ensure we only
-  // succeed if the token exists, is not yet used, and is not expired.
-  // This eliminates the TOCTOU window where two concurrent requests could both
-  // pass the used_at check before either updates the row.
-  const usedAt = new Date().toISOString()
+  const now = new Date().toISOString()
+
+  // Read session: must exist, not expired, and have fewer than 4 uses
   const { data: session } = await service
     .from('portal_sessions')
-    .update({ used_at: usedAt })
+    .select('id, use_count, expires_at')
     .eq('token_hash', tokenHash)
     .eq('client_id', client.id)
-    .is('used_at', null)
-    .gt('expires_at', usedAt)
-    .select('id')
     .maybeSingle()
 
-  if (!session) {
-    // Update matched nothing — do a read-only diagnostic to give a helpful message
-    const { data: check } = await service
-      .from('portal_sessions')
-      .select('used_at, expires_at')
-      .eq('token_hash', tokenHash)
-      .eq('client_id', client.id)
-      .maybeSingle()
+  if (!session) return badRequest('Invalid or expired link')
+  if (session.expires_at < now) return badRequest('This link has expired. Request a new one.')
+  if (session.use_count >= 4) return badRequest('This link has been used too many times. Request a new one from your freelancer.')
 
-    if (!check) return badRequest('Invalid or expired link')
-    if (check.used_at) return badRequest('This link has already been used. Request a new one from your freelancer.')
-    return badRequest('This link has expired. Request a new one.')
+  // Increment the use counter
+  await service
+    .from('portal_sessions')
+    .update({ use_count: session.use_count + 1 })
+    .eq('id', session.id)
+
+  // Set portal session cookie — valid until the furthest project deadline, or 1 year if none
+  const { data: projects } = await service
+    .from('projects')
+    .select('due_date')
+    .eq('client_id', client.id)
+    .is('deleted_at', null)
+    .not('due_date', 'is', null)
+
+  const nowMs = Date.now()
+  const oneYearMs = 60 * 60 * 24 * 365
+  let cookieMaxAge = oneYearMs
+
+  if (projects && projects.length > 0) {
+    const furthestDeadline = Math.max(
+      ...projects.map(p => new Date(p.due_date!).getTime())
+    )
+    const secsUntilDeadline = Math.floor((furthestDeadline - nowMs) / 1000)
+    if (secsUntilDeadline > 0) cookieMaxAge = secsUntilDeadline
   }
 
-  // Set portal session cookie (httpOnly, 30 days)
   const cookieStore = await cookies()
   cookieStore.set('portal_client_id', client.id, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: cookieMaxAge,
     path: '/',
   })
 
