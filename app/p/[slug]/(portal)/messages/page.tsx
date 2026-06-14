@@ -13,7 +13,7 @@ export default async function PortalMessagesPage({ params }: { params: Promise<{
   const { data: client } = await service
     .from('clients')
     .select(`
-      id, name,
+      id, name, portal_features,
       profiles:freelancer_id ( id, full_name, business_name, avatar_url ),
       projects (
         id, title,
@@ -30,6 +30,8 @@ export default async function PortalMessagesPage({ params }: { params: Promise<{
     .single()
 
   if (!client) redirect(`/p/${slug}/access`)
+  const features = client.portal_features as Record<string, boolean> | null
+  if (features && features.messages === false) redirect(`/p/${slug}`)
 
   const profile = Array.isArray(client.profiles) ? (client.profiles[0] ?? null) : client.profiles
   const freelancerName = profile?.business_name || profile?.full_name || 'Your Team'
