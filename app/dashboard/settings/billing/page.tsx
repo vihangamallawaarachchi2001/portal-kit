@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BillingSettings } from '@/components/dashboard/billing-settings'
+import { getWorkspaceContext } from '@/lib/workspace'
+import { Lock } from 'lucide-react'
 import type { BankDetails } from '@/types/database'
 
 export const revalidate = 0
@@ -13,6 +15,23 @@ export default async function BillingPage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
+
+  const { isOwner } = await getWorkspaceContext(user.id, user.email ?? '')
+  if (!isOwner) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 px-8 py-24 text-center">
+        <div className="size-12 rounded-xl bg-surface-container flex items-center justify-center">
+          <Lock className="size-5 text-on-surface-variant" />
+        </div>
+        <div>
+          <p className="text-sm font-bold text-on-surface">Owner only</p>
+          <p className="text-xs text-on-surface-variant mt-1 max-w-xs">
+            Billing is managed by the workspace owner. Contact them to make changes to the plan.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const [
     { data: profile },
