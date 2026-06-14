@@ -49,6 +49,10 @@ export function ClientsView({ clients, plan = 'free' }: ClientsViewProps) {
   const [, startTransition] = useTransition()
   const [view, setView]     = useState<'table' | 'cards'>('table')
   const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 767px)').matches) setView('cards')
+  }, [])
   const [filter, setFilter] = useState('all')
   const [addOpen, setAddOpen] = useState(false)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
