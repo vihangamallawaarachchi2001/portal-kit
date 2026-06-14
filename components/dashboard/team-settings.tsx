@@ -21,7 +21,6 @@ const FEATURE_PERMISSIONS: { key: keyof WorkspacePermissions; label: string; des
   { key: 'projects', label: 'Projects', description: 'View and manage projects' },
   { key: 'invoices', label: 'Invoices', description: 'View and send invoices' },
   { key: 'files',    label: 'Files',    description: 'Upload and review files' },
-  { key: 'messages', label: 'Messages', description: 'Chat with clients' },
   { key: 'settings', label: 'Settings', description: 'Access workspace settings' },
 ]
 
@@ -34,7 +33,7 @@ const SUB_PERMS = [
 
 const DEFAULT_PERMISSIONS: WorkspacePermissions = {
   clients: true, projects: true, invoices: true,
-  files: true, messages: true, settings: false, billing: false,
+  files: true, messages: false, settings: false, billing: false,
   all_clients: true,
 }
 

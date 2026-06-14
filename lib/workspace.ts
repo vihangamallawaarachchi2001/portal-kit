@@ -51,7 +51,7 @@ const OWNER_PERMISSIONS: WorkspacePermissions = {
 
 const DEFAULT_MEMBER_PERMISSIONS: WorkspacePermissions = {
   clients: true, projects: true, invoices: true,
-  files: true, messages: true, settings: false, billing: false,
+  files: true, messages: false, settings: false, billing: false,
   all_clients: true,
 }
 

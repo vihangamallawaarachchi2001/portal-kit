@@ -5,6 +5,9 @@ import { ChevronRight, ExternalLink } from 'lucide-react'
 import { getInitials } from '@/lib/format'
 import { ClientTabBar } from '@/components/dashboard/client-tab-bar'
 import { SendPortalLinkButton, CopyPortalLinkButton } from '@/components/dashboard/send-portal-link-button'
+import { getWorkspaceContext } from '@/lib/workspace'
+
+export const dynamic = 'force-dynamic'
 
 export default async function ClientDetailLayout({
   children,
@@ -18,6 +21,9 @@ export default async function ClientDetailLayout({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId, isOwner, permissions } = ctx
+
   const { data: client } = await supabase
     .from('clients')
     .select(`
@@ -25,7 +31,7 @@ export default async function ClientDetailLayout({
       projects ( id, status, messages ( id, sender_type, read_at ) )
     `)
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
@@ -118,7 +124,7 @@ export default async function ClientDetailLayout({
           </div>
 
           {/* Tab bar on dark bg */}
-          <ClientTabBar clientId={id} dark />
+          <ClientTabBar clientId={id} dark isOwner={isOwner} permissions={permissions} />
         </div>
       </div>
 

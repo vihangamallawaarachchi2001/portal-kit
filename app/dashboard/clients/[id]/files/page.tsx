@@ -12,7 +12,8 @@ export default async function ClientFilesPage({ params }: { params: Promise<{ id
   if (!user) redirect('/auth')
 
   const ctx = await getWorkspaceContext(user.id, user.email ?? '')
-  const { ownerId } = ctx
+  const { ownerId, isOwner, permissions } = ctx
+  if (!isOwner && !permissions.files) redirect(`/dashboard/clients/${id}`)
 
   const { data: client } = await supabase
     .from('clients')

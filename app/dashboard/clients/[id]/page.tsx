@@ -4,6 +4,9 @@ import { ClientOverviewView } from '@/components/dashboard/client-overview-view'
 import { effectiveInvoiceStatus } from '@/lib/format'
 import { getWorkspaceContext } from '@/lib/workspace'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function ClientOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()

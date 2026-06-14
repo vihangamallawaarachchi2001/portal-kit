@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { ProjectsView, type ProjectRow } from '@/components/dashboard/projects-view'
 import { getWorkspaceContext, allowedClientIds } from '@/lib/workspace'
 
+export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function ProjectsPage() {

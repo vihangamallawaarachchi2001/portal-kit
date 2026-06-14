@@ -13,7 +13,8 @@ export default async function ClientInvoicesPage({ params }: { params: Promise<{
   if (!user) redirect('/auth')
 
   const ctx = await getWorkspaceContext(user.id, user.email ?? '')
-  const { ownerId } = ctx
+  const { ownerId, isOwner, permissions } = ctx
+  if (!isOwner && !permissions.invoices) redirect(`/dashboard/clients/${id}`)
 
   const [{ data: client }, { data: invoices }, { data: projects }, { data: profile }] = await Promise.all([
     supabase.from('clients').select('id, name, email').eq('id', id).eq('freelancer_id', ownerId).is('deleted_at', null).single(),
