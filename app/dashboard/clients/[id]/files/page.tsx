@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { FileManager } from '@/components/dashboard/file-manager'
+import { getWorkspaceContext } from '@/lib/workspace'
 
 export const revalidate = 0
 
@@ -10,11 +11,14 @@ export default async function ClientFilesPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
+  const ctx = await getWorkspaceContext(user.id, user.email ?? '')
+  const { ownerId } = ctx
+
   const { data: client } = await supabase
     .from('clients')
     .select('id, name, plan:freelancer_id(plan)')
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
@@ -24,20 +28,20 @@ export default async function ClientFilesPage({ params }: { params: Promise<{ id
     .from('projects')
     .select('id, title, status, files(*)')
     .eq('client_id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   const { data: profileData } = await supabase
     .from('profiles')
     .select('plan')
-    .eq('id', user.id)
+    .eq('id', ownerId)
     .single()
 
   const { count: totalFiles } = await supabase
     .from('files')
     .select('id', { count: 'exact', head: true })
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
 
   return (
