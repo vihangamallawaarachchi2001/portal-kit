@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { ClientOverviewView } from '@/components/dashboard/client-overview-view'
+import { effectiveInvoiceStatus } from '@/lib/format'
+import { getWorkspaceContext } from '@/lib/workspace'
 
 export default async function ClientOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -8,19 +10,21 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
+  const ctx = await getWorkspaceContext(user.id, user.email ?? ''); const { ownerId } = ctx;
+
   const { data: client } = await supabase
     .from('clients')
     .select(`
       *,
       projects (
         id, title, status, description, due_date, updated_at,
-        files ( id, status ),
+        files ( id, status, uploaded_by_client, parent_file_id ),
         messages ( id, sender_type, read_at )
       ),
       invoices ( id, invoice_number, total, currency, status, due_date, created_at )
     `)
     .eq('id', id)
-    .eq('freelancer_id', user.id)
+    .eq('freelancer_id', ownerId)
     .is('deleted_at', null)
     .single()
 
@@ -29,7 +33,7 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
   type RawProject = {
     id: string; title: string; status: string; description: string | null
     due_date: string | null; updated_at: string; deleted_at?: string | null
-    files?: { id: string; status: string }[]
+    files?: { id: string; status: string; uploaded_by_client?: boolean; parent_file_id?: string | null }[]
     messages?: { id: string; sender_type: string; read_at: string | null }[]
   }
 
@@ -50,7 +54,7 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
     description: p.description,
     due_date: p.due_date,
     updated_at: p.updated_at,
-    pendingFiles: (p.files ?? []).filter(f => f.status === 'pending').length,
+    pendingFiles: (p.files ?? []).filter(f => f.status === 'pending' && !f.uploaded_by_client && !f.parent_file_id).length,
     unreadMsgs: (p.messages ?? []).filter(m => m.sender_type === 'client' && !m.read_at).length,
   }))
 
@@ -68,11 +72,14 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
     }))
 
   const outstandingTotal = ((client.invoices ?? []) as RawInvoice[])
-    .filter(i => i.status === 'sent' || i.status === 'overdue')
+    .filter(i => {
+      const eff = effectiveInvoiceStatus(i.status, i.due_date)
+      return eff === 'sent' || eff === 'overdue'
+    })
     .reduce((s, i) => s + Number(i.total), 0)
 
   const totalPendingFiles = rawProjects.reduce(
-    (s, p) => s + (p.files ?? []).filter(f => f.status === 'pending').length, 0)
+    (s, p) => s + (p.files ?? []).filter(f => f.status === 'pending' && !f.uploaded_by_client && !f.parent_file_id).length, 0)
 
   const totalUnread = rawProjects.reduce(
     (s, p) => s + (p.messages ?? []).filter(m => m.sender_type === 'client' && !m.read_at).length, 0)
