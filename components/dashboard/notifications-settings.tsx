@@ -283,7 +283,7 @@ function NotifRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold text-on-surface">{setting.label}</p>
-          {setting.pro && (
+          {setting.pro && locked && (
             <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">Pro</span>
           )}
           {locked && (
