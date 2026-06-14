@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { formatCurrency, formatDate, getInitials } from '@/lib/format'
+import { formatCurrency, formatDate, getInitials, effectiveInvoiceStatus } from '@/lib/format'
 import {
   TrendingUp, AlertTriangle, CheckCircle2, FileText,
   Search, Check, SlidersHorizontal, Banknote,
@@ -96,14 +96,20 @@ export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
     return parts.map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ')
   }
 
-  const outstandingByCur = sumByCurrency(invoices.filter(i => i.status === 'sent'))
-  const overdueByCur     = sumByCurrency(invoices.filter(i => i.status === 'overdue'))
+  const outstandingByCur = sumByCurrency(invoices.filter(i => {
+    const eff = effectiveInvoiceStatus(i.status, i.due_date)
+    return eff === 'sent' || eff === 'overdue'
+  }))
+  const overdueByCur     = sumByCurrency(invoices.filter(i => effectiveInvoiceStatus(i.status, i.due_date) === 'overdue'))
   const paidByCur        = sumByCurrency(invoices.filter(i => i.status === 'paid'))
   const hasOutstanding   = Object.values(outstandingByCur).some(a => a > 0)
   const hasOverdue       = Object.values(overdueByCur).some(a => a > 0)
   const draftCount       = invoices.filter(i => i.status === 'draft').length
-  const overdueCount     = invoices.filter(i => i.status === 'overdue').length
-  const sentCount        = invoices.filter(i => i.status === 'sent').length
+  const overdueCount     = invoices.filter(i => effectiveInvoiceStatus(i.status, i.due_date) === 'overdue').length
+  const sentCount        = invoices.filter(i => {
+    const eff = effectiveInvoiceStatus(i.status, i.due_date)
+    return eff === 'sent' || eff === 'overdue'
+  }).length
   const paidCount        = invoices.filter(i => i.status === 'paid').length
 
   /* Unique clients for filter (from invoices data) */
@@ -121,7 +127,8 @@ export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
       const matchSearch = !q
         || inv.invoice_number.toLowerCase().includes(q)
         || (inv.clients?.name ?? '').toLowerCase().includes(q)
-      const matchStatus = statusFilter === 'all' || inv.status === statusFilter
+      const effStatus = effectiveInvoiceStatus(inv.status, inv.due_date)
+      const matchStatus = statusFilter === 'all' || effStatus === statusFilter
       const matchClient = clientFilter === 'all' || inv.clients?.id === clientFilter
       return matchSearch && matchStatus && matchClient
     })
@@ -152,7 +159,7 @@ export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <MetricCard
             icon={TrendingUp} label="Outstanding" amount={formatMultiCurrency(outstandingByCur)}
-            count={`${sentCount} invoice${sentCount !== 1 ? 's' : ''} sent`}
+            count={`${sentCount} invoice${sentCount !== 1 ? 's' : ''} awaiting payment`}
             iconBg="bg-ds-secondary/10" iconColor="text-ds-secondary"
             pulse={hasOutstanding} pulseColor="bg-ds-secondary"
           />
@@ -205,7 +212,7 @@ export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
           )}
         </div>
 
-        {/* ── Table ────────────────────────────────────── */}
+        {/* ── Invoice sections / table ─────────────────── */}
         {filtered.length === 0 ? (
           <div className="bg-white rounded-xl border border-outline-variant/20 shadow-sm p-10 flex flex-col items-center text-center gap-2">
             <p className="text-sm font-semibold text-on-surface">No invoices match your filters</p>
@@ -213,91 +220,170 @@ export function InvoicesView({ invoices, clients, plan = 'free' }: Props) {
               className="text-xs font-semibold text-ds-secondary hover:underline">Clear filters</button>
           </div>
         ) : (
-          <div className="overflow-x-auto pb-4">
-            <div className="min-w-175 rounded-xl border border-outline-variant/20 overflow-hidden bg-white shadow-sm">
-              {/* Header */}
-              <div className={cn('grid px-5 py-2.5 bg-surface-container/50 border-b border-outline-variant/15', INV_COL)}>
-                {['Invoice', 'Client', 'Status', 'Amount', 'Due Date', ''].map((h, i) => (
-                  <p key={i} className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{h}</p>
-                ))}
-              </div>
-
-              {/* Rows */}
-              <div className="divide-y divide-outline-variant/10">
-                {filtered.map(inv => {
-                  const cfg       = STATUS_CFG[inv.status] ?? STATUS_CFG.draft
-                  const client    = inv.clients
-                  const accent    = client ? clientAccent(client.name) : '#94a3b8'
-                  const isOverdue = inv.status === 'overdue'
-                  const isPaid    = inv.status === 'paid'
-                  const href      = client ? `/dashboard/clients/${client.id}/invoices` : '#'
-
-                  return (
-                    <div key={inv.id} className={cn(
-                      'relative grid items-center px-5 py-3.5 group transition-colors',
-                      INV_COL,
-                      isOverdue ? 'bg-red-50/30 hover:bg-red-50/60' : 'hover:bg-surface-container/15',
-                    )}>
-                      <div className="absolute left-0 top-0 bottom-0 w-0.75" style={{ background: cfg.accent }} />
-
-                      {/* Invoice # */}
-                      <div className="min-w-0 pr-3">
-                        <p className="text-sm font-bold text-on-surface truncate">{inv.invoice_number}</p>
-                        <p className="text-[10px] text-on-surface-variant/40 mt-0.5">{formatDate(inv.created_at)}</p>
-                      </div>
-
-                      {/* Client */}
-                      <div className="min-w-0 pr-3">
-                        {client ? (
-                          <Link href={`/dashboard/clients/${client.id}`}
-                            className="flex items-center gap-2 hover:text-ds-secondary transition-colors">
-                            <div
-                              className="size-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
-                              style={{ background: accent }}
-                            >
-                              {getInitials(client.name)}
-                            </div>
-                            <span className="text-xs font-medium text-on-surface truncate">{client.name}</span>
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-on-surface-variant/40">—</span>
-                        )}
-                      </div>
-
-                      {/* Status */}
-                      <span className={cn('w-fit inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full', cfg.pill)}>
-                        <span className={cn('size-1 rounded-full shrink-0', cfg.dot)} />
-                        {cfg.label}
-                      </span>
-
-                      {/* Amount */}
-                      <span className={cn(
-                        'text-sm font-bold tabular-nums',
-                        isPaid ? 'text-emerald-600' : isOverdue ? 'text-red-700' : 'text-on-surface',
-                      )}>
-                        {formatCurrency(Number(inv.total), inv.currency)}
-                      </span>
-
-                      {/* Due date */}
-                      <p className={cn('text-[12px]', isOverdue ? 'text-red-500 font-medium' : 'text-on-surface-variant')}>
-                        {inv.due_date ? formatDate(inv.due_date) : '—'}
-                      </p>
-
-                      {/* View link */}
-                      <div className="flex items-center justify-end">
-                        <Link href={href}
-                          className="h-7 px-2.5 rounded-lg text-xs font-medium text-ds-secondary md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-ds-secondary/8 flex items-center gap-1">
-                          View <ArrowRight className="size-3" />
-                        </Link>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
+          <InvoiceTable
+            invoices={filtered}
+            grouped={!isFiltering}
+          />
         )}
       </div>
+    </div>
+  )
+}
+
+/* ── Invoice table (flat or grouped) ────────────── */
+function InvoiceRow({ inv }: { inv: InvoiceRow }) {
+  const effStatus = effectiveInvoiceStatus(inv.status, inv.due_date)
+  const cfg       = STATUS_CFG[effStatus] ?? STATUS_CFG.draft
+  const client    = inv.clients
+  const accent    = client ? clientAccent(client.name) : '#94a3b8'
+  const isOverdue = effStatus === 'overdue'
+  const isPaid    = effStatus === 'paid'
+  const href      = client ? `/dashboard/clients/${client.id}/invoices` : '#'
+
+  return (
+    <div className={cn(
+      'relative grid items-center px-5 py-3.5 group transition-colors',
+      INV_COL,
+      isOverdue ? 'bg-red-50/30 hover:bg-red-50/60' : isPaid ? 'hover:bg-emerald-50/20' : 'hover:bg-surface-container/15',
+    )}>
+      <div className="absolute left-0 top-0 bottom-0 w-0.75" style={{ background: cfg.accent }} />
+
+      <div className="min-w-0 pr-3">
+        <p className={cn('text-sm font-bold truncate', isPaid ? 'text-on-surface/60' : 'text-on-surface')}>{inv.invoice_number}</p>
+        <p className="text-[10px] text-on-surface-variant/40 mt-0.5">{formatDate(inv.created_at)}</p>
+      </div>
+
+      <div className="min-w-0 pr-3">
+        {client ? (
+          <Link href={`/dashboard/clients/${client.id}`}
+            className="flex items-center gap-2 hover:text-ds-secondary transition-colors">
+            <div className="size-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
+              style={{ background: isPaid ? '#94a3b8' : accent }}>
+              {getInitials(client.name)}
+            </div>
+            <span className={cn('text-xs font-medium truncate', isPaid ? 'text-on-surface-variant' : 'text-on-surface')}>{client.name}</span>
+          </Link>
+        ) : (
+          <span className="text-xs text-on-surface-variant/40">—</span>
+        )}
+      </div>
+
+      <span className={cn('w-fit inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full', cfg.pill)}>
+        <span className={cn('size-1 rounded-full shrink-0', cfg.dot)} />
+        {cfg.label}
+      </span>
+
+      <span className={cn(
+        'text-sm font-bold tabular-nums',
+        isPaid ? 'text-emerald-600' : isOverdue ? 'text-red-700' : 'text-on-surface',
+      )}>
+        {formatCurrency(Number(inv.total), inv.currency)}
+      </span>
+
+      <p className={cn('text-[12px]', isOverdue ? 'text-red-500 font-medium' : 'text-on-surface-variant')}>
+        {inv.due_date ? formatDate(inv.due_date) : '—'}
+      </p>
+
+      <div className="flex items-center justify-end">
+        <Link href={href}
+          className="h-7 px-2.5 rounded-lg text-xs font-medium text-ds-secondary md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-ds-secondary/8 flex items-center gap-1">
+          View <ArrowRight className="size-3" />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function SectionHeader({ label, count, color }: { label: string; count: number; color: string }) {
+  return (
+    <div className={cn('flex items-center gap-3 px-5 py-2 border-b border-outline-variant/10')} style={{ background: color }}>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">{label}</span>
+      <span className="text-[10px] font-bold text-on-surface-variant/50">{count}</span>
+    </div>
+  )
+}
+
+function InvoiceTable({ invoices, grouped }: { invoices: InvoiceRow[]; grouped: boolean }) {
+  const tableHeader = (
+    <div className={cn('grid px-5 py-2.5 bg-surface-container/50 border-b border-outline-variant/15', INV_COL)}>
+      {['Invoice', 'Client', 'Status', 'Amount', 'Due Date', ''].map((h, i) => (
+        <p key={i} className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{h}</p>
+      ))}
+    </div>
+  )
+
+  if (!grouped) {
+    return (
+      <div className="overflow-x-auto pb-4">
+        <div className="min-w-175 rounded-xl border border-outline-variant/20 overflow-hidden bg-white shadow-sm">
+          {tableHeader}
+          <div className="divide-y divide-outline-variant/10">
+            {invoices.map(inv => <InvoiceRow key={inv.id} inv={inv} />)}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const overdue     = invoices.filter(i => effectiveInvoiceStatus(i.status, i.due_date) === 'overdue')
+  const outstanding = invoices.filter(i => effectiveInvoiceStatus(i.status, i.due_date) === 'sent')
+  const drafts      = invoices.filter(i => i.status === 'draft')
+  const paid        = invoices.filter(i => i.status === 'paid')
+
+  return (
+    <div className="flex flex-col gap-4 pb-4">
+      {/* Active / unpaid sections */}
+      {(overdue.length > 0 || outstanding.length > 0 || drafts.length > 0) && (
+        <div className="overflow-x-auto">
+          <div className="min-w-175 rounded-xl border border-outline-variant/20 overflow-hidden bg-white shadow-sm">
+            {tableHeader}
+            {overdue.length > 0 && (
+              <>
+                <SectionHeader label="Overdue" count={overdue.length} color="rgba(254,242,242,0.8)" />
+                <div className="divide-y divide-outline-variant/10">
+                  {overdue.map(inv => <InvoiceRow key={inv.id} inv={inv} />)}
+                </div>
+              </>
+            )}
+            {outstanding.length > 0 && (
+              <>
+                <SectionHeader label="Awaiting payment" count={outstanding.length} color="rgba(239,246,255,0.7)" />
+                <div className="divide-y divide-outline-variant/10">
+                  {outstanding.map(inv => <InvoiceRow key={inv.id} inv={inv} />)}
+                </div>
+              </>
+            )}
+            {drafts.length > 0 && (
+              <>
+                <SectionHeader label="Drafts" count={drafts.length} color="rgba(248,250,252,0.9)" />
+                <div className="divide-y divide-outline-variant/10">
+                  {drafts.map(inv => <InvoiceRow key={inv.id} inv={inv} />)}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Paid section — separate card, visually muted */}
+      {paid.length > 0 && (
+        <div className="overflow-x-auto">
+          <div className="min-w-175 rounded-xl border border-emerald-100 overflow-hidden bg-white shadow-sm opacity-80">
+            <div className={cn('grid px-5 py-2.5 bg-emerald-50/60 border-b border-emerald-100/60', INV_COL)}>
+              {['Invoice', 'Client', 'Status', 'Amount', 'Paid Date', ''].map((h, i) => (
+                <p key={i} className="text-[10px] font-bold uppercase tracking-wider text-emerald-700/60">{h}</p>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 px-5 py-2 bg-emerald-50/40 border-b border-emerald-100/40">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700/60">Paid</span>
+              <span className="text-[10px] font-bold text-emerald-600/40">{paid.length}</span>
+            </div>
+            <div className="divide-y divide-emerald-50">
+              {paid.map(inv => <InvoiceRow key={inv.id} inv={inv} />)}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
