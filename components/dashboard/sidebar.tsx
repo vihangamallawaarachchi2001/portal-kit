@@ -21,7 +21,7 @@ const NAV = [
   { href: '/dashboard',           label: 'Dashboard', icon: LayoutDashboard, exact: true,  badge: false, permKey: null        },
   { href: '/dashboard/projects',  label: 'Projects',  icon: FolderOpen,      exact: false, badge: false, permKey: 'projects'  },
   { href: '/dashboard/clients',   label: 'Clients',   icon: Users,           exact: false, badge: false, permKey: 'clients'   },
-  { href: '/dashboard/chats',     label: 'Messages',  icon: MessageSquare,   exact: false, badge: true,  permKey: 'messages'  },
+  { href: '/dashboard/chats',     label: 'Messages',  icon: MessageSquare,   exact: false, badge: true,  permKey: 'owner'     },
   { href: '/dashboard/invoices',  label: 'Invoices',  icon: FileText,        exact: false, badge: false, permKey: 'invoices'  },
   { href: '/dashboard/files',     label: 'Files',     icon: Paperclip,       exact: false, badge: false, permKey: 'files'     },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart2,       exact: false, badge: false, permKey: 'owner'     },
