@@ -20,6 +20,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
+  console.log('[stripe webhook] received event:', event.type)
+
+  try {
+
   const service = createServiceClient()
 
   switch (event.type) {
@@ -30,7 +34,7 @@ export async function POST(req: Request) {
 
       const { data: invoice } = await service
         .from('invoices')
-        .select('*, clients(name, email, portal_slug), profiles:freelancer_id(full_name, notification_preferences)')
+        .select('*, clients(name, email, portal_slug), profiles:freelancer_id(full_name, business_name, plan, hide_branding, notification_preferences)')
         .eq('id', invoiceId)
         .single()
 
@@ -50,6 +54,8 @@ export async function POST(req: Request) {
       const profile = Array.isArray(invoice.profiles) ? (invoice.profiles[0] ?? null) : invoice.profiles
       const client  = Array.isArray(invoice.clients)  ? (invoice.clients[0] ?? null)  : invoice.clients
       const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
+      const isPro   = profile?.plan !== 'free'
+      const hideBranding = isPro && (profile?.hide_branding ?? false)
 
       // Notification preference embedded in initial fetch — no extra round-trip
       const prefs   = (profile as { notification_preferences?: Record<string, boolean> } | null)?.notification_preferences
@@ -82,13 +88,14 @@ export async function POST(req: Request) {
         await sendPaymentReceiptEmail({
           to: client.email,
           clientName: client.name ?? '',
-          businessName: profile?.full_name ?? 'Your freelancer',
+          businessName: profile?.business_name || profile?.full_name || 'Your freelancer',
           invoiceNumber: invoice.invoice_number,
           total: invoice.total,
           currency: invoice.currency,
           paidAt,
           lineItems: invoice.line_items ?? [],
           portalUrl: `${appUrl}/p/${client.portal_slug}`,
+          hideBranding,
         }).catch((err) => console.error('[email] payment-receipt failed', err))
       }
       break
@@ -163,6 +170,11 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ received: true })
+
+  } catch (err) {
+    console.error('[stripe webhook] UNHANDLED ERROR for event', event.type, err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
 }
 
 function getPlanFromPriceId(priceId: string): 'free' | 'pro' | 'business' {
