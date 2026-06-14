@@ -27,7 +27,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .select(`
       *,
       clients ( id, name, email ),
-      profiles:freelancer_id ( full_name, business_name, tagline, plan )
+      profiles:freelancer_id ( full_name, business_name, tagline, plan, hide_branding )
     `)
     .eq('id', id)
     .is('deleted_at', null)
@@ -41,6 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   // PDF export is a Pro+ feature — block if freelancer is on Free plan
   const profile = Array.isArray(invoice.profiles) ? (invoice.profiles[0] ?? null) : invoice.profiles
+  const hideBranding = profile?.plan !== 'free' && (profile?.hide_branding ?? false)
   if (profile?.plan === 'free') {
     return paymentRequired('PDF invoice export is available on Pro and above.', { code: 'invoice_pdf' })
   }
@@ -67,6 +68,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     freelancerName: profile?.full_name ?? '',
     clientName:     client?.name ?? '',
     clientEmail:    client?.email ?? '',
+    hideBranding,
   }) as Parameters<typeof renderToBuffer>[0]
 
   const pdfBuffer = await renderToBuffer(element)
