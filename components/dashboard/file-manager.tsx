@@ -69,8 +69,10 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
     .filter((f: FileType) => !f.deleted_at)
     .sort((a: FileType, b: FileType) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-  // Root files only (not review attachments)
-  const files = allProjectFiles.filter((f: FileType) => !f.parent_file_id)
+  // Root files only (not review attachments), split by uploader
+  const rootFiles = allProjectFiles.filter((f: FileType) => !f.parent_file_id)
+  const clientUploads = rootFiles.filter((f: FileType & { uploaded_by_client?: boolean }) => f.uploaded_by_client)
+  const files = rootFiles.filter((f: FileType & { uploaded_by_client?: boolean }) => !f.uploaded_by_client)
 
   // Build attachment map for this project
   const attachmentMap = new Map<string, FileType[]>()
@@ -448,6 +450,46 @@ export function FileManager({ clientId: _clientId, projects, plan, totalFileCoun
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Client uploads ───────────────────────── */}
+      {clientUploads.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Client uploads</p>
+            <span className="text-[11px] text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full font-semibold">
+              {clientUploads.length}
+            </span>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="divide-y divide-outline-variant/20">
+              {clientUploads.map((file: FileType) => {
+                const { Icon, bg, color } = fileIconCfg(file.mime_type)
+                return (
+                  <div key={file.id} className="group/file flex items-center gap-4 px-5 py-4 hover:bg-surface-container/30 transition-colors">
+                    <div className={cn('size-10 rounded-md flex items-center justify-center shrink-0', bg)}>
+                      <Icon className={cn('size-5', color)} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-on-surface truncate leading-tight">{file.filename}</p>
+                      <p className="text-[11px] text-on-surface-variant mt-0.5">{formatFileSize(file.file_size)} · {formatRelativeTime(file.created_at)}</p>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover/file:opacity-100 transition-all shrink-0">
+                      <button
+                        onClick={() => handleDownload(file.id, file.filename)}
+                        disabled={downloadingId === file.id}
+                        className="size-7 rounded-md flex items-center justify-center text-on-surface-variant hover:text-ds-secondary hover:bg-ds-secondary/8 transition-colors disabled:opacity-50"
+                        title="Download"
+                      >
+                        {downloadingId === file.id ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
